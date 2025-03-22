@@ -1,0 +1,15 @@
+#!/bin/bash
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "3.19"
+python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "binary" --error "3.19"
+python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19"
+python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary"
+python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse"
+python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --hw "64" --secret "sparse"
+
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --secret "binary" --error "3.19" -v --table
+python3 src/estimate.py --param "n" --lambda "80" --logq "20" --secret "binary" --error "3.19" -v --table
+python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19" -v --table
+python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary" -v --table
+
+python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse" -v --table
+python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --hw "64" --secret "sparse" -v --table
