@@ -53,6 +53,7 @@ def main(argv):
         if not table:
             subdata = process_subdata(param, data, verify, estimator_installed, secret)
             headers = update_headers(param, verify, estimator_installed)
+            helper_headers(headers)
             print_table(headers, subdata)
         else:
             helper_headers(headers)

@@ -3,9 +3,14 @@ import csv
 import sys, getopt
 from formula_params import lambda_usvp_bin, lambda_usvp_s_bin, lambda_bdd_bin, lambda_bdd_s_bin, n_usvp_bin, n_usvp_s_bin, n_bdd_bin, n_bdd_s_bin, lambda_usvp_ter, lambda_usvp_s_ter, lambda_bdd_ter, lambda_bdd_s_ter, n_usvp_ter, n_usvp_s_ter, n_bdd_ter, n_bdd_s_ter
 from formulas import check_overstreched
+from const import (HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NOTABLE, HEADERS_STD_E_VERIFY, 
+                   HEADERS_STD_E_NOTABLE, HEADERS_N_VERIFY, HEADERS_N_NOTABLE, HEADERS_LOGQ_VERIFY, 
+                   HEADERS_LOGQ_NOTABLE)
 
 sys.path.append('./latticeestimator')
 estimator_installed = 1
+
+paper = 'https://eprint.iacr.org/2024/1001'
 
 try:
     from estimator import LWE, ND
@@ -30,23 +35,23 @@ def update_headers(param, verify, estimator_installed):
 
 def get_lambda_headers(verify, estimator_installed):
     if verify and estimator_installed:
-        return ["Secret dist.", "LWE dim.", "log q", "Output", "lwe"]
-    return ["Secret dist.", "LWE dim.", "log q", "Output"]
+        return HEADERS_LAMBDA_VERIFY
+    return HEADERS_LAMBDA_NOTABLE
 
 def get_std_e_headers(verify, estimator_installed):
     if verify and estimator_installed:
-        return ["Secret dist.", "lambda", "LWE dim.", "log q", "Output", "lwe usvp", "lwe bdd"]
-    return ["Secret dist.", "lambda", "LWE dim.", "log q", "Output"]
+        return HEADERS_STD_E_VERIFY
+    return HEADERS_STD_E_NOTABLE
 
 def get_n_headers(verify, estimator_installed):
     if verify and estimator_installed:
-        return ["Secret dist.", "lambda", "log q", "Output", "Pow", "usvp num", "bdd num"]
-    return ["Secret dist.", "lambda", "log q", "Output", "Pow"]
+        return HEADERS_N_VERIFY
+    return HEADERS_N_NOTABLE
 
 def get_logq_headers(verify, estimator_installed):
     if verify and estimator_installed:
-        return ["Secret dist.", "lambda", "LWE dim.", "Output", "lwe usvp", "lwe bdd"]
-    return ["Secret dist.", "lambda", "LWE dim.", "Output"]
+        return HEADERS_LOGQ_VERIFY
+    return HEADERS_LOGQ_NOTABLE
 
 def check_ntru(output_dict):
     beta_ = check_overstreched(output_dict)
@@ -334,8 +339,6 @@ def helper_fit():
     print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
     sys.exit()
 
-paper = 'https://eprint.iacr.org/2024/1001'
-
 def create_explanation_dict(headers):
     """
     Create a dictionary of explanations for the headers.
@@ -344,28 +347,33 @@ def create_explanation_dict(headers):
     :return: Dictionary of explanations.
     """
     explanations = {
-        "Secret dist.": "The distribution of the secret (can be either binary or ternary)",
-        "LWE dim.": "The Learning With Errors (LWE) dimension",
+        "secret dist.": "The distribution of the secret (can be binary, ternary or sparse)",
+        "lwe dim.": "The Learning With Errors (LWE) dimension",
         "lambda": "The security level",
         "log q": "The size of the modulus q in bits",
-        "usvp_s (Eq. 21)": "The output of Eq. 21 of " + paper,
         "lwe est": "The output of running the Lattice Estimator using the output of our formulas and the rest of the LWE parameters",
-        "usvp_s pow2": "Closest power of 2 to the output of Eq. 21",
-        "bdd_s (Eq. 22)": "The output of Eq. 22 of " + paper,
-        "bdd_s pow2": "Closest power of 2 to the output of Eq. 22",
-        "bdd": "The output of Eq. XX of " + paper, #TODO update this reference
-        "bdd pow2": "Closest power of 2 to the output of Eq. XX", #TODO update this reference
-        "usvp (Eq. 14)": "The output of Eq. 14 of " + paper,
-        "usvp_s (Eq. 16)": "The output of Eq. 16 of " + paper,
-        "bdd (Eq. 17)": "The output of Eq. 17 of " + paper,
-        "bdd_s (Eq. 20)": "The output of Eq. 20 of " + paper,
-        "logq usvp": "The result of numerically approximating log q using usvp",
-        "logq bdd": "The result of numerically approximating log q using bdd",
-        "std_e usvp": "The result of numerically approximating the standard deviation of the error using usvp",
-        "std_e bdd": "The result of numerically approximating the standard deviation of the error using bdd",
+        "usvp": "Output of the formula which estimates the cost of the (unique) SVP attack",
+        "usvp_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) SVP attack",
+        "bdd": "Output of the formula which estimates the cost of the (unique) BDD attack",
+        "bdd_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) BDD attack",
+        "logq usvp": "Output of the numerical approximation of log q for the (unique) SVP attack",
+        "logq bdd": "Output of the numerical approximation of log q for the (unique) BDD attack",\
+        "usvp num": "Output of the numerical approximation of the (unique) SVP attack",
+        "bdd num": "Output of the numerical approximation of the (unique) BDD attack",
+        "log2(std_e) usvp": "Output of the numerical approximation of the (log2) standard deviation of the error for the (unique) SVP attack",
+        "log2(std_e) bdd": "Output of the numerical approximation of the (log2) standard deviation of the error for the (unique) BDD attack",
         "bdd 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_bdd",
         "usvp 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_usvp",
-        "diff": "The difference between the output of the previous column and the output of the Lattice Estimator"
+        "diff": "The difference between the output of the previous column and the output of the Lattice Estimator",
+        "est usvp": "Output of the Lattice Estimator for the (unique) SVP attack",
+        "est bdd": "Output of the Lattice Estimator for the (unique) BDD attack",
+        "est usvp_s": "Output of the Lattice Estimator using the result from the simplified formula for the (unique) SVP attack",
+        "est bdd_s": "Output of the Lattice Estimator using the result from the simplified formula for the (unique) BDD attack",
+        "output": "Recommended value to be used considering all the outputs of the formulas and numerical methods",
+        "pow": "Closest power of 2 to the LWE dimension recommended in Output",
+        "hw": "Hamming weight of the secret",
+        "hybrid": "Output of the numerical approximation of the hybrid attack",
+        "est hybrid": "Output of the Lattice Estimator for the hybrid attack"
     }
 
     # Create a dictionary using the headers and explanations

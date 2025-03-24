@@ -1,12 +1,20 @@
 import math
+from numpy import log2
+
 from formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
     model_n_usvp, model_n_usvp_s, model_n_bdd, model_n_bdd_s,
 )
 from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd
-from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_lambda_hybrid, numerical_logq_hybrid
+from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
 from aux_functions import closest_power_of_2
-from numpy import log2
+
+
+from const import (
+    HEADERS_N_VERIFY, HEADERS_N_NO_VERIFY, HEADERS_LOGQ_VERIFY, HEADERS_LOGQ_NO_VERIFY, HEADERS_LOGQ_HYBRID_VERIFY, HEADERS_LOGQ_HYBRID_NO_VERIFY,
+    HEADERS_STD_E_VERIFY, HEADERS_STD_E_NO_VERIFY, HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NO_VERIFY, HEADERS_LAMBDA_ALT_VERIFY, HEADERS_LAMBDA_ALT_NO_VERIFY,
+    HEADERS_LAMBDA_HYBRID_VERIFY, HEADERS_LAMBDA_HYBRID_NO_VERIFY
+)
 
 import sys
 sys.path.append('./latticeestimator')
@@ -78,39 +86,33 @@ def process_parameters(params):
     return headers, data
 
 def process_n(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict):
-    headers = ["Secret dist.", "lambda", "log q", "usvp", "lwe usvp", "usvp_s", "lwe usvp_s", "usvp num", "lwe num", "bdd", "lwe bdd", "bdd_s", "lwe bdd_s", "bdd num", "lwe num", "Output", "Pow"] if (verify and estimator_installed) else ["Secret dist.", "lambda", "log q", "usvp", "usvp_s", "usvp num", "bdd", "bdd_s", "bdd num", "Output", "Pow"]
+    headers = HEADERS_N_VERIFY if (verify and estimator_installed) else HEADERS_N_NO_VERIFY
     data = process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict)
     return headers, data
 
 def process_logq(l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict):
     if secret != 'sparse':
-        headers = ["Secret dist.", "lambda", "LWE dim.", "logq usvp", "logq bdd", "lwe usvp", "lwe bdd"] if (verify and estimator_installed) else ["Secret dist.", "lambda", "LWE dim.", "logq usvp", "logq bdd"]
+        headers = HEADERS_LOGQ_VERIFY if (verify and estimator_installed) else HEADERS_LOGQ_NO_VERIFY
         data = process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, output_dict)
     else:
-        if verify and estimator_installed:
-            headers = ["Secret dist.", "LWE dim.", "lambda", "hw", "hybrid", "lwe hybrid"]
-        else:
-            headers = ["Secret dist.", "LWE dim.", "lambda", "hw", "hybrid"]
+        headers = HEADERS_LOGQ_HYBRID_VERIFY if verify and estimator_installed else HEADERS_LOGQ_HYBRID_NO_VERIFY
         data = process_logq_param_hybrid(l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict)
     return headers, data
 
 def process_std_e(logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict):
-    headers = ["Secret dist.", "lambda", "LWE dim.", "logq", "std_e usvp", "std_e bdd", "lwe usvp", "lwe bdd", "Output"] if (verify and estimator_installed) else ["Secret dist.", "lambda", "LWE dim.", "logq", "num usvp", "num bdd", "Output"]
+    headers = HEADERS_STD_E_VERIFY if (verify and estimator_installed) else HEADERS_STD_E_NO_VERIFY
     data = process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict)
     return headers, data
 
 def process_lambda(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, h, output_dict):
     if secret != 'sparse':
         if abs(std_e - 3.19) < 1e-9:
-            headers = ["Secret dist.", "LWE dim.", "log q", "usvp", "lwe usvp", "usvp_s", "bdd", "lwe bdd", "bdd_s", "Output"] if (verify and estimator_installed) else ["Secret dist.", "LWE dim.", "log q", "usvp", "usvp_s", "bdd", "bdd_s", "Output"]
+            headers = HEADERS_LAMBDA_VERIFY if (verify and estimator_installed) else HEADERS_LAMBDA_NO_VERIFY
         else:
-            headers = ["Secret dist.", "LWE dim.", "log q", "usvp", "lwe usvp", "bdd", "lwe bdd", "Output"] if (verify and estimator_installed) else ["Secret dist.", "LWE dim.", "log q", "usvp", "bdd", "Output"]
+            headers = HEADERS_LAMBDA_ALT_VERIFY if (verify and estimator_installed) else HEADERS_LAMBDA_ALT_NO_VERIFY
         data = process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, output_dict)
     else:
-        if verify and estimator_installed:
-            headers = ["Secret dist.", "LWE dim.", "log q",  "hw",  "hybrid", "lwe hybrid"]
-        else:
-            headers = ["Secret dist.", "LWE dim.", "log q", "hw", "hybrid"]
+        headers = HEADERS_LAMBDA_HYBRID_VERIFY if verify and estimator_installed else HEADERS_LAMBDA_HYBRID_NO_VERIFY
         data = process_lambda_param_hybrid(logq, lwe_d, std_s, h, secret, verify, estimator_installed, output_dict)
 
     return headers, data
