@@ -2,9 +2,9 @@ import sys
 from aux_functions import (
     check_estimator_installed, set_functions_params, parse_options, handle_options,
     print_table, helper_headers, handle_errors,
-    update_headers, print_warnings, check_ntru
+    print_warnings, check_ntru
 )
-from param_calls import process_parameters, process_subdata
+from param_calls import process_parameters
 
 
 def main(argv):
@@ -13,11 +13,10 @@ def main(argv):
     output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw = handle_options(
         opts)
 
-    estimator_installed = check_estimator_installed()
-
     if handle_errors(std_e, logq, lwe_d, l, param):
         return
 
+    estimator_installed = check_estimator_installed()
     if not estimator_installed and verify:
         print("Lattice Estimator not installed, can't run verification")
         return
@@ -52,18 +51,16 @@ def main(argv):
         'output_dict': output_dict
     }
 
-    headers, data = process_parameters(params)
+    data = process_parameters(params, table)
 
     if param in ['n', 'logq', 'std_e', 'lambda']:
-        if not table:
-            subdata = process_subdata(
-                param, data, verify, estimator_installed, secret)
-            headers = update_headers(param, verify, estimator_installed)
-            helper_headers(headers)
-            print_table(headers, subdata)
-        else:
-            helper_headers(headers)
-            print_table(headers, data)
+        headers = list(data[0].keys()) if data else []
+        data_values = [list(d.values()) for d in data]
+        helper_headers(headers)
+        print_table(headers, data_values)
+    else:
+        print("Parameter " + param + " not valid")
+        return
 
     if ntru_flag:
         check_ntru(output_dict)

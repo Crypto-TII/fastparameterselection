@@ -15,7 +15,7 @@ from aux_functions import closest_power_of_2
 from const import (
     HEADERS_N_VERIFY, HEADERS_N_NO_VERIFY, HEADERS_LOGQ_VERIFY, HEADERS_LOGQ_NO_VERIFY, HEADERS_LOGQ_HYBRID_VERIFY, HEADERS_LOGQ_HYBRID_NO_VERIFY,
     HEADERS_STD_E_VERIFY, HEADERS_STD_E_NO_VERIFY, HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NO_VERIFY, HEADERS_LAMBDA_ALT_VERIFY, HEADERS_LAMBDA_ALT_NO_VERIFY,
-    HEADERS_LAMBDA_HYBRID_VERIFY, HEADERS_LAMBDA_HYBRID_NO_VERIFY
+    HEADERS_LAMBDA_HYBRID_VERIFY, HEADERS_LAMBDA_HYBRID_NO_VERIFY, SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_USVP, LOGQ_BDD, HW, HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, NUM_USVP, NUM_BDD, EST
 )
 
 import sys
@@ -69,7 +69,7 @@ def run_verification(lq, secret, est_usvp, est_bdd, est_usvp_pow, est_bdd_pow):
     return lwe_usvp, lwe_bdd, lwe_usvp_pow, lwe_bdd_pow
 
 
-def process_parameters(params):
+def process_parameters(params, table):
     param = params['param']
     logq = params['logq']
     l = params['l']
@@ -94,13 +94,13 @@ def process_parameters(params):
         headers, data = process_std_e(
             logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict)
     elif param == 'lambda':
-        headers, data = process_lambda(logq, lwe_d, std_s, std_e, model_values['lambda_usvp'], model_values['lambda_usvp_s'], model_values[
-                                       'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret, secret_q, hw, output_dict)
+        data = process_lambda(logq, lwe_d, std_s, std_e, model_values['lambda_usvp'], model_values['lambda_usvp_s'], model_values[
+            'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret, secret_q, hw, table, output_dict)
     elif param == "est":
         headers, data = process_est(logq, lwe_d, std_e, secret_q)
     else:
         headers, data = helper(), []
-    return headers, data
+    return data
 
 
 def process_n(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict):
@@ -132,22 +132,15 @@ def process_std_e(logq, l, lwe_d, std_s, verify, estimator_installed, secret, se
     return headers, data
 
 
-def process_lambda(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, h, output_dict):
+def process_lambda(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, h, table, output_dict):
     if secret != 'sparse':
-        if abs(std_e - 3.19) < 1e-9:
-            headers = HEADERS_LAMBDA_VERIFY if (
-                verify and estimator_installed) else HEADERS_LAMBDA_NO_VERIFY
-        else:
-            headers = HEADERS_LAMBDA_ALT_VERIFY if (
-                verify and estimator_installed) else HEADERS_LAMBDA_ALT_NO_VERIFY
         data = process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s,
-                                    lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, output_dict)
+                                    lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, table, output_dict)
     else:
-        headers = HEADERS_LAMBDA_HYBRID_VERIFY if verify and estimator_installed else HEADERS_LAMBDA_HYBRID_NO_VERIFY
         data = process_lambda_param_hybrid(
             logq, lwe_d, std_s, h, secret, verify, estimator_installed, output_dict)
 
-    return headers, data
+    return data
 
 
 def process_est(logq, lwe_d, std_e, secret_q):
@@ -159,31 +152,6 @@ def process_est(logq, lwe_d, std_e, secret_q):
         print(LWE.arora_gb(parameters))
         # print(LWE.primal_usvp(parameters))
     return [], []
-
-
-def process_subdata(param, data, verify, estimator_installed, secret):
-    subdata = []
-    for i, row in enumerate(data):
-        if param == 'std_e':
-            subdata.append([row[0], row[1], row[2], row[3], row[-1]])
-            if row[4] <= 1 or row[5] <= 1:
-                print("Warning: arora-gb might outperform usvp and bdd in this parameter regime, Check with the Lattice Estimator by running \n")
-                print("python3 src/estimate.py --param \"{}\" --n \"{}\" --logq \"{}\" --secret \"{}\" --error \"{}\"".format(
-                    "est", row[2], row[3], secret, 2**row[4]))
-                print("python3 src/estimate.py --param \"{}\" --n \"{}\" --logq \"{}\" --secret \"{}\" --error \"{}\" \n".format(
-                    "est", row[2], row[3], secret, 2**row[5]))
-        elif param == 'n':
-            subdata.append([row[0], row[1], row[2], row[-2], row[-1]])
-        elif param == 'lambda':
-            subdata.append([row[0], row[1], row[2], row[-1], row[4]])
-        else:
-            subdata.append([row[0], row[1], row[2], row[-1]])
-        if verify and estimator_installed:
-            if param == 'std_e':
-                subdata[-1].extend([row[6], row[7]])
-            elif param == 'logq':
-                subdata[-1].extend([row[5], row[6]])
-    return subdata
 
 
 def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict):
@@ -256,11 +224,16 @@ def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, ver
             lwe_bdd_numerical = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters_bdd_num, red_cost_model=RC.BDGL16)["rop"]))
 
-            data_point = [secret, l, lq, est_usvp, lwe_usvp, est_usvp_s, lwe_usvp_s, est_usvp_numerical, lwe_usvp_numerical, est_bdd,
-                          lwe_bdd, est_bdd_s, lwe_bdd_s, est_bdd_numerical, lwe_bdd_numerical, optimal_value, closest_power_of_2(optimal_value)]
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp, USVP_S: est_usvp_s, LWE_USVP_S: lwe_usvp_s,
+                USVP_NUM: est_usvp_numerical, LWE_NUM: lwe_usvp_numerical, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, LWE_BDD_S: lwe_bdd_s,
+                BDD_NUM: est_bdd_numerical, LWE_NUM: lwe_bdd_numerical, OUTPUT: optimal_value, POW: closest_power_of_2(optimal_value)
+            }
         else:
-            data_point = [secret, l, lq, est_usvp, est_usvp_s, est_usvp_numerical, est_bdd,
-                          est_bdd_s, est_bdd_numerical, optimal_value, closest_power_of_2(optimal_value)]
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, USVP_S: est_usvp_s, USVP_NUM: est_usvp_numerical,
+                BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_bdd_numerical, OUTPUT: optimal_value, POW: closest_power_of_2(optimal_value)
+            }
         data.append(data_point)
 
     return data
@@ -270,14 +243,10 @@ def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secr
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
-    :param file_path: Path to the input file.
-    :param logq: List of log q values.
     :param l: Security parameter.
     :param lwe_d: LWE dimension.
     :param std_s: Standard deviation of the secret.
     :param std_e: Standard deviation of the error.
-    :param n_usvp_s: Parameter for the usvp_s model.
-    :param n_bdd_s: Parameter for the bdd_s model.
     :param verify: Boolean flag to indicate if verification is needed.
     :param estimator_installed: Boolean flag to indicate if the estimator is installed.
     :param secret: Secret distribution.
@@ -304,13 +273,18 @@ def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secr
             lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
         lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
             lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-        data_point = [secret, l, lwe_d, est_usvp_numerical,
-                      est_bdd_numerical, lwe_usvp, lwe_bdd, optimal_value]
+        data_point = {
+            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: est_usvp_numerical,
+            LOGQ_BDD: est_bdd_numerical, LWE_USVP: lwe_usvp, LWE_BDD: lwe_bdd, OUTPUT: optimal_value
+        }
     else:
-        data_point = [secret, l, lwe_d, est_usvp_numerical,
-                      est_bdd_numerical, optimal_value]
+        data_point = {
+            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: est_usvp_numerical,
+            LOGQ_BDD: est_bdd_numerical, OUTPUT: optimal_value
+        }
     data.append(data_point)
 
+    print(data)  # Print the result
     return data
 
 
@@ -318,18 +292,15 @@ def process_logq_param_hybrid(l, lwe_d, std_s, std_e, verify, estimator_installe
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
-    :param file_path: Path to the input file.
-    :param logq: List of log q values.
     :param l: Security parameter.
     :param lwe_d: LWE dimension.
     :param std_s: Standard deviation of the secret.
     :param std_e: Standard deviation of the error.
-    :param n_usvp_s: Parameter for the usvp_s model.
-    :param n_bdd_s: Parameter for the bdd_s model.
     :param verify: Boolean flag to indicate if verification is needed.
     :param estimator_installed: Boolean flag to indicate if the estimator is installed.
     :param secret: Secret distribution.
     :param secret_q: Secret modulus.
+    :param h: Hamming weight.
     :param output_dict: Dictionary to store the output values.
 
     :return: List of data points with estimated values for 'logq'.
@@ -346,9 +317,13 @@ def process_logq_param_hybrid(l, lwe_d, std_s, std_e, verify, estimator_installe
         )
         primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
             FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
-        data_point = [secret, lwe_d, l, h, est_hybrid, primal_hybrid_cost]
+        data_point = {
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
+        }
     else:
-        data_point = [secret, lwe_d, l, h, est_hybrid]
+        data_point = {
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, HYBRID: est_hybrid
+        }
 
     optimal_value = est_hybrid
     output_dict['logq'] = optimal_value
@@ -362,14 +337,10 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
     """
     Process the parameter 'std_e' and estimate its value using various models and numerical solvers.
 
-    :param file_path: Path to the input file.
     :param logq: List of log q values.
     :param l: Security parameter.
     :param lwe_d: LWE dimension.
     :param std_s: Standard deviation of the secret.
-    :param std_e: Standard deviation of the error.
-    :param n_usvp_s: Parameter for the usvp_s model.
-    :param n_bdd_s: Parameter for the bdd_s model.
     :param verify: Boolean flag to indicate if verification is needed.
     :param estimator_installed: Boolean flag to indicate if the estimator is installed.
     :param secret: Secret distribution.
@@ -395,37 +366,22 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
                 lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
             lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-            data_point = [secret, l, lwe_d, lq, est_usvp_numerical,
-                          est_bdd_numerical, lwe_usvp, lwe_bdd, optimal_value]
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, STD_E_USVP: est_usvp_numerical,
+                STD_E_BDD: est_bdd_numerical, LWE_USVP: lwe_usvp, LWE_BDD: lwe_bdd, OUTPUT: optimal_value
+            }
         else:
-            data_point = [secret, l, lwe_d, lq,
-                          est_usvp_numerical, est_bdd_numerical, optimal_value]
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
+                STD_E_USVP: est_usvp_numerical, STD_E_BDD: est_bdd_numerical, OUTPUT: optimal_value
+            }
         data.append(data_point)
 
+    print(data)  # Print the result
     return data
 
 
-def process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, output_dict):
-    """
-    Process the parameter 'lambda' and estimate its value using various models and numerical solvers.
-
-    :param file_path: Path to the input file.
-    :param logq: List of log q values.
-    :param lwe_d: LWE dimension.
-    :param std_s: Standard deviation of the secret.
-    :param std_e: Standard deviation of the error.
-    :param lambda_usvp: Parameter for the usvp model.
-    :param lambda_usvp_s: Parameter for the usvp_s model.
-    :param lambda_bdd: Parameter for the bdd model.
-    :param lambda_bdd_s: Parameter for the bdd_s model.
-    :param verify: Boolean flag to indicate if verification is needed.
-    :param estimator_installed: Boolean flag to indicate if the estimator is installed.
-    :param secret: Secret distribution.
-    :param secret_q: Secret modulus.
-    :param output_dict: Dictionary to store the output values.
-
-    :return: List of data points with estimated values for 'lambda'.
-    """
+def process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, table, output_dict):
     data = []
     if len(logq) > 1:
         output_dict['lambda'] = []
@@ -436,12 +392,54 @@ def process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, 
             est_usvp_s, est_bdd_s = estimate_usvp_s_bdd_s(
                 lwe_d, lq, lambda_usvp_s, lambda_bdd_s)
             optimal_value = max(est_usvp, est_usvp_s, est_bdd, est_bdd_s)
-            data_point = create_data_point_with_verification(
-                verify, estimator_installed, lq, secret, lwe_d, est_usvp, est_usvp_s, est_bdd, est_bdd_s, optimal_value)
+            if verify and estimator_installed:
+                lwe_parameters_bdd = LWE.Parameters(
+                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                lwe_parameters_usvp = LWE.Parameters(
+                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
+                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+                if table:
+                    data_point = {
+                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp,
+                        USVP_S: est_usvp_s, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, OUTPUT: optimal_value
+                    }
+                else:
+                    data_point = {
+                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: optimal_value, LWE_USVP: lwe_usvp
+                    }
+            else:
+                if table:
+                    data_point = {
+                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp,
+                        USVP_S: est_usvp_s, BDD: est_bdd, BDD_S: est_bdd_s, OUTPUT: optimal_value
+                    }
+                else:
+                    data_point = {
+                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: optimal_value
+                    }
         else:
             optimal_value = max(est_usvp, est_bdd)
-            data_point = create_data_point_without_verification(
-                verify, estimator_installed, lq, secret, lwe_d, est_usvp, est_bdd, optimal_value)
+            if verify and estimator_installed:
+                lwe_parameters_bdd = LWE.Parameters(
+                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                lwe_parameters_usvp = LWE.Parameters(
+                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
+                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+                data_point = {
+                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, LWE_USVP: est_usvp, LWE_USVP_S: lwe_usvp,
+                    LWE_BDD: est_bdd, LWE_BDD_S: lwe_bdd, OUTPUT: optimal_value
+                }
+            else:
+                data_point = {
+                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, LWE_USVP: est_usvp,
+                    LWE_BDD: est_bdd, OUTPUT: optimal_value
+                }
 
         if len(logq) > 1:
             output_dict['lambda'].append(optimal_value)
@@ -449,7 +447,6 @@ def process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, 
             output_dict['lambda'] = optimal_value
 
         data.append(data_point)
-
     return data
 
 
@@ -457,19 +454,13 @@ def process_lambda_param_hybrid(logq, lwe_d, std_s, h, secret, verify, estimator
     """
     Process the parameter 'lambda' and estimate its value using various models and numerical solvers.
 
-    :param file_path: Path to the input file.
     :param logq: List of log q values.
     :param lwe_d: LWE dimension.
     :param std_s: Standard deviation of the secret.
-    :param std_e: Standard deviation of the error.
-    :param lambda_usvp: Parameter for the usvp model.
-    :param lambda_usvp_s: Parameter for the usvp_s model.
-    :param lambda_bdd: Parameter for the bdd model.
-    :param lambda_bdd_s: Parameter for the bdd_s model.
+    :param h: Hamming weight.
+    :param secret: Secret distribution.
     :param verify: Boolean flag to indicate if verification is needed.
     :param estimator_installed: Boolean flag to indicate if the estimator is installed.
-    :param secret: Secret distribution.
-    :param secret_q: Secret modulus.
     :param output_dict: Dictionary to store the output values.
 
     :return: List of data points with estimated values for 'lambda'.
@@ -478,9 +469,7 @@ def process_lambda_param_hybrid(logq, lwe_d, std_s, h, secret, verify, estimator
     if len(logq) > 1:
         output_dict['lambda'] = []
     for lq in logq:
-        # print("lambda inputs: ", "lwe d ", lwe_d, "log q ", lq, "std_e: ", 3.19, "hw ", h)
         est_hybrid = math.floor(numerical_lambda_hybrid_v2(lwe_d, lq, 3.19, h))
-        # print("est_hybrid: ", est_hybrid)
 
         if verify and estimator_installed:
             FHEParam = LWE.Parameters(
@@ -491,9 +480,13 @@ def process_lambda_param_hybrid(logq, lwe_d, std_s, h, secret, verify, estimator
             )
             primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
                 FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
-            data_point = [secret, lwe_d, lq, h, est_hybrid, primal_hybrid_cost]
+            data_point = {
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
+            }
         else:
-            data_point = [secret, lwe_d, lq, h, est_hybrid]
+            data_point = {
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid
+            }
 
         if len(logq) > 1:
             output_dict['lambda'].append(est_hybrid)
@@ -521,21 +514,3 @@ def estimate_usvp_s_bdd_s(lwe_d, lq, lambda_usvp_s, lambda_bdd_s):
     est_usvp_s = int(round(model_lambda_usvp_s(lwe_d, lq, lambda_usvp_s)))
     est_bdd_s = int(round(model_lambda_bdd_s(lwe_d, lq, lambda_bdd_s)))
     return est_usvp_s, est_bdd_s
-
-
-def create_data_point_with_verification(verify, estimator_installed, lq, secret, lwe_d, est_usvp, est_usvp_s, est_bdd, est_bdd_s, optimal_value):
-    if verify and estimator_installed:
-        lwe_usvp, lwe_bdd, lwe_usvp_s, lwe_bdd_s = run_verification(
-            lq, secret, lwe_d, lwe_d, lwe_d, lwe_d)
-        return [secret, lwe_d, lq, est_usvp, lwe_usvp, est_usvp_s, est_bdd, lwe_bdd, est_bdd_s, optimal_value]
-    else:
-        return [secret, lwe_d, lq, est_usvp, est_usvp_s, est_bdd, est_bdd_s, optimal_value]
-
-
-def create_data_point_without_verification(verify, estimator_installed, lq, secret, lwe_d, est_usvp, est_bdd, optimal_value):
-    if verify and estimator_installed:
-        lwe_usvp, lwe_bdd, lwe_usvp_s, lwe_bdd_s = run_verification(
-            lq, secret, lwe_d, lwe_d, lwe_d, lwe_d)
-        return [secret, lwe_d, lq, est_usvp, lwe_usvp, est_bdd, lwe_bdd, optimal_value]
-    else:
-        return [secret, lwe_d, lq, est_usvp, est_bdd, optimal_value]

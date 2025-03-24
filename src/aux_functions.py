@@ -316,7 +316,9 @@ def print_table(headers, rows):
 
     # Print the rows
     for row in rows:
-        print(row_format.format(*row))
+        formatted_row = [f"{value:.2f}" if isinstance(
+            value, float) else str(value) for value in row]
+        print(row_format.format(*formatted_row))
 
 
 def parse_logq(logq_str):
@@ -349,7 +351,7 @@ def helper():
     print('python3 src/estimate.py --param "n" --file "./examples/example_n_binary.csv"')
     # print('python3 src/estimate.py --param "logq" --file "./examples/example_logq_binary.csv"')
     # print('python3 src/estimate.py --param "error" --file "./examples/example_error_binary.csv"')
-    print('python3 src/estimate.py --param "lambda" --n "1024" --logq "20-30;35;40-60" --secret "binary" --error "3.19"')
+    print('python3 src/estimate.py --param "lambda" --n "1024" --logq "20-30;35;40-60"')
     print('python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "binary" --error "3.19"')
     print('python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19"')
     print('python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary"')
@@ -402,7 +404,8 @@ def create_explanation_dict(headers):
         "pow": "Closest power of 2 to the LWE dimension recommended in Output",
         "hw": "Hamming weight of the secret",
         "hybrid": "Output of the numerical approximation of the hybrid attack",
-        "est hybrid": "Output of the Lattice Estimator for the hybrid attack"
+        "est hybrid": "Output of the Lattice Estimator for the hybrid attack",
+        "est": "Output of the Lattice Estimator"
     }
 
     # Create a dictionary using the headers and explanations
