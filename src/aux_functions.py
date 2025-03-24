@@ -4,9 +4,7 @@ import sys
 import getopt
 from formulas import check_overstreched
 from const import (
-    HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NOTABLE, HEADERS_STD_E_VERIFY,
-    HEADERS_STD_E_NOTABLE, HEADERS_N_VERIFY, HEADERS_N_NOTABLE, HEADERS_LOGQ_VERIFY,
-    HEADERS_LOGQ_NOTABLE, LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
+    LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
     LAMBDA_USVP_S_TER, LAMBDA_BDD_BIN, LAMBDA_BDD_TER, LAMBDA_BDD_S_BIN,
     LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
     N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
@@ -347,26 +345,35 @@ def helper():
     """
     Print the helper message and exit.
     """
-    # print('python3 src/estimate.py --param "lambda" --file "./examples/example_lambda_binary.csv"')
-    print('python3 src/estimate.py --param "n" --file "./examples/example_n_binary.csv"')
-    # print('python3 src/estimate.py --param "logq" --file "./examples/example_logq_binary.csv"')
-    # print('python3 src/estimate.py --param "error" --file "./examples/example_error_binary.csv"')
-    print('python3 src/estimate.py --param "lambda" --n "1024" --logq "20-30;35;40-60"')
-    print('python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "binary" --error "3.19"')
-    print('python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19"')
-    print('python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary"')
-    print('You can add  --verify 1 to any of the above commands to check the results against the Lattice Estimator')
-    sys.exit()
-
-
-def helper_fit():
-    """
-    Print the helper message for fitting and exit.
-    """
-    print('python3 fit_formula.py --param "lambda" --attack "usvp" --dist "binary" --simpl 0')
-    print('python3 fit_formula.py --param "lambda" --attack "bdd" --dist "ternary" --simpl 1')
-    print('python3 fit_formula.py --param "n" --attack "usvp" --dist "binary" --simpl 0')
-    print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
+    print("Usage: python3 src/estimate.py [OPTIONS]")
+    print("\nOptions:")
+    print("  --param <param>         Parameter to estimate (lambda, n, logq, std_e, est)")
+    print("  --n <n>                 LWE dimension (e.g., 1024)")
+    print("  --lambda <lambda>       Security parameter (e.g., 80)")
+    print("  --logq <logq>           Log q values (e.g., 20;24-28;30;33;37;42)")
+    print(
+        "  --secret <secret>       Secret distribution (binary, ternary, sparse) [optional, default: binary]")
+    print(
+        "  --error <error>         Standard deviation of the error (e.g., 3.19) [optional, default: 3.19]")
+    print("  --hw <hw>               Hamming weight (for sparse secrets) (e.g., 64)")
+    print("  --verify                Verify results against the Lattice Estimator")
+    print("  --table                 Output results from all the formulas")
+    print("  --ntru                  Check NTRU parameters")
+    print("  -h, --help              Show this help message and exit")
+    print("\nExamples:")
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "3.19"')
+    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "binary" --error "3.19"')
+    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19"')
+    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary"')
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse"')
+    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --hw "64" --secret "sparse"')
+    print('\nWith verification and table output:')
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --secret "binary" --error "3.19" -v --table')
+    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20" --secret "binary" --error "3.19" -v --table')
+    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19" -v --table')
+    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary" -v --table')
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse" -v --table')
+    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --hw "64" --secret "sparse" -v --table')
     sys.exit()
 
 

@@ -9,13 +9,10 @@ from formulas import (
 )
 from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd
 from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
-from aux_functions import closest_power_of_2
-
+from aux_functions import closest_power_of_2, helper
 
 from const import (
-    HEADERS_N_VERIFY, HEADERS_N_NO_VERIFY, HEADERS_LOGQ_VERIFY, HEADERS_LOGQ_NO_VERIFY, HEADERS_LOGQ_HYBRID_VERIFY, HEADERS_LOGQ_HYBRID_NO_VERIFY,
-    HEADERS_STD_E_VERIFY, HEADERS_STD_E_NO_VERIFY, HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NO_VERIFY, HEADERS_LAMBDA_ALT_VERIFY, HEADERS_LAMBDA_ALT_NO_VERIFY,
-    HEADERS_LAMBDA_HYBRID_VERIFY, HEADERS_LAMBDA_HYBRID_NO_VERIFY, SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_USVP, LOGQ_BDD, HW, HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, NUM_USVP, NUM_BDD, EST
+    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, HW, HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, EST
 )
 
 import sys
@@ -85,51 +82,44 @@ def process_parameters(params, table):
     output_dict = params['output_dict']
 
     if param == 'n':
-        headers, data = process_n(logq, l, std_s, std_e, model_values['n_usvp'], model_values['n_usvp_s'],
-                                  model_values['n_bdd'], model_values['n_bdd_s'], verify, estimator_installed, secret, secret_q, output_dict)
+        data = process_n(logq, l, std_s, std_e, model_values['n_usvp'], model_values['n_usvp_s'],
+                         model_values['n_bdd'], model_values['n_bdd_s'], verify, estimator_installed, secret, secret_q, table, output_dict)
     elif param == 'logq':
-        headers, data = process_logq(
+        data = process_logq(
             l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict)
     elif param == 'std_e':
-        headers, data = process_std_e(
-            logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict)
+        data = process_std_e(
+            logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, table, output_dict)
     elif param == 'lambda':
         data = process_lambda(logq, lwe_d, std_s, std_e, model_values['lambda_usvp'], model_values['lambda_usvp_s'], model_values[
             'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret, secret_q, hw, table, output_dict)
     elif param == "est":
-        headers, data = process_est(logq, lwe_d, std_e, secret_q)
+        data = process_est(logq, lwe_d, std_e, secret_q)
     else:
-        headers, data = helper(), []
+        data = helper(), []
     return data
 
 
-def process_n(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict):
-    headers = HEADERS_N_VERIFY if (
-        verify and estimator_installed) else HEADERS_N_NO_VERIFY
+def process_n(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, table, output_dict):
     data = process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd,
-                           n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict)
-    return headers, data
+                           n_bdd_s, verify, estimator_installed, secret, secret_q, table, output_dict)
+    return data
 
 
 def process_logq(l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict):
     if secret != 'sparse':
-        headers = HEADERS_LOGQ_VERIFY if (
-            verify and estimator_installed) else HEADERS_LOGQ_NO_VERIFY
         data = process_logq_param(
             l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, output_dict)
     else:
-        headers = HEADERS_LOGQ_HYBRID_VERIFY if verify and estimator_installed else HEADERS_LOGQ_HYBRID_NO_VERIFY
         data = process_logq_param_hybrid(
             l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict)
-    return headers, data
+    return data
 
 
-def process_std_e(logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict):
-    headers = HEADERS_STD_E_VERIFY if (
-        verify and estimator_installed) else HEADERS_STD_E_NO_VERIFY
+def process_std_e(logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, table, output_dict):
     data = process_std_e_param(
-        logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict)
-    return headers, data
+        logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, table, output_dict)
+    return data
 
 
 def process_lambda(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, h, table, output_dict):
@@ -154,7 +144,7 @@ def process_est(logq, lwe_d, std_e, secret_q):
     return [], []
 
 
-def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, output_dict):
+def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, secret, secret_q, table, output_dict):
     """
     Process the parameter 'n' and estimate its value using various models and numerical solvers.
 
@@ -190,12 +180,13 @@ def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, ver
             math.ceil(numerical_n_bdd(l, lq, std_s, std_e)))
 
         # Store the minimum value of n provided from all the formulas
-        optimal_value = max(est_usvp, est_usvp_s, est_bdd,
-                            est_bdd_s, est_usvp_numerical, est_bdd_numerical)
+        return_value = max(est_usvp, est_usvp_s, est_bdd,
+                           est_bdd_s, est_usvp_numerical, est_bdd_numerical)
+
         if len(logq) > 1:
-            output_dict['n'].append(optimal_value)
+            output_dict['n'].append(return_value)
         else:
-            output_dict['n'] = optimal_value
+            output_dict['n'] = return_value
 
         if verify and estimator_installed:
             lwe_parameters_usvp = LWE.Parameters(
@@ -224,16 +215,32 @@ def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, ver
             lwe_bdd_numerical = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters_bdd_num, red_cost_model=RC.BDGL16)["rop"]))
 
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp, USVP_S: est_usvp_s, LWE_USVP_S: lwe_usvp_s,
-                USVP_NUM: est_usvp_numerical, LWE_NUM: lwe_usvp_numerical, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, LWE_BDD_S: lwe_bdd_s,
-                BDD_NUM: est_bdd_numerical, LWE_NUM: lwe_bdd_numerical, OUTPUT: optimal_value, POW: closest_power_of_2(optimal_value)
+            estimates = {
+                est_usvp: lwe_usvp, est_usvp_s: lwe_usvp_s,
+                est_usvp_numerical: lwe_usvp_numerical, est_bdd: lwe_bdd,
+                est_bdd_s: lwe_bdd_s, est_bdd_numerical: lwe_bdd_numerical
             }
+
+            if table:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp, USVP_S: est_usvp_s, LWE_USVP_S: lwe_usvp_s,
+                    USVP_NUM: est_usvp_numerical, LWE_NUM: lwe_usvp_numerical, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, LWE_BDD_S: lwe_bdd_s,
+                    BDD_NUM: est_bdd_numerical, LWE_NUM: lwe_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
+                }
+            else:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, OUTPUT: return_value, EST: estimates[return_value], POW: closest_power_of_2(return_value)
+                }
         else:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, USVP_S: est_usvp_s, USVP_NUM: est_usvp_numerical,
-                BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_bdd_numerical, OUTPUT: optimal_value, POW: closest_power_of_2(optimal_value)
-            }
+            if table:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, USVP_S: est_usvp_s, USVP_NUM: est_usvp_numerical,
+                    BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
+                }
+            else:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, OUTPUT: return_value, POW: closest_power_of_2(return_value)
+                }
         data.append(data_point)
 
     return data
@@ -261,8 +268,8 @@ def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secr
     est_bdd_numerical = int(math.floor(
         numerical_logq_bdd(l, lwe_d, std_s, std_e)))
 
-    optimal_value = max(est_usvp_numerical, est_bdd_numerical)
-    output_dict['logq'] = optimal_value
+    return_value = max(est_usvp_numerical, est_bdd_numerical)
+    output_dict['logq'] = return_value
 
     if verify and estimator_installed:
         lwe_parameters_bdd = LWE.Parameters(
@@ -275,12 +282,12 @@ def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secr
             lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
         data_point = {
             SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: est_usvp_numerical,
-            LOGQ_BDD: est_bdd_numerical, LWE_USVP: lwe_usvp, LWE_BDD: lwe_bdd, OUTPUT: optimal_value
+            LOGQ_BDD: est_bdd_numerical, LWE_USVP: lwe_usvp, LWE_BDD: lwe_bdd, OUTPUT: return_value
         }
     else:
         data_point = {
             SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: est_usvp_numerical,
-            LOGQ_BDD: est_bdd_numerical, OUTPUT: optimal_value
+            LOGQ_BDD: est_bdd_numerical, OUTPUT: return_value
         }
     data.append(data_point)
 
@@ -325,15 +332,15 @@ def process_logq_param_hybrid(l, lwe_d, std_s, std_e, verify, estimator_installe
             SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, HYBRID: est_hybrid
         }
 
-    optimal_value = est_hybrid
-    output_dict['logq'] = optimal_value
+    return_value = est_hybrid
+    output_dict['logq'] = return_value
 
     data.append(data_point)
 
     return data
 
 
-def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, output_dict):
+def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, table, output_dict):
     """
     Process the parameter 'std_e' and estimate its value using various models and numerical solvers.
 
@@ -354,8 +361,8 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
         est_usvp_numerical = log2(numerical_std_e_usvp(l, lwe_d, lq, std_s))
         est_bdd_numerical = log2(numerical_std_e_bdd(l, lwe_d, lq, std_s))
 
-        optimal_value = max(est_usvp_numerical, est_bdd_numerical)
-        output_dict['std_e'] = optimal_value
+        return_value = max(est_usvp_numerical, est_bdd_numerical)
+        output_dict['std_e'] = return_value
 
         if verify and estimator_installed:
             lwe_parameters_bdd = LWE.Parameters(
@@ -366,18 +373,32 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
                 lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
             lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, STD_E_USVP: est_usvp_numerical,
-                STD_E_BDD: est_bdd_numerical, LWE_USVP: lwe_usvp, LWE_BDD: lwe_bdd, OUTPUT: optimal_value
+
+            estimates = {
+                est_usvp_numerical: lwe_usvp, est_bdd_numerical: lwe_bdd
             }
+
+            if table:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
+                    STD_E_USVP: est_usvp_numerical, LWE_BDD: lwe_bdd, LWE_USVP: lwe_usvp, STD_E_BDD: est_bdd_numerical, OUTPUT: return_value
+                }
+            else:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: estimates[return_value]
+                }
         else:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
-                STD_E_USVP: est_usvp_numerical, STD_E_BDD: est_bdd_numerical, OUTPUT: optimal_value
-            }
+            if table:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
+                    STD_E_USVP: est_usvp_numerical, STD_E_BDD: est_bdd_numerical, OUTPUT: return_value
+                }
+            else:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value
+                }
         data.append(data_point)
 
-    print(data)  # Print the result
     return data
 
 
@@ -385,69 +406,73 @@ def process_lambda_param(logq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, 
     data = []
     if len(logq) > 1:
         output_dict['lambda'] = []
+
     for lq in logq:
-        est_usvp, est_bdd = estimate_usvp_bdd(
-            lwe_d, lq, std_s, std_e, lambda_usvp, lambda_bdd, secret_q)
-        if abs(std_e - 3.19) < 1e-9:
-            est_usvp_s, est_bdd_s = estimate_usvp_s_bdd_s(
-                lwe_d, lq, lambda_usvp_s, lambda_bdd_s)
-            optimal_value = max(est_usvp, est_usvp_s, est_bdd, est_bdd_s)
-            if verify and estimator_installed:
-                lwe_parameters_bdd = LWE.Parameters(
-                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
-                lwe_parameters_usvp = LWE.Parameters(
-                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-                lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-                if table:
-                    data_point = {
-                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp,
-                        USVP_S: est_usvp_s, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, OUTPUT: optimal_value
-                    }
-                else:
-                    data_point = {
-                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: optimal_value, LWE_USVP: lwe_usvp
-                    }
-            else:
-                if table:
-                    data_point = {
-                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp,
-                        USVP_S: est_usvp_s, BDD: est_bdd, BDD_S: est_bdd_s, OUTPUT: optimal_value
-                    }
-                else:
-                    data_point = {
-                        SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: optimal_value
-                    }
-        else:
-            optimal_value = max(est_usvp, est_bdd)
-            if verify and estimator_installed:
-                lwe_parameters_bdd = LWE.Parameters(
-                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
-                lwe_parameters_usvp = LWE.Parameters(
-                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-                lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-                data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, LWE_USVP: est_usvp, LWE_USVP_S: lwe_usvp,
-                    LWE_BDD: est_bdd, LWE_BDD_S: lwe_bdd, OUTPUT: optimal_value
-                }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, LWE_USVP: est_usvp,
-                    LWE_BDD: est_bdd, OUTPUT: optimal_value
-                }
-
+        data_point = process_lambda_for_lq(lq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s,
+                                           lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, table)
+        return_value = data_point[OUTPUT]
         if len(logq) > 1:
-            output_dict['lambda'].append(optimal_value)
+            output_dict['lambda'].append(return_value)
         else:
-            output_dict['lambda'] = optimal_value
-
+            output_dict['lambda'] = return_value
         data.append(data_point)
+
     return data
+
+
+def process_lambda_for_lq(lq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret, secret_q, table):
+    est_usvp, est_bdd = estimate_usvp_bdd(
+        lwe_d, lq, std_s, std_e, lambda_usvp, lambda_bdd, secret_q)
+    if abs(std_e - 3.19) < 1e-9:
+        est_usvp_s, est_bdd_s = estimate_usvp_s_bdd_s(
+            lwe_d, lq, lambda_usvp_s, lambda_bdd_s)
+        return_value = max(est_usvp, est_usvp_s, est_bdd, est_bdd_s)
+        data_point = create_data_point(lq, lwe_d, std_e, secret, secret_q, est_usvp,
+                                       est_usvp_s, est_bdd, est_bdd_s, return_value, verify, estimator_installed, table)
+    else:
+        return_value = max(est_usvp, est_bdd)
+        data_point = create_data_point(lq, lwe_d, std_e, secret, secret_q, est_usvp,
+                                       None, est_bdd, None, return_value, verify, estimator_installed, table)
+
+    return data_point
+
+
+def create_data_point(lq, lwe_d, std_e, secret, secret_q, est_usvp, est_usvp_s, est_bdd, est_bdd_s, return_value, verify, estimator_installed, table):
+    if verify and estimator_installed:
+        lwe_parameters_bdd = LWE.Parameters(
+            lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+        lwe_parameters_usvp = LWE.Parameters(
+            lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+        lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+            lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+        lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
+            lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+
+        estimates = {
+            est_usvp: lwe_usvp, est_bdd: lwe_bdd, est_usvp_s: lwe_usvp, est_bdd_s: lwe_bdd
+        }
+
+        if table:
+            data_point = {
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp,
+                USVP_S: est_usvp_s, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, OUTPUT: return_value
+            }
+        else:
+            data_point = {
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: estimates[return_value]
+            }
+    else:
+        if table:
+            data_point = {
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp,
+                USVP_S: est_usvp_s, BDD: est_bdd, BDD_S: est_bdd_s, OUTPUT: return_value
+            }
+        else:
+            data_point = {
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value
+            }
+
+    return data_point
 
 
 def process_lambda_param_hybrid(logq, lwe_d, std_s, h, secret, verify, estimator_installed, output_dict):
