@@ -1,24 +1,29 @@
 import sys
 from aux_functions import (
-    set_lambda_functions, parse_options, handle_options,
-    print_table, helper_headers, initialize_parameters, handle_errors,
-    get_estimator_status, update_headers, print_warnings, check_ntru
+    check_estimator_installed, set_functions_params, parse_options, handle_options,
+    print_table, helper_headers, handle_errors,
+    update_headers, print_warnings, check_ntru
 )
 from param_calls import process_parameters, process_subdata
 
-def main(argv):
-    
-    param, lwe_d, verify, ntru_flag = initialize_parameters()
-    opts = parse_options(argv)
-    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw = handle_options(opts)
-    estimator_installed = get_estimator_status()
-    if handle_errors(std_e, logq, lwe_d, l, param): return
 
-    if not estimator_installed and verify: 
+def main(argv):
+
+    opts = parse_options(argv)
+    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw = handle_options(
+        opts)
+
+    estimator_installed = check_estimator_installed()
+
+    if handle_errors(std_e, logq, lwe_d, l, param):
+        return
+
+    if not estimator_installed and verify:
         print("Lattice Estimator not installed, can't run verification")
         return
 
-    lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_lambda_functions(secret)
+    lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_functions_params(
+        secret)
 
     model_values = {
         'lambda_usvp': lambda_usvp,
@@ -51,7 +56,8 @@ def main(argv):
 
     if param in ['n', 'logq', 'std_e', 'lambda']:
         if not table:
-            subdata = process_subdata(param, data, verify, estimator_installed, secret)
+            subdata = process_subdata(
+                param, data, verify, estimator_installed, secret)
             headers = update_headers(param, verify, estimator_installed)
             helper_headers(headers)
             print_table(headers, subdata)
@@ -66,6 +72,7 @@ def main(argv):
 
     if param != "est":
         return output_dict[param]
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

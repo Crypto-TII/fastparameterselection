@@ -41,6 +41,7 @@ small_slope_t8 = {2: 0.04473, 3: 0.04472, 4: 0.04402, 5: 0.04407, 6: 0.04334, 7:
                   52: 0.02454, 53: 0.02441, 54: 0.02427, 55: 0.02407, 56: 0.02393, 57: 0.02371, 58: 0.02366,
                   59: 0.02341, 60: 0.02332}
 
+
 def ball_log_vol(n):
     """
     Calculate the logarithm of the volume of an n-dimensional ball.
@@ -49,6 +50,7 @@ def ball_log_vol(n):
     :return: Logarithm of the volume of the ball.
     """
     return ((n/2.) * math.log(PI) - math.lgamma(n/2. + 1))
+
 
 def log_gh(d, logvol=0):
     """
@@ -63,6 +65,7 @@ def log_gh(d, logvol=0):
 
     return (1./d * (logvol - ball_log_vol(d)))
 
+
 def delta(k):
     """
     Calculate the root-Hermite factor for a given block size.
@@ -74,6 +77,7 @@ def delta(k):
     delta = math.exp(log_gh(k)/(k-1))
     return (delta)
 
+
 def check_overstreched(params):
     """
     Check if the parameters are in the overstretched regime.
@@ -81,14 +85,14 @@ def check_overstreched(params):
     :param params: Dictionary of parameters.
     :return: Beta value if overstretched, -1 otherwise.
     """
-    n    = params['n']
-    lgq  = params['lgq']
+    n = params['n']
+    lgq = params['lgq']
     stds = params['std_s']
     stde = params['std_e']
 
     lnq = multiply(lgq, ln2)
 
-    dense_det_log = math.log( math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
+    dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
 
     for beta in range(50, 1000):
         alpha_beta = delta(beta)**2
@@ -97,10 +101,11 @@ def check_overstreched(params):
 
         rhs_log = 0.5*(m-1)*lnq-0.5*(m-1)**2*alpha_beta_log
 
-        if dense_det_log<rhs_log:
+        if dense_det_log < rhs_log:
             return beta
 
     return -1
+
 
 def predicted_beta_bdd(n, q, sigma, zeta):
     """
@@ -114,23 +119,26 @@ def predicted_beta_bdd(n, q, sigma, zeta):
     """
     lnq = math.log(q)
 
-    beta_approx1 = 2*n/lnq*(math.log(n/(lnq))) #very rough approximation
-    #we are assuming that n > lnq
-    #print("beta approx", beta_approx1, "log(n/lnq)", math.log(n/(lnq)), "n/lnq", n/lnq, "n", n, "lnq", lnq)
+    beta_approx1 = 2*n/lnq*(math.log(n/(lnq)))  # very rough approximation
+    # we are assuming that n > lnq
+    # print("beta approx", beta_approx1, "log(n/lnq)", math.log(n/(lnq)), "n/lnq", n/lnq, "n", n, "lnq", lnq)
 
     A = 2*n*lnq
     B = 2*(lnq - math.log(sigma*math.sqrt(const)))+math.log(beta_approx1/const)
     C = n/(2*lnq)
     D = lnq - math.log(zeta)
 
-    Z  =  ((2*D*math.sqrt(C)+math.sqrt(A))/B)**2   #approximates beta/(ln(beta/2*const))
-    ln_beta_const = -lambertw(-const/Z,-1) #approximates ln(beta/const)
+    # approximates beta/(ln(beta/2*const))
+    Z = ((2*D*math.sqrt(C)+math.sqrt(A))/B)**2
+    ln_beta_const = -lambertw(-const/Z, -1)  # approximates ln(beta/const)
 
-    num   = 2*n*lnq*ln_beta_const
-    denom = ln_beta_const+2*(lnq-math.log(sigma*math.sqrt(const))) - 2*math.sqrt(n/(2*lnq*Z))*(lnq-math.log(zeta))
+    num = 2*n*lnq*ln_beta_const
+    denom = ln_beta_const+2*(lnq-math.log(sigma*math.sqrt(const))) - \
+        2*math.sqrt(n/(2*lnq*Z))*(lnq-math.log(zeta))
 
     res = num/denom**2
     return res
+
 
 def predicted_beta_usvp(d, lnq, sig, chi):
     """
@@ -143,17 +151,20 @@ def predicted_beta_usvp(d, lnq, sig, chi):
     :return: Predicted beta value.
     """
     x = np.divide(d, lnq)
-    f1 = np.divide(np.multiply(d, np.log(x)), np.multiply(const, lnq - np.log(sig)))
+    f1 = np.divide(np.multiply(d, np.log(x)),
+                   np.multiply(const, lnq - np.log(sig)))
     f2 = np.multiply(x, np.log(np.divide(d, lnq - np.log(sig))))
 
     # Beta calculation
-    beta = np.divide(np.multiply(2 * d, np.multiply(lnq - np.log(chi), np.log(f1))), 
+    beta = np.divide(np.multiply(2 * d, np.multiply(lnq - np.log(chi), np.log(f1))),
                      np.power(lnq + 0.5 * np.log(f2) - np.log(const * sig), 2))
     return beta
 
 # Main functions
 
 # Eq. (15)
+
+
 def model_lambda_usvp(d, logq, std_s, std_e, params):
     """
     Model the lambda value for the USVP model.
@@ -176,10 +187,13 @@ def model_lambda_usvp(d, logq, std_s, std_e, params):
         print("Error: could not find optimal d, maybe n is too small or logq is too large")
         exit(0)
     else:
-        m2 = np.multiply(2 * d, beta * np.divide(lnq - np.log(chi), np.log(np.divide(beta, const))))
+        m2 = np.multiply(2 * d, beta * np.divide(lnq -
+                         np.log(chi), np.log(np.divide(beta, const))))
         return np.multiply(params[0], beta) + np.multiply(params[1], np.log(m2)) + params[2]
 
 # Eq. (17)
+
+
 def model_lambda_usvp_s(d, logq, params):
     """
     Model the lambda value for the simplified USVP model.
@@ -191,10 +205,12 @@ def model_lambda_usvp_s(d, logq, params):
     """
     lnq = np.multiply(logq, ln2)
 
-    return np.multiply(np.multiply(params[0], np.divide(d, lnq)), 
+    return np.multiply(np.multiply(params[0], np.divide(d, lnq)),
                        np.log(np.divide(params[1] * d, lnq))) + np.multiply(params[2], np.log(d)) + params[3]
 
 # Eq. (18)
+
+
 def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
     """
     Model the lambda value for the BDD model.
@@ -207,9 +223,9 @@ def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
     :param params: Model parameters.
     :return: Lambda value.
     """
-    sig = std_e 
+    sig = std_e
     chi = std_e/std_s
-    
+
     lnq = np.multiply(logq, ln2)
 
     beta = []
@@ -230,6 +246,8 @@ def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
     return np.multiply(params[0], beta) + params[1] * np.log(m2) + params[2]
 
 # Eq. (21)
+
+
 def model_lambda_bdd_s(d, logq, params):
     """
     Model the lambda value for the simplified BDD model.
@@ -241,10 +259,12 @@ def model_lambda_bdd_s(d, logq, params):
     """
     lnq = np.multiply(logq, ln2)
 
-    return np.multiply(np.divide(params[0] * d, lnq), 
+    return np.multiply(np.divide(params[0] * d, lnq),
                        np.log(params[1] * d / lnq)) + np.multiply(params[2], np.log(d)) + params[3]
 
 # Eq. (22)
+
+
 def model_n_usvp(l, logq, std_s, std_e, params):
     """
     Model the n value for the USVP model.
@@ -263,13 +283,15 @@ def model_n_usvp(l, logq, std_s, std_e, params):
     chi = std_e/std_s
     lnq = np.multiply(logq, ln2)
 
-    num   = (0.5*np.log(beta_approx)+lnq-np.log(const*sigma)+params[1])**2
-    denom = 2*(np.log(beta_approx/const + params[2] )*(lnq-np.log(chi)))
-    leading_order = (beta_approx*params[0] )*num / denom
+    num = (0.5*np.log(beta_approx)+lnq-np.log(const*sigma)+params[1])**2
+    denom = 2*(np.log(beta_approx/const + params[2])*(lnq-np.log(chi)))
+    leading_order = (beta_approx*params[0])*num / denom
 
-    return leading_order 
+    return leading_order
 
 # Eq. (23)
+
+
 def model_n_usvp_s(l, logq, params):
     """
     Model the n value for the simplified USVP model.
@@ -283,6 +305,8 @@ def model_n_usvp_s(l, logq, params):
     return np.multiply(np.divide(l + params[0] * np.log(lnq), params[1] * np.log(l) + params[2]) + params[3], lnq)
 
 # Eq. (24)
+
+
 def model_n_bdd(l, logq, std_s, std_e, params):
     """
     Model the n value for the BDD model.
@@ -296,7 +320,7 @@ def model_n_bdd(l, logq, std_s, std_e, params):
     """
     sigma = std_e
     zeta = std_e / std_s
-    beta_approx = (l - np.log(l))/0.292 #approximate beta from lambda
+    beta_approx = (l - np.log(l))/0.292  # approximate beta from lambda
     lnq = np.multiply(logq, ln2)
     n = l
 
@@ -310,6 +334,8 @@ def model_n_bdd(l, logq, std_s, std_e, params):
     return A*nom/denom
 
 # Eq. (25)
+
+
 def model_n_bdd_s(l, logq, std_s, std_e, params):
     """
     Model the n value for the simplified BDD model.
@@ -328,8 +354,6 @@ def model_n_bdd_s(l, logq, std_s, std_e, params):
     lnq = np.multiply(logq, ln2)
 
     term1 = params[0] * l + params[1] * np.log(l)
-    term2 = params[2] * np.divide(lnq ,np.log(l)) + params[3] * np.divide(np.log(l),lnq)
-    return np.multiply(term1,term2)
-
-
-
+    term2 = params[2] * np.divide(lnq, np.log(l)) + \
+        params[3] * np.divide(np.log(l), lnq)
+    return np.multiply(term1, term2)

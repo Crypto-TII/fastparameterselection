@@ -1,26 +1,29 @@
 import math
 import csv
-import sys, getopt
-from formula_params import lambda_usvp_bin, lambda_usvp_s_bin, lambda_bdd_bin, lambda_bdd_s_bin, n_usvp_bin, n_usvp_s_bin, n_bdd_bin, n_bdd_s_bin, lambda_usvp_ter, lambda_usvp_s_ter, lambda_bdd_ter, lambda_bdd_s_ter, n_usvp_ter, n_usvp_s_ter, n_bdd_ter, n_bdd_s_ter
+import sys
+import getopt
 from formulas import check_overstreched
-from const import (HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NOTABLE, HEADERS_STD_E_VERIFY, 
-                   HEADERS_STD_E_NOTABLE, HEADERS_N_VERIFY, HEADERS_N_NOTABLE, HEADERS_LOGQ_VERIFY, 
-                   HEADERS_LOGQ_NOTABLE)
+from const import (
+    HEADERS_LAMBDA_VERIFY, HEADERS_LAMBDA_NOTABLE, HEADERS_STD_E_VERIFY,
+    HEADERS_STD_E_NOTABLE, HEADERS_N_VERIFY, HEADERS_N_NOTABLE, HEADERS_LOGQ_VERIFY,
+    HEADERS_LOGQ_NOTABLE, LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
+    LAMBDA_USVP_S_TER, LAMBDA_BDD_BIN, LAMBDA_BDD_TER, LAMBDA_BDD_S_BIN,
+    LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
+    N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
+)
 
 sys.path.append('./latticeestimator')
-estimator_installed = 1
 
-paper = 'https://eprint.iacr.org/2024/1001'
 
-try:
-    from estimator import LWE, ND
-except ImportError:
-    print("Warning: Failed to import lattice_estimator, some options will not work")
-    estimator_installed = 0
+def check_estimator_installed():
+    try:
+        global LWE, ND
+        from estimator import LWE, ND
+        return True
+    except ImportError:
+        print("Warning: Failed to import lattice_estimator, some options will not work")
+        return False
 
-# Auxiliary functions needed in estimate.py
-def get_estimator_status():
-    return estimator_installed
 
 def update_headers(param, verify, estimator_installed):
     if param == 'lambda':
@@ -33,30 +36,36 @@ def update_headers(param, verify, estimator_installed):
         return get_logq_headers(verify, estimator_installed)
     return []
 
+
 def get_lambda_headers(verify, estimator_installed):
     if verify and estimator_installed:
         return HEADERS_LAMBDA_VERIFY
     return HEADERS_LAMBDA_NOTABLE
+
 
 def get_std_e_headers(verify, estimator_installed):
     if verify and estimator_installed:
         return HEADERS_STD_E_VERIFY
     return HEADERS_STD_E_NOTABLE
 
+
 def get_n_headers(verify, estimator_installed):
     if verify and estimator_installed:
         return HEADERS_N_VERIFY
     return HEADERS_N_NOTABLE
+
 
 def get_logq_headers(verify, estimator_installed):
     if verify and estimator_installed:
         return HEADERS_LOGQ_VERIFY
     return HEADERS_LOGQ_NOTABLE
 
+
 def check_ntru(output_dict):
     beta_ = check_overstreched(output_dict)
     if beta_ > 0 and output_dict['lambda'] > 0 and (output_dict['lambda'] - 0.292 * beta_) > 20:
         print("Warning: the ntru parameters are in the overstretched regime")
+
 
 def print_warnings(verify, estimator_installed):
     print("\n")
@@ -64,8 +73,10 @@ def print_warnings(verify, estimator_installed):
         print("Warning: Verification not possible, Lattice Estimator not installed")
     print("\n")
 
+
 def initialize_parameters():
     return None, None, 0, False
+
 
 def handle_errors(std_e, logq, lwe_d, l, param):
     errors = check_parameters(std_e, logq, lwe_d, l, param)
@@ -76,7 +87,7 @@ def handle_errors(std_e, logq, lwe_d, l, param):
     return False
 
 
-def set_lambda_functions(secret):
+def set_functions_params(secret):
     """
     Set the lambda functions based on the secret distribution.
 
@@ -84,9 +95,10 @@ def set_lambda_functions(secret):
     :return: Tuple of lambda functions.
     """
     if secret == "binary":
-        return lambda_usvp_bin, lambda_usvp_s_bin, lambda_bdd_bin, lambda_bdd_s_bin, n_usvp_bin, n_usvp_s_bin, n_bdd_bin, n_bdd_s_bin
+        return LAMBDA_USVP_BIN, LAMBDA_USVP_S_BIN, LAMBDA_BDD_BIN, LAMBDA_BDD_S_BIN, N_USVP_BIN, N_USVP_S_BIN, N_BDD_BIN, N_BDD_S_BIN
     else:
-        return lambda_usvp_ter, lambda_usvp_s_ter, lambda_bdd_ter, lambda_bdd_s_ter, n_usvp_ter, n_usvp_s_ter, n_bdd_ter, n_bdd_s_ter
+        return LAMBDA_USVP_TER, LAMBDA_USVP_S_TER, LAMBDA_BDD_TER, LAMBDA_BDD_S_TER, N_USVP_TER, N_USVP_S_TER, N_BDD_TER, N_BDD_S_TER
+
 
 def parse_options(argv):
     """
@@ -96,14 +108,16 @@ def parse_options(argv):
     :return: List of options and arguments.
     """
     try:
-        opts, args = getopt.getopt(argv, "h,v", ["secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=", "ntru", "table"])
+        opts, args = getopt.getopt(argv, "h,v", [
+                                   "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=", "ntru", "table"])
     except Exception as e:
         print(e)
         helper()
     if len(opts) == 0:
         helper()
-        
+
     return opts
+
 
 def check_parameters(std_e, logq, lwe_d, l, param):
     """
@@ -120,24 +134,26 @@ def check_parameters(std_e, logq, lwe_d, l, param):
 
     if param != 'std_e':
         if std_e == 0:
-            errors.append("Error: std_e = 0, the LWE problem can be solved in polynomial time, impossible to reach the desired security level")
+            errors.append(
+                "Error: std_e = 0, the LWE problem can be solved in polynomial time, impossible to reach the desired security level")
         elif std_e < 0:
             errors.append("Error: std_e must be bigger than 0")
-    
+
     if param != 'logq':
         for q in logq:
             if q <= 0:
                 errors.append("Error: logq must be bigger than 0")
-    
+
     if param != 'n':
         if lwe_d <= 0:
             errors.append("Error: LWE dimension must be bigger than 0")
-    
+
     if param != 'lambda':
         if l <= 0:
             errors.append("Error: lambda must be bigger than 0")
-    
+
     return errors
+
 
 def set_secret(secret, output_dict):
     """
@@ -149,19 +165,20 @@ def set_secret(secret, output_dict):
     """
     std_s = 0
     secret_q = 0
-    if secret == 'binary': 
+    if secret == 'binary':
         std_s = UniformModStd(2)
         secret_q = 2
         output_dict['std_s'] = 0.5
-    elif secret == 'ternary': 
+    elif secret == 'ternary':
         std_s = UniformModStd(3)
         secret_q = 3
         output_dict['std_s'] = math.sqrt(2./3)
-    else: 
+    else:
         if secret != 'sparse':
             print("Secret distribution not supported")
             sys.exit()
     return std_s, secret_q
+
 
 def handle_options(opts):
     """
@@ -175,9 +192,10 @@ def handle_options(opts):
     ntru_flag = False
     lwe_d = 0
     logq = 0
-    std_e = 3.19 # Default value for the standard deviation of the error
-    secret = "binary" # Default value for the secret distribution
-    std_s, secret_q = set_secret(secret, output_dict) # Default value for the standard deviation of the secret
+    std_e = 3.19  # Default value for the standard deviation of the error
+    secret = "binary"  # Default value for the secret distribution
+    # Default value for the standard deviation of the secret
+    std_s, secret_q = set_secret(secret, output_dict)
     l = 0
     hw = 0
     table = False
@@ -198,7 +216,7 @@ def handle_options(opts):
             try:
                 lwe_d = int(arg)
             except:
-                print("Error: Invalid LWE dimension format") 
+                print("Error: Invalid LWE dimension format")
                 sys.exit()
             output_dict['n'] = lwe_d
         elif opt == '--lambda':
@@ -219,7 +237,9 @@ def handle_options(opts):
             helper()
     return output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw
 
-#Exctracted from the Lattice Estimator
+# Exctracted from the Lattice Estimator
+
+
 def UniformModStd(q):
     """
     Calculate the standard deviation of a uniform distribution modulo q.
@@ -228,15 +248,17 @@ def UniformModStd(q):
     :return: Standard deviation.
     """
     a = -(q // 2)
-    b = -a -1 if q % 2 == 0 else -a
+    b = -a - 1 if q % 2 == 0 else -a
 
     if b < a:
-        raise ValueError(f"upper limit must be larger than lower limit but got: {b} < {a}")
+        raise ValueError(
+            f"upper limit must be larger than lower limit but got: {b} < {a}")
     m = b - a + 1
     mean = (a + b) / float(2)
     stddev = math.sqrt((m**2 - 1) / float(12))
 
     return stddev
+
 
 def load_all_from_csv(file_path):
     """
@@ -250,6 +272,7 @@ def load_all_from_csv(file_path):
         entries = [row for row in reader]
     return entries
 
+
 def closest_power_of_2(n):
     """
     Find the closest power of 2 to a given number.
@@ -259,16 +282,17 @@ def closest_power_of_2(n):
     """
     if n <= 0:
         raise ValueError("Input must be a positive number.")
-    
+
     # Calculate the power of 2 just below and above the number
     lower_pow = 2 ** math.floor(math.log2(n))
     upper_pow = 2 ** math.ceil(math.log2(n))
-    
+
     # Determine which is closer
     if abs(n - lower_pow) < abs(n - upper_pow):
         return lower_pow
     else:
         return upper_pow
+
 
 def print_table(headers, rows):
     """
@@ -278,20 +302,22 @@ def print_table(headers, rows):
     :param rows: List of rows.
     """
     # Calculate the maximum width for each column
-    col_widths = [max(len(str(cell)) for cell in col) for col in zip(headers, *rows)]
-    
+    col_widths = [max(len(str(cell)) for cell in col)
+                  for col in zip(headers, *rows)]
+
     # Create a format string for each row
     row_format = " | ".join(["{:<" + str(width) + "}" for width in col_widths])
-    
+
     # Print the header
     print(row_format.format(*headers))
-    
+
     # Print the separator
     print("-+-".join(['-' * width for width in col_widths]))
-    
+
     # Print the rows
     for row in rows:
         print(row_format.format(*row))
+
 
 def parse_logq(logq_str):
     """
@@ -314,11 +340,12 @@ def parse_logq(logq_str):
             logq.append(int(part))
     return logq
 
+
 def helper():
     """
     Print the helper message and exit.
     """
-    #print('python3 src/estimate.py --param "lambda" --file "./examples/example_lambda_binary.csv"')
+    # print('python3 src/estimate.py --param "lambda" --file "./examples/example_lambda_binary.csv"')
     print('python3 src/estimate.py --param "n" --file "./examples/example_n_binary.csv"')
     # print('python3 src/estimate.py --param "logq" --file "./examples/example_logq_binary.csv"')
     # print('python3 src/estimate.py --param "error" --file "./examples/example_error_binary.csv"')
@@ -329,6 +356,7 @@ def helper():
     print('You can add  --verify 1 to any of the above commands to check the results against the Lattice Estimator')
     sys.exit()
 
+
 def helper_fit():
     """
     Print the helper message for fitting and exit.
@@ -338,6 +366,7 @@ def helper_fit():
     print('python3 fit_formula.py --param "n" --attack "usvp" --dist "binary" --simpl 0')
     print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
     sys.exit()
+
 
 def create_explanation_dict(headers):
     """
@@ -357,7 +386,7 @@ def create_explanation_dict(headers):
         "bdd": "Output of the formula which estimates the cost of the (unique) BDD attack",
         "bdd_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) BDD attack",
         "logq usvp": "Output of the numerical approximation of log q for the (unique) SVP attack",
-        "logq bdd": "Output of the numerical approximation of log q for the (unique) BDD attack",\
+        "logq bdd": "Output of the numerical approximation of log q for the (unique) BDD attack",
         "usvp num": "Output of the numerical approximation of the (unique) SVP attack",
         "bdd num": "Output of the numerical approximation of the (unique) BDD attack",
         "log2(std_e) usvp": "Output of the numerical approximation of the (log2) standard deviation of the error for the (unique) SVP attack",
@@ -380,9 +409,11 @@ def create_explanation_dict(headers):
     explanation_dict = {}
     for header in headers:
         # Add the explanation if it exists in the explanations dictionary, otherwise use a default message
-        explanation_dict[header] = explanations.get(header, "No explanation available for this header.")
+        explanation_dict[header] = explanations.get(
+            header, "No explanation available for this header.")
 
     return explanation_dict
+
 
 def helper_headers(header):
     """
@@ -393,7 +424,8 @@ def helper_headers(header):
     explanation_dict = create_explanation_dict(header)
 
     max_length = max(len(header) for header in explanation_dict.keys())
-    max_length_exp = max(len(explanation) for explanation in explanation_dict.values())
+    max_length_exp = max(len(explanation)
+                         for explanation in explanation_dict.values())
 
     # Print each header and its explanation with proper formatting
     for header, explanation in explanation_dict.items():
