@@ -176,12 +176,16 @@ def numerical_logq_bdd(l, n, std_s, std_e):
     :param std_e: Standard deviation of the error.
     :return: logq value.
     """
-    lnq_initial_guess = n / 100
-
-    zeta = std_e / std_s
-
+    
     beta = (l - 16.4) / 0.292
 
+    if (beta < const):
+        print("Error: will not start optimization, most likely provided lambda is too small")
+        exit(0)
+
+    lnq_initial_guess = 2*n*log(beta/const) / beta #comes from a simplfied the formula below: (remove log(beta / const), log(zeta) and - 2 * log(std_e) - log(const) from denom)
+    zeta = std_e / std_s
+    
     def nom(lnq): return 2 * n * lnq * log(beta / const)
     def denom(lnq): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - \
         2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
@@ -207,12 +211,17 @@ def numerical_logq_usvp(l, n, std_s, std_e):
     :param std_e: Standard deviation of the error.
     :return: logq value.
     """
-    lnq_initial_guess = n / 100
+    
+    beta = (l - 16.4) / 0.292
+    if (beta < const):
+        print("Error: will not start optimization, most likely provided lambda is too small")
+        exit(0)
 
     zeta = std_e / std_s
 
-    beta = (l - 16.4) / 0.292
-
+    lnq_initial_guess = ( 2*n*log(beta/log(beta/const)) - beta/log(beta/const) + sqrt(n**2*log(beta/log(beta/const))**2 - n*log(beta/log(beta/const))*beta/log(beta/const)) )/(2*beta/log(beta/const))
+    assert(lnq_initial_guess>1)
+    
     def nom(lnq): return 2 * n * (lnq - log(zeta)) * log(beta / const)
     def denom(lnq): return lnq + log(sqrt(beta) / (const * std_e))
     def eq(lnq): return beta - nom(lnq) / (denom(lnq) ** 2)
