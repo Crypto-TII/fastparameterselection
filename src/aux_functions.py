@@ -23,42 +23,6 @@ def check_estimator_installed():
         return False
 
 
-def update_headers(param, verify, estimator_installed):
-    if param == 'lambda':
-        return get_lambda_headers(verify, estimator_installed)
-    elif param == 'std_e':
-        return get_std_e_headers(verify, estimator_installed)
-    elif param == 'n':
-        return get_n_headers(verify, estimator_installed)
-    elif param == 'logq':
-        return get_logq_headers(verify, estimator_installed)
-    return []
-
-
-def get_lambda_headers(verify, estimator_installed):
-    if verify and estimator_installed:
-        return HEADERS_LAMBDA_VERIFY
-    return HEADERS_LAMBDA_NOTABLE
-
-
-def get_std_e_headers(verify, estimator_installed):
-    if verify and estimator_installed:
-        return HEADERS_STD_E_VERIFY
-    return HEADERS_STD_E_NOTABLE
-
-
-def get_n_headers(verify, estimator_installed):
-    if verify and estimator_installed:
-        return HEADERS_N_VERIFY
-    return HEADERS_N_NOTABLE
-
-
-def get_logq_headers(verify, estimator_installed):
-    if verify and estimator_installed:
-        return HEADERS_LOGQ_VERIFY
-    return HEADERS_LOGQ_NOTABLE
-
-
 def check_ntru(output_dict):
     beta_ = check_overstreched(output_dict)
     if beta_ > 0 and output_dict['lambda'] > 0 and (output_dict['lambda'] - 0.292 * beta_) > 20:
@@ -70,10 +34,6 @@ def print_warnings(verify, estimator_installed):
     if verify and not estimator_installed:
         print("Warning: Verification not possible, Lattice Estimator not installed")
     print("\n")
-
-
-def initialize_parameters():
-    return None, None, 0, False
 
 
 def handle_errors(std_e, logq, lwe_d, l, param):
@@ -225,8 +185,6 @@ def handle_options(opts):
             output_dict['logq'] = logq
         elif opt == '-v':
             verify = 1
-        elif opt == '--file':
-            file_path = arg
         elif opt == '--ntru':
             ntru_flag = True
         elif opt == '--table':
