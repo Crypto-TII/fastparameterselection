@@ -506,18 +506,37 @@ def numerical_logq_hybrid(n, l, h):
     res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess)
 
     # if no candidates found, try again with new initial guess up to bound_trials  times
-    bound_trials = 200
+    # we change the number of trials and the initial guess range depending on lambda
+
+    # TODO: adjust the intervals
+
+    initial_guess_interval = (30, 2500)
+    bound_trials = 400
+
+    if l in range(80, 192):
+        bound_trials = 5
+        initial_guess_interval = (30, 35)
+    elif l in range(192, 250):
+        bound_trials = 100
+        initial_guess_interval = (30, 1500)
+    elif l in range(250, 512):
+        bound_trials = 400
+        initial_guess_interval = (30, 2000)
+
+    trials = bound_trials
+
     while len(res[0]) == 0 and bound_trials > 0:
         bound_trials -= 1
-        initial_guess = random.randint(30, 2500)
+        initial_guess = random.randint(
+            initial_guess_interval[0], initial_guess_interval[1])
         res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess)
         if len(res[0]) > 0:
             break
 
     if len(res[0]) == 0:
         print("numerical_logq_hybrid_runoptimize couldn't find a solution after",
-              200-bound_trials, "trial for this parameters set")
-        return float('inf')
+              trials-bound_trials, "trial for this parameters set")
+        exit(-1)
 
     initial_points = []
     for el in res[1]:
