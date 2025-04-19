@@ -4,13 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "src/lib.rs"
+name = "hybrid"
 # "cdylib" is necessary to produce a shared library for Python to import from.
 crate-type = ["cdylib"]
 
 [dependencies]
+num = "0.4.3"
 rand = "0.9.0"
+roots = "0.0.8"
+rug = "1.27.0"
 
 [dependencies.pyo3]
 version = "0.24.0"
 features = ["abi3-py38"]
+roots = "0.5"

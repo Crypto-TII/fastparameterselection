@@ -6,6 +6,18 @@ use std::f64::{consts::LN_2, INFINITY};
 const CONST: f64 = 1.01; // Placeholder for `const` from original Python code
 const SIGMA_E: f64 = 3.19;
 
+extern crate num;
+
+use crate::num::ToPrimitive;
+use num::bigint::BigInt;
+use num::bigint::ToBigInt;
+use num::traits::One;
+use num::traits::Zero;
+
+use roots::{find_root_brent, SimpleConvergency};
+use rug::Float;
+use std::ops::DivAssign;
+
 #[pyfunction]
 fn numerical_logq_hybrid(n: i32, l: i32, h: f64) -> f64 {
     let mut initial_guess = 700;
@@ -74,37 +86,50 @@ fn probability_enum(n: i32, h: f64, ng: f64, w: f64) -> f64 {
     let ng = ng as i32;
     let w = w as i32;
 
-    let mut prob = 0.0;
+    // Use BigFloat for arbitrary-precision floating-point calculations
+    let mut prob = Float::with_val(128, 0.0);
 
     for i in 0..w {
-        let numerator = binomial((n - h) as u64, (ng - i) as u64) * binomial(h as u64, i as u64);
-        let denominator = binomial(n as u64, ng as u64);
-        prob += numerator as f64 / denominator as f64;
+        let numerator_bigint =
+            binomial((n - h) as u64, (ng - i) as u64) * binomial(h as u64, i as u64);
+        let denominator_bigint = binomial(n as u64, ng as u64);
+
+        // Convert BigInt to f64 directly
+        let numerator = Float::with_val(128, numerator_bigint.to_f64().unwrap_or(0.0));
+        let denominator = Float::with_val(128, denominator_bigint.to_f64().unwrap_or(1.0));
+
+        if denominator.is_zero() {
+            continue;
+        }
+
+        let mut term = numerator;
+        term.div_assign(denominator); // term = numerator / denominator
+        prob += term;
     }
 
-    if prob <= 0.0 {
+    if prob <= Float::with_val(128, 0.0) {
         f64::NEG_INFINITY // avoid log2(0)
     } else {
-        prob.log2()
+        // Compute log2 of prob
+        prob.to_f64().log2()
     }
 }
 
-fn binomial(n: u64, k: u64) -> u64 {
+//compute binomial coefficients using bigint to avoid overflow
+fn binomial(n: u64, k: u64) -> BigInt {
     if k > n {
-        return 0;
-    }
-    if k == 0 || k == n {
-        return 1;
+        return BigInt::zero();
     }
 
-    let k = k.min(n - k); // Use symmetry
-    let mut result = 1u64;
+    let mut num = BigInt::one();
+    let mut denom = BigInt::one();
 
     for i in 0..k {
-        result = result * (n - i) / (i + 1);
+        num *= (n - i).to_bigint().unwrap();
+        denom *= (i + 1).to_bigint().unwrap();
     }
 
-    result
+    num / denom
 }
 
 fn check_candidates_logq(
@@ -131,7 +156,7 @@ fn check_candidates_logq(
     }
 
     for (i, &logq) in logqs.iter().enumerate() {
-        let l_ = numerical_lambda_hybrid_v2(n, logq, sigma_e, h, Some(initial_guesses[i]));
+        let l_ = numerical_lambda_hybrid_v2(n as f64, logq, sigma_e, h, Some(initial_guesses[i]));
 
         let diff = (l_ - l).abs();
         if diff < best_diff_mut {
@@ -159,83 +184,143 @@ fn _delta(beta: f64) -> f64 {
     base.powf(1.0 / (2.0 * (beta - 1.0)))
 }
 
+fn newton_solve<F>(mut x: [f64; 3], f: F, max_iter: usize, tol: f64) -> Option<[f64; 3]>
+where
+    F: Fn([f64; 3]) -> [f64; 3],
+{
+    let h = 1e-6;
+    for _ in 0..max_iter {
+        let fx = f(x);
+        let norm_fx: f64 = fx.iter().map(|v| v.abs()).sum();
+        if norm_fx < tol {
+            // Round the result to avoid floating-point precision issues
+            return Some(x.map(|v| (v * 1e9).round() / 1e9));
+        }
+
+        // Approximate Jacobian via finite differences
+        let mut jacobian = [[0.0; 3]; 3];
+        for i in 0..3 {
+            let mut x_h = x;
+            x_h[i] += h;
+            let fx_h = f(x_h);
+            for j in 0..3 {
+                jacobian[j][i] = (fx_h[j] - fx[j]) / h;
+            }
+        }
+
+        // Solve J * dx = -f(x) using Gaussian elimination or a linear solver
+        let dx = match solve_linear_system(jacobian, fx.map(|v| -v)) {
+            Some(sol) => sol,
+            None => return None,
+        };
+
+        for i in 0..3 {
+            x[i] += dx[i];
+        }
+    }
+    None
+}
+
+fn solve_linear_system(a: [[f64; 3]; 3], b: [f64; 3]) -> Option<[f64; 3]> {
+    let mut a = a;
+    let mut b = b;
+    for i in 0..3 {
+        // Pivot
+        let mut max_row = i;
+        for k in (i + 1)..3 {
+            if a[k][i].abs() > a[max_row][i].abs() {
+                max_row = k;
+            }
+        }
+        a.swap(i, max_row);
+        b.swap(i, max_row);
+
+        let diag = a[i][i];
+        if diag.abs() < 1e-12 {
+            return None;
+        }
+
+        for j in i..3 {
+            a[i][j] /= diag;
+        }
+        b[i] /= diag;
+
+        for k in 0..3 {
+            if k != i {
+                let factor = a[k][i];
+                for j in i..3 {
+                    a[k][j] -= factor * a[i][j];
+                }
+                b[k] -= factor * b[i];
+            }
+        }
+    }
+
+    // Round the result to avoid floating-point precision issues
+    Some(b.map(|x| (x * 1e9).round() / 1e9))
+}
+
 fn numerical_lambda_hybrid_v2(
-    n: i32,
+    n: f64,
     logq: f64,
     sigma_e: f64,
     h: f64,
     initial_guess: Option<[f64; 3]>,
 ) -> f64 {
-    let lnq = logq * LN_2;
-    let sigma_s = (h / n as f64).sqrt();
+    let lnq = logq * f64::ln(2.0);
+    let sigma_s = (h / n).sqrt();
     let xi = sigma_e / sigma_s;
     let mut rt_min = f64::INFINITY;
 
     for wg in 2..52 {
-        let eq1 = |ng: f64, beta: f64, d: f64| {
-            approx_binom(ng, wg as f64) + wg as f64 + log2(d) - (0.292 * beta + 16.4 + 3.0) + 2.0
+        let eq1 = |ng_: f64, beta_: f64, d_: f64| {
+            approx_binom(ng_, wg as f64) + wg as f64 + d_.log2() - (0.292 * beta_ + 16.4 + 3.0)
+                + 2.0
         };
 
-        let eq2 = |ng: f64, beta: f64, d: f64| {
-            d - (n as f64 * lnq / log2(_delta(beta))).sqrt().ceil() + ng - 1.0 //TODO: CHANGE log2 to log
+        let eq2 = |ng_: f64, beta_: f64, d_: f64| {
+            let delta = _delta(beta_);
+            let val = (n * lnq / delta.ln()).sqrt().ceil();
+            d_ - val + ng_ - 1.0
         };
 
-        let eq3 = |ng: f64, beta: f64, d: f64| {
-            (-d + 1.0) * log2(_delta(beta))
-                + ((d - n as f64 + ng - 1.0) * logq + (n as f64 - ng) * log2(xi)) / d
-                - log2(2.0 * sigma_e * sigma_e)
+        let eq3 = |ng_: f64, beta_: f64, d_: f64| {
+            let delta = _delta(beta_);
+            (-d_ + 1.0) * delta.log2() + ((d_ - n + ng_ - 1.0) * logq + (n - ng_) * xi.log2()) / d_
+                - (2.0 * sigma_e * sigma_e).log2()
         };
 
-        let mut guess = if let Some(g) = initial_guess {
-            g
-        } else {
-            let initial_bdd = approx_startpoint_bdd(n, logq, h);
-            let beta_start = initial_bdd[0];
-            let d_start = (2.0 * n as f64 * lnq * beta_start / log2(beta_start / CONST)).sqrt(); //TODO: CHANGE log2 to log
-            [n as f64 / 4.0, beta_start, d_start - n as f64 / 4.0]
+        let system = |x: [f64; 3]| {
+            let (ng_, beta_, d_) = (x[0], x[1], x[2]);
+            [
+                eq1(ng_, beta_, d_),
+                eq2(ng_, beta_, d_),
+                eq3(ng_, beta_, d_),
+            ]
         };
 
-        let mut bound_trials = 250;
-        let mut sol_tolerance = 100.0;
-        let mut res = [0.0; 3];
+        // let initial = initial_guess.unwrap_or_else(|| {
+        //     let bdd = approx_startpoint_bdd(n as i32, logq, h);
+        //     let beta_start = bdd[0];
+        //     let d_start = (2.0 * n * lnq * beta_start / (beta_start / CONST).ln()).sqrt();
+        //     [n / 4.0, beta_start, d_start - n / 4.0]
+        // });
 
-        while bound_trials > 0 {
-            bound_trials -= 1;
+        let result = newton_solve(initial_guess.unwrap(), system, 50, 1e-4);
 
-            // === Replace this with a real solver ===
-            // res = dummy_fsolve(
-            //     &|x: [f64; 3]| {
-            //         [
-            //             eq1(x[0], x[1], x[2]),
-            //             eq2(x[0], x[1], x[2]),
-            //             eq3(x[0], x[1], x[2]),
-            //         ]
-            //     },
-            //     guess,
-            // );
+        if let Some(res) = result {
+            let sol_tol = {
+                let [f1, f2, f3] = system(res);
+                f1.abs() + f2.abs() + f3.abs()
+            };
 
-            // Placeholder: Just use initial guess as dummy solution
-            res = guess;
-            guess = [res[0] + 0.1, res[1] + 0.1, res[2] + 0.1];
-
-            sol_tolerance = eq1(res[0], res[1], res[2]).abs()
-                + eq2(res[0], res[1], res[2]).abs()
-                + eq3(res[0], res[1], res[2]).abs();
-
-            if sol_tolerance < 7.0 {
-                break;
+            if sol_tol < 7.0 {
+                let rt = 0.292 * res[1] + (8.0 * res[2]).log2() + 16.4
+                    - probability_enum(n as i32, h, res[0], wg as f64);
+                if rt < rt_min {
+                    rt_min = rt;
+                }
             }
-
-            let mut rng = rand::thread_rng();
-            let beta_start = (guess[1] + rng.gen_range(-1500.0..30.0)).max(40.0);
-            let d_start = (2.0 * n as f64 * lnq * beta_start / log2(beta_start / CONST)).sqrt(); //TODO: CHANGE log2 to log
-            guess = [n as f64 / 4.0, beta_start, d_start - n as f64 / 4.0];
-        }
-
-        let rt =
-            0.292 * res[1] + log2(8.0 * res[2]) + 16.4 - probability_enum(n, h, res[0], wg as f64);
-        if rt < rt_min && sol_tolerance < 7.0 {
-            rt_min = rt;
         }
     }
 
@@ -329,40 +414,179 @@ fn numerical_logq_hybrid_runoptimize(
     (sol_qs, sols)
 }
 
-fn approx_startpoint_bdd(n: i32, logq: f64, h: f64) -> [f64; 2] {
-    let sigma_s = (h / n as f64).sqrt();
-    let lnq = logq * LN_2;
-    let zeta = (SIGMA_E / sigma_s).round();
-    let beta_initial_guess = n as f64 / 4.0;
+// fn approx_startpoint_bdd(n: i32, logq: f64, h: f64) -> [f64; 2] {
+//     println!(
+//         "Starting approx_startpoint_bdd with n = {}, logq = {}, h = {}",
+//         n, logq, h
+//     );
 
-    // nominator of the equation
-    let nom = |beta: f64| 2.0 * n as f64 * lnq * (beta / CONST).ln();
+//     let sigma_s = (h / n as f64).sqrt();
+//     println!("Calculated sigma_s = {}", sigma_s);
 
-    // denominator of the equation
-    let denom = |beta: f64| {
-        (beta / CONST).ln() + 2.0 * lnq
-            - 2.0 * SIGMA_E.ln()
-            - CONST.ln()
-            - 2.0
-                * (lnq - (zeta.ln()))
-                * ((n as f64 * (beta / CONST).ln() / (2.0 * lnq * beta)).sqrt())
-    };
+//     let lnq = logq * LN_2;
+//     println!("Calculated lnq = {}", lnq);
 
-    // Full equation
-    let eq6 = |beta: f64| beta - nom(beta) / denom(beta).powi(2);
+//     let zeta = (SIGMA_E / sigma_s).round();
+//     println!("Calculated zeta = {}", zeta);
 
-    // Solve using Newton-Raphson or similar
-    let beta_solution = 40 as f64; //TODO CHANGE THIS
+//     let mut beta_initial_guess = n as f64 / 4.0;
+//     println!("Initial beta_initial_guess = {}", beta_initial_guess);
 
-    // Compute d
-    let d_optimal = (2.0 * n as f64 * lnq * beta_solution / (beta_solution / CONST).ln()).sqrt();
+//     let nom = |beta: f64| {
+//         let result = 2.0 * n as f64 * lnq * (beta / CONST).ln();
+//         println!("nom(beta = {}): {}", beta, result);
+//         result
+//     };
 
-    [beta_solution, d_optimal]
-}
+//     let denom = |beta: f64| {
+//         let result = (beta / CONST).ln() + 2.0 * lnq
+//             - 2.0 * SIGMA_E.ln()
+//             - CONST.ln()
+//             - 2.0
+//                 * (lnq - zeta.ln())
+//                 * ((n as f64 * (beta / CONST).ln()) / (2.0 * lnq * beta)).sqrt();
+//         println!("denom(beta = {}): {}", beta, result);
+//         result
+//     };
+
+//     let eq6 = |beta: f64| {
+//         let result = beta - nom(beta) / denom(beta).powi(2);
+//         println!("eq6(beta = {}): {}", beta, result);
+//         result
+//     };
+
+//     // Root finding loop
+//     let mut beta_solution = f64::INFINITY;
+//     let mut trials = 100;
+
+//     while trials > 0 {
+//         trials -= 1;
+
+//         println!(
+//             "Trial {}: beta_initial_guess = {}",
+//             100 - trials,
+//             beta_initial_guess
+//         );
+
+//         // Create a convergence strategy (you must create a new one each time)
+//         let mut convergency = SimpleConvergency {
+//             eps: 1e-7,
+//             max_iter: 1000,
+//         };
+
+//         // Use Brent’s method to find a root in a given interval
+//         let result = find_root_brent(
+//             beta_initial_guess,
+//             beta_initial_guess + 20.0, // adjust the interval if needed
+//             &eq6,
+//             &mut convergency,
+//         );
+
+//         if let Ok(root) = result {
+//             println!("Found root: {}", root);
+//             beta_solution = root;
+//             break;
+//         } else {
+//             println!("Failed to find root, increasing beta_initial_guess");
+//             beta_initial_guess += 1.0; // Try a new initial interval
+//         }
+//     }
+
+//     if beta_solution.is_infinite() {
+//         println!("Failed to find a root for beta after 100 trials.");
+//         return [f64::INFINITY, f64::INFINITY];
+//     }
+
+//     let d_optimal = (2.0 * n as f64 * lnq * beta_solution / (beta_solution / CONST).ln()).sqrt();
+//     println!("Calculated d_optimal = {}", d_optimal);
+
+//     [beta_solution, d_optimal]
+// }
 
 #[pymodule]
-fn logq_hybrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn hybrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(numerical_logq_hybrid, m)?)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_numerical_logq_hybrid() {
+        let result = numerical_logq_hybrid(1024, 80, 64.0);
+        assert!(result.is_finite());
+    }
+
+    #[test]
+    fn test_log2() {
+        assert_eq!(log2(8.0), 3.0);
+        assert_eq!(log2(1.0), 0.0);
+    }
+
+    #[test]
+    fn test_log_delta() {
+        assert!(log_delta(2.0).is_finite());
+        assert_eq!(log_delta(1.0), f64::NEG_INFINITY);
+    }
+
+    #[test]
+    fn test_approx_binom() {
+        assert!(approx_binom(10.0, 5.0).is_finite());
+        assert_eq!(approx_binom(10.0, 0.0), 0.0);
+    }
+
+    #[test]
+    fn test_entropy() {
+        assert_eq!(entropy(0.5), 1.0);
+        assert_eq!(entropy(0.0), 0.0);
+    }
+
+    #[test]
+    fn test_probability_enum() {
+        let result = probability_enum(10, 5.0, 3.0, 2.0);
+        assert!(result.is_finite());
+    }
+
+    #[test]
+    fn test_binomial() {
+        assert_eq!(binomial(5, 2), BigInt::from(10));
+        assert_eq!(binomial(5, 0), BigInt::from(1));
+    }
+
+    #[test]
+    fn test_delta() {
+        assert!(matches!(_delta(2.0), x if x.is_finite()));
+        assert_eq!(_delta(1.0), f64::INFINITY);
+    }
+
+    #[test]
+    fn test_newton_solve() {
+        let system = |x: [f64; 3]| [x[0] - 1.0, x[1] - 2.0, x[2] - 3.0];
+        let result = newton_solve([0.0, 0.0, 0.0], system, 100, 1e-6);
+        assert_eq!(result, Some([1.0, 2.0, 3.0]));
+    }
+
+    #[test]
+    fn test_solve_linear_system() {
+        let a = [[2.0, 1.0, -1.0], [-3.0, -1.0, 2.0], [-2.0, 1.0, 2.0]];
+        let b = [8.0, -11.0, -3.0];
+        let result = solve_linear_system(a, b);
+        assert_eq!(result, Some([2.0, 3.0, -1.0]));
+    }
+
+    #[test]
+    fn test_numerical_lambda_hybrid_v2() {
+        let result = numerical_lambda_hybrid_v2(1024.0, 1.0, 3.19, 64.0, None);
+        assert!(result.is_finite());
+    }
+
+    #[test]
+    fn test_numerical_logq_hybrid_runoptimize() {
+        let (sol_qs, sols) = numerical_logq_hybrid_runoptimize(1024, 80, 3.19, 64.0, 700);
+        assert!(!sol_qs.is_empty());
+        assert!(!sols.is_empty());
+    }
 }
