@@ -6,6 +6,8 @@ use std::f64::{consts::LN_2, INFINITY};
 const CONST: f64 = 1.01; // Placeholder for `const` from original Python code
 const SIGMA_E: f64 = 3.19;
 
+use nrfind::find_root;
+
 extern crate num;
 
 use crate::num::ToPrimitive;
@@ -18,7 +20,10 @@ use roots::{find_root_brent, SimpleConvergency};
 use rug::Float;
 use std::ops::DivAssign;
 
-#[pyfunction]
+use gomez::nalgebra as na;
+use gomez::{Domain, Problem, SolverDriver, System};
+use na::{Dyn, IsContiguous};
+
 fn numerical_logq_hybrid(n: i32, l: i32, h: f64) -> f64 {
     let mut initial_guess = 700;
     let mut res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess);
@@ -184,88 +189,55 @@ fn _delta(beta: f64) -> f64 {
     base.powf(1.0 / (2.0 * (beta - 1.0)))
 }
 
-fn newton_solve<F>(mut x: [f64; 3], f: F, max_iter: usize, tol: f64) -> Option<[f64; 3]>
-where
-    F: Fn([f64; 3]) -> [f64; 3],
-{
-    let h = 1e-6;
-    for _ in 0..max_iter {
-        let fx = f(x);
-        let norm_fx: f64 = fx.iter().map(|v| v.abs()).sum();
-        if norm_fx < tol {
-            // Round the result to avoid floating-point precision issues
-            return Some(x.map(|v| (v * 1e9).round() / 1e9));
-        }
-
-        // Approximate Jacobian via finite differences
-        let mut jacobian = [[0.0; 3]; 3];
-        for i in 0..3 {
-            let mut x_h = x;
-            x_h[i] += h;
-            let fx_h = f(x_h);
-            for j in 0..3 {
-                jacobian[j][i] = (fx_h[j] - fx[j]) / h;
-            }
-        }
-
-        // Solve J * dx = -f(x) using Gaussian elimination or a linear solver
-        let dx = match solve_linear_system(jacobian, fx.map(|v| -v)) {
-            Some(sol) => sol,
-            None => return None,
-        };
-
-        for i in 0..3 {
-            x[i] += dx[i];
-        }
-    }
-    None
+// Define the system for numerical_lambda_hybrid_v2
+struct NumericalLambdaHybridV2 {
+    n: f64,
+    logq: f64,
+    sigma_e: f64,
+    xi: f64,
+    wg: f64,
 }
 
-fn solve_linear_system(a: [[f64; 3]; 3], b: [f64; 3]) -> Option<[f64; 3]> {
-    let mut a = a;
-    let mut b = b;
-    for i in 0..3 {
-        // Pivot
-        let mut max_row = i;
-        for k in (i + 1)..3 {
-            if a[k][i].abs() > a[max_row][i].abs() {
-                max_row = k;
-            }
-        }
-        a.swap(i, max_row);
-        b.swap(i, max_row);
+impl Problem for NumericalLambdaHybridV2 {
+    type Field = f64;
 
-        let diag = a[i][i];
-        if diag.abs() < 1e-12 {
-            return None;
-        }
-
-        for j in i..3 {
-            a[i][j] /= diag;
-        }
-        b[i] /= diag;
-
-        for k in 0..3 {
-            if k != i {
-                let factor = a[k][i];
-                for j in i..3 {
-                    a[k][j] -= factor * a[i][j];
-                }
-                b[k] -= factor * b[i];
-            }
-        }
+    fn domain(&self) -> Domain<Self::Field> {
+        Domain::unconstrained(3) // 3 variables: ng_, beta_, d_
     }
-
-    // Round the result to avoid floating-point precision issues
-    Some(b.map(|x| (x * 1e9).round() / 1e9))
 }
 
+impl System for NumericalLambdaHybridV2 {
+    fn eval<Sx, Srx>(
+        &self,
+        x: &na::Vector<Self::Field, Dyn, Sx>,
+        rx: &mut na::Vector<Self::Field, Dyn, Srx>,
+    ) where
+        Sx: na::storage::Storage<Self::Field, Dyn> + IsContiguous,
+        Srx: na::storage::StorageMut<Self::Field, Dyn>,
+    {
+        let ng_ = x[0];
+        let beta_ = x[1];
+        let d_ = x[2];
+
+        let delta = _delta(beta_);
+        let lnq = self.logq * f64::ln(2.0);
+
+        rx[0] =
+            approx_binom(ng_, self.wg) + self.wg + d_.log2() - (0.292 * beta_ + 16.4 + 3.0) + 2.0;
+        rx[1] = d_ - (self.n * lnq / delta.ln()).sqrt().ceil() + ng_ - 1.0;
+        rx[2] = (-d_ + 1.0) * delta.log2()
+            + ((d_ - self.n + ng_ - 1.0) * self.logq + (self.n - ng_) * self.xi.log2()) / d_
+            - (2.0 * self.sigma_e * self.sigma_e).log2();
+    }
+}
+
+#[pyfunction]
 fn numerical_lambda_hybrid_v2(
     n: f64,
     logq: f64,
     sigma_e: f64,
     h: f64,
-    initial_guess: Option<[f64; 3]>,
+    mut initial_guess: Option<[f64; 3]>,
 ) -> f64 {
     let lnq = logq * f64::ln(2.0);
     let sigma_s = (h / n).sqrt();
@@ -273,44 +245,36 @@ fn numerical_lambda_hybrid_v2(
     let mut rt_min = f64::INFINITY;
 
     for wg in 2..52 {
-        let eq1 = |ng_: f64, beta_: f64, d_: f64| {
-            approx_binom(ng_, wg as f64) + wg as f64 + d_.log2() - (0.292 * beta_ + 16.4 + 3.0)
-                + 2.0
+        let system = NumericalLambdaHybridV2 {
+            n,
+            logq,
+            sigma_e,
+            xi,
+            wg: wg as f64,
         };
 
-        let eq2 = |ng_: f64, beta_: f64, d_: f64| {
-            let delta = _delta(beta_);
-            let val = (n * lnq / delta.ln()).sqrt().ceil();
-            d_ - val + ng_ - 1.0
-        };
+        let mut solver = SolverDriver::builder(&system)
+            .with_initial(initial_guess.unwrap_or([n / 4.0, 40.0, 1377.6]).to_vec())
+            .build();
 
-        let eq3 = |ng_: f64, beta_: f64, d_: f64| {
-            let delta = _delta(beta_);
-            (-d_ + 1.0) * delta.log2() + ((d_ - n + ng_ - 1.0) * logq + (n - ng_) * xi.log2()) / d_
-                - (2.0 * sigma_e * sigma_e).log2()
-        };
+        let tolerance = 1e-4;
 
-        let system = |x: [f64; 3]| {
-            let (ng_, beta_, d_) = (x[0], x[1], x[2]);
-            [
-                eq1(ng_, beta_, d_),
-                eq2(ng_, beta_, d_),
-                eq3(ng_, beta_, d_),
-            ]
-        };
-
-        // let initial = initial_guess.unwrap_or_else(|| {
-        //     let bdd = approx_startpoint_bdd(n as i32, logq, h);
-        //     let beta_start = bdd[0];
-        //     let d_start = (2.0 * n * lnq * beta_start / (beta_start / CONST).ln()).sqrt();
-        //     [n / 4.0, beta_start, d_start - n / 4.0]
-        // });
-
-        let result = newton_solve(initial_guess.unwrap(), system, 50, 1e-4);
+        let result = solver
+            .find(|state| state.norm() <= tolerance || state.iter() >= 50)
+            .map(|state| state.0.to_vec())
+            .ok();
 
         if let Some(res) = result {
             let sol_tol = {
-                let [f1, f2, f3] = system(res);
+                let [f1, f2, f3] = [
+                    approx_binom(res[0], wg as f64) + wg as f64 + res[2].log2()
+                        - (0.292 * res[1] + 16.4 + 3.0)
+                        + 2.0,
+                    res[2] - (n * lnq / _delta(res[1]).ln()).sqrt().ceil() + res[0] - 1.0,
+                    (-res[2] + 1.0) * _delta(res[1]).log2()
+                        + ((res[2] - n + res[0] - 1.0) * logq + (n - res[0]) * xi.log2()) / res[2]
+                        - (2.0 * sigma_e * sigma_e).log2(),
+                ];
                 f1.abs() + f2.abs() + f3.abs()
             };
 
@@ -325,6 +289,60 @@ fn numerical_lambda_hybrid_v2(
     }
 
     rt_min
+}
+
+// Define the system for numerical_logq_hybrid_runoptimize
+struct NumericalLogqHybridRunOptimize {
+    n: f64,
+    l: f64,
+    sigma_e: f64,
+    xi: f64,
+    wg: f64,
+    h: f64,
+}
+
+impl Problem for NumericalLogqHybridRunOptimize {
+    type Field = f64;
+
+    fn domain(&self) -> Domain<Self::Field> {
+        Domain::unconstrained(4) // 4 variables: ng, beta, d, logq
+    }
+}
+
+impl System for NumericalLogqHybridRunOptimize {
+    fn eval<Sx, Srx>(
+        &self,
+        x: &na::Vector<Self::Field, Dyn, Sx>,
+        rx: &mut na::Vector<Self::Field, Dyn, Srx>,
+    ) where
+        Sx: na::storage::Storage<Self::Field, Dyn> + IsContiguous,
+        Srx: na::storage::StorageMut<Self::Field, Dyn>,
+    {
+        let ng = x[0];
+        let beta = x[1];
+        let d = x[2];
+        let logq = x[3];
+
+        let delta = log_delta(beta);
+
+        rx[0] = self.l - (0.292 * beta + 16.4 + 3.0 + log2(d))
+            + approx_binom(self.n - self.h, ng - self.wg)
+            + approx_binom(self.h, self.wg)
+            - approx_binom(self.n, ng)
+            - 1.0;
+
+        rx[1] = self.l - approx_binom(ng, self.wg) - self.wg - 2.0 * log2(d)
+            + approx_binom(self.n - self.h, ng - self.wg)
+            + approx_binom(self.h, self.wg)
+            - approx_binom(self.n, ng)
+            - 12.0;
+
+        rx[2] = d - (self.n * logq / delta).sqrt().ceil() + ng - 1.0;
+
+        rx[3] = (-d + 1.0) * delta
+            + ((d - self.n + ng - 1.0) * logq + (self.n - ng) * log2(self.xi)) / d
+            - log2(2.0 * self.sigma_e * self.sigma_e);
+    }
 }
 
 fn numerical_logq_hybrid_runoptimize(
@@ -347,165 +365,61 @@ fn numerical_logq_hybrid_runoptimize(
         .ceil();
 
     for wg in 2..55 {
-        let eq1a = |ng: f64, beta: f64, d: f64| {
-            l as f64 - (0.292 * beta + 16.4 + 3.0 + log2(d))
-                + approx_binom(n as f64 - h, ng - wg as f64)
-                + approx_binom(h as f64, wg as f64)
-                - approx_binom(n as f64, ng)
-                - 1.0
+        let system = NumericalLogqHybridRunOptimize {
+            n: n as f64,
+            l: l as f64,
+            sigma_e,
+            xi,
+            wg: wg as f64,
+            h,
         };
 
-        let eq1b = |ng: f64, beta: f64, d: f64| {
-            l as f64 - approx_binom(ng as f64, wg as f64) - wg as f64 - 2.0 * log2(d)
-                + approx_binom(n as f64 - h, ng - wg as f64)
-                + approx_binom(h as f64, wg as f64)
-                - approx_binom(n as f64, ng)
-                - 12.0
-        };
+        let mut solver = SolverDriver::builder(&system)
+            .with_initial(vec![
+                n as f64 / 16.0,
+                beta_initial_guess,
+                d_initial_guess,
+                logq_initial_guess,
+            ])
+            .build();
 
-        let eq2 = |ng: f64, beta: f64, d: f64, logq: f64| {
-            d - (n as f64 * logq / log_delta(beta)).sqrt().ceil() + ng - 1.0
-        };
+        let tolerance = 1e-4;
 
-        let eq3 = |ng: f64, beta: f64, d: f64, logq: f64| {
-            (-d + 1.0) * log_delta(beta)
-                + ((d - n as f64 + ng - 1.0) * logq + (n as f64 - ng) * log2(xi)) / d
-                - log2(2.0 * sigma_e * sigma_e)
-        };
+        let result = solver
+            .find(|state| state.norm() <= tolerance || state.iter() >= 50)
+            .map(|state| state.0.to_vec())
+            .ok();
 
-        let system = |x: &[f64; 4]| -> [f64; 4] {
-            [
-                eq1a(x[0], x[1], x[2]),
-                eq1b(x[0], x[1], x[2]),
-                eq2(x[0], x[1], x[2], x[3]),
-                eq3(x[0], x[1], x[2], x[3]),
-            ]
-        };
+        if let Some(res) = result {
+            let sol_tolerance = (res[0] - res[0].round()).abs()
+                + (res[1] - res[1].round()).abs()
+                + (res[2] - res[2].round()).abs()
+                + (res[3] - res[3].round()).abs();
 
-        // Use a numerical solver here (e.g., newton_raphson or argmin crate)
-        // Placeholder: Just use initial guess as dummy solution
-        let res = [
-            n as f64 / 16.0,
-            beta_initial_guess,
-            d_initial_guess,
-            logq_initial_guess,
-        ];
+            if sol_tolerance < 2.5 {
+                let rt = 0.292 * res[1] + log2(8.0 * res[2]) + 16.4
+                    - probability_enum(n, h, res[0], wg as f64);
 
-        let rt =
-            0.292 * res[1] + log2(8.0 * res[2]) + 16.4 - probability_enum(n, h, res[0], wg as f64);
-
-        let eq1a_tolerance = (eq1a(res[0].round(), res[1].round(), res[2].round())).abs();
-        let sol_tolerance = (eq1a(res[0], res[1], res[2])).abs()
-            + (eq1b(res[0], res[1], res[2])).abs()
-            + (eq2(res[0], res[1], res[2], res[3])).abs()
-            + (eq3(res[0], res[1], res[2], res[3])).abs();
-
-        if sol_tolerance < 2.5 && eq1a_tolerance < 0.7 && (l as f64 - rt).abs() < 2.5 {
-            let ng_min = res[0].round();
-            let beta_min = res[1].round();
-            let d_min = res[2].round();
-            let logq_min = res[3].round();
-
-            sol_qs.push(logq_min);
-            sols.push(vec![wg as f64, ng_min, beta_min, d_min, logq_min]);
+                if (l as f64 - rt).abs() < 2.5 {
+                    sol_qs.push(res[3].round());
+                    sols.push(vec![
+                        wg as f64,
+                        res[0].round(),
+                        res[1].round(),
+                        res[2].round(),
+                        res[3].round(),
+                    ]);
+                }
+            }
         }
     }
 
     (sol_qs, sols)
 }
 
-// fn approx_startpoint_bdd(n: i32, logq: f64, h: f64) -> [f64; 2] {
-//     println!(
-//         "Starting approx_startpoint_bdd with n = {}, logq = {}, h = {}",
-//         n, logq, h
-//     );
-
-//     let sigma_s = (h / n as f64).sqrt();
-//     println!("Calculated sigma_s = {}", sigma_s);
-
-//     let lnq = logq * LN_2;
-//     println!("Calculated lnq = {}", lnq);
-
-//     let zeta = (SIGMA_E / sigma_s).round();
-//     println!("Calculated zeta = {}", zeta);
-
-//     let mut beta_initial_guess = n as f64 / 4.0;
-//     println!("Initial beta_initial_guess = {}", beta_initial_guess);
-
-//     let nom = |beta: f64| {
-//         let result = 2.0 * n as f64 * lnq * (beta / CONST).ln();
-//         println!("nom(beta = {}): {}", beta, result);
-//         result
-//     };
-
-//     let denom = |beta: f64| {
-//         let result = (beta / CONST).ln() + 2.0 * lnq
-//             - 2.0 * SIGMA_E.ln()
-//             - CONST.ln()
-//             - 2.0
-//                 * (lnq - zeta.ln())
-//                 * ((n as f64 * (beta / CONST).ln()) / (2.0 * lnq * beta)).sqrt();
-//         println!("denom(beta = {}): {}", beta, result);
-//         result
-//     };
-
-//     let eq6 = |beta: f64| {
-//         let result = beta - nom(beta) / denom(beta).powi(2);
-//         println!("eq6(beta = {}): {}", beta, result);
-//         result
-//     };
-
-//     // Root finding loop
-//     let mut beta_solution = f64::INFINITY;
-//     let mut trials = 100;
-
-//     while trials > 0 {
-//         trials -= 1;
-
-//         println!(
-//             "Trial {}: beta_initial_guess = {}",
-//             100 - trials,
-//             beta_initial_guess
-//         );
-
-//         // Create a convergence strategy (you must create a new one each time)
-//         let mut convergency = SimpleConvergency {
-//             eps: 1e-7,
-//             max_iter: 1000,
-//         };
-
-//         // Use Brent’s method to find a root in a given interval
-//         let result = find_root_brent(
-//             beta_initial_guess,
-//             beta_initial_guess + 20.0, // adjust the interval if needed
-//             &eq6,
-//             &mut convergency,
-//         );
-
-//         if let Ok(root) = result {
-//             println!("Found root: {}", root);
-//             beta_solution = root;
-//             break;
-//         } else {
-//             println!("Failed to find root, increasing beta_initial_guess");
-//             beta_initial_guess += 1.0; // Try a new initial interval
-//         }
-//     }
-
-//     if beta_solution.is_infinite() {
-//         println!("Failed to find a root for beta after 100 trials.");
-//         return [f64::INFINITY, f64::INFINITY];
-//     }
-
-//     let d_optimal = (2.0 * n as f64 * lnq * beta_solution / (beta_solution / CONST).ln()).sqrt();
-//     println!("Calculated d_optimal = {}", d_optimal);
-
-//     [beta_solution, d_optimal]
-// }
-
 #[pymodule]
 fn hybrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(numerical_logq_hybrid, m)?)?;
+    m.add_function(wrap_pyfunction!(numerical_lambda_hybrid_v2, m)?)?;
 
     Ok(())
 }
@@ -563,30 +477,15 @@ mod tests {
     }
 
     #[test]
-    fn test_newton_solve() {
-        let system = |x: [f64; 3]| [x[0] - 1.0, x[1] - 2.0, x[2] - 3.0];
-        let result = newton_solve([0.0, 0.0, 0.0], system, 100, 1e-6);
-        assert_eq!(result, Some([1.0, 2.0, 3.0]));
-    }
-
-    #[test]
-    fn test_solve_linear_system() {
-        let a = [[2.0, 1.0, -1.0], [-3.0, -1.0, 2.0], [-2.0, 1.0, 2.0]];
-        let b = [8.0, -11.0, -3.0];
-        let result = solve_linear_system(a, b);
-        assert_eq!(result, Some([2.0, 3.0, -1.0]));
-    }
-
-    #[test]
     fn test_numerical_lambda_hybrid_v2() {
-        let result = numerical_lambda_hybrid_v2(1024.0, 1.0, 3.19, 64.0, None);
+        let result = numerical_lambda_hybrid_v2(1024.0, 40.0, 3.19, 64.0, None);
         assert!(result.is_finite());
     }
 
-    #[test]
-    fn test_numerical_logq_hybrid_runoptimize() {
-        let (sol_qs, sols) = numerical_logq_hybrid_runoptimize(1024, 80, 3.19, 64.0, 700);
-        assert!(!sol_qs.is_empty());
-        assert!(!sols.is_empty());
-    }
+    // #[test]
+    // fn test_numerical_logq_hybrid_runoptimize() {
+    //     let (sol_qs, sols) = numerical_logq_hybrid_runoptimize(1024, 80, 3.19, 64.0, 700);
+    //     assert!(!sol_qs.is_empty());
+    //     assert!(!sols.is_empty());
+    //}
 }

@@ -9,6 +9,8 @@ name = "hybrid"
 crate-type = ["cdylib"]
 
 [dependencies]
+gomez = "0.5.0"
+nrfind = "1.0.3"
 num = "0.4.3"
 rand = "0.9.0"
 roots = "0.0.8"
