@@ -7,7 +7,7 @@ from formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
     model_n_usvp, model_n_usvp_s, model_n_bdd, model_n_bdd_s,
 )
-from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_usvp
+from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_std_e_bdd_minimize, numerical_std_e_usvp_minimize, numerical_lambda_bdd, numerical_lambda_usvp
 from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper
 
@@ -378,8 +378,74 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
     """
     data = []
     for lq in logq:
-        est_usvp_numerical = log2(numerical_std_e_usvp(l, lwe_d, lq, std_s))
-        est_bdd_numerical = log2(numerical_std_e_bdd(l, lwe_d, lq, std_s))
+
+        lwe_bdd_minimize, lwe_usvp_minimize, lwe_bdd, lwe_usvp = 0, 0, 0, 0
+        est_usvp_numerical, est_bdd_numerical, est_bdd_numerical_minimize, est_usvp_numerical_minimize = 1, 1, 1, 1
+
+        try:
+            est_usvp_numerical, est_usvp_numerical_status = numerical_std_e_usvp(
+                l, lwe_d, lq, std_s)
+            est_usvp_numerical = log2(est_usvp_numerical)
+        except Exception as e:
+            print(f"Error in numerical_std_e_usvp: {e}")
+            est_usvp_numerical, est_usvp_numerical_status = 0, False
+
+        try:
+            est_bdd_numerical, est_bdd_numerical_status = numerical_std_e_bdd(
+                l, lwe_d, lq, std_s)
+            est_bdd_numerical = log2(est_usvp_numerical)
+        except Exception as e:
+            print(f"Error in numerical_std_e_bdd: {e}")
+            est_bdd_numerical, est_bdd_numerical_status = 0, False
+
+        try:
+            est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = numerical_std_e_usvp_minimize(
+                l, lwe_d, lq, std_s)
+            est_usvp_numerical_minimize = log2(est_usvp_numerical_minimize)
+        except Exception as e:
+            print(f"Error in numerical_std_e_usvp_minimize: {e}")
+            est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = 0, False
+
+        try:
+            est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = numerical_std_e_bdd_minimize(
+                l, lwe_d, lq, std_s)
+            est_bdd_numerical_minimize = log2(est_bdd_numerical_minimize)
+        except Exception as e:
+            print(f"Error in numerical_std_e_bdd_minimize: {e}")
+            est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = 0, False
+
+        if est_bdd_numerical_status:
+            lwe_parameters_bdd = LWE.Parameters(
+                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_bdd_numerical))
+            lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+
+        if est_usvp_numerical_status:
+            lwe_parameters_usvp = LWE.Parameters(
+                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_usvp_numerical))
+            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+
+        if est_bdd_numerical_minimize_status:
+            lwe_parameters_bdd_minimize = LWE.Parameters(
+                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_bdd_numerical_minimize))
+            lwe_bdd_minimize = math.floor(math.log2(LWE.primal_bdd(
+                lwe_parameters_bdd_minimize, red_cost_model=RC.BDGL16)["rop"]))
+
+        if est_usvp_numerical_minimize_status:
+            lwe_parameters_usvp_minimize = LWE.Parameters(
+                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_usvp_numerical_minimize))
+            lwe_usvp_minimize = math.floor(math.log2(LWE.primal_usvp(
+                lwe_parameters_usvp_minimize, red_cost_model=RC.BDGL16)["rop"]))
+
+        print("est_usvp_numerical (minimize)",
+              est_usvp_numerical_minimize, est_usvp_numerical_minimize_status, lwe_usvp_minimize)
+        print("est_usvp_numerical (fsolve)",
+              est_usvp_numerical, est_usvp_numerical_status, lwe_usvp)
+        print("est_bdd_numerical (minimize)", est_bdd_numerical_minimize,
+              est_bdd_numerical_minimize_status, lwe_bdd_minimize)
+        print("est_bdd_numerical (fsolve)",
+              est_bdd_numerical, est_bdd_numerical_status, lwe_bdd)
 
         return_value = max(est_usvp_numerical, est_bdd_numerical)
         output_dict['std_e'] = return_value
@@ -583,7 +649,7 @@ def estimate_usvp_bdd(lwe_d, lq, std_s, std_e, lambda_usvp, lambda_bdd, secret_q
     est_bdd = 0
     try:
         est_bdd = int(round(model_lambda_bdd(lwe_d, lq, std_s,
-                      std_e, secret_q, lambda_bdd)[0].real))
+                                             std_e, secret_q, lambda_bdd)[0].real))
     except Exception as e:
         print(e)
     return est_usvp, est_bdd
