@@ -426,11 +426,11 @@ def process_lambda_for_lq(lq, lwe_d, std_s, std_e, lambda_usvp, lambda_usvp_s, l
     if abs(std_e - 3.19) < 1e-9:
         est_usvp_s, est_bdd_s = estimate_usvp_s_bdd_s(
             lwe_d, lq, lambda_usvp_s, lambda_bdd_s)
-        return_value = max(est_usvp, est_usvp_s, est_bdd, est_bdd_s)
+        return_value = min(max(est_usvp, est_usvp_s), max(est_bdd, est_bdd_s))
         data_point = create_data_point(lq, lwe_d, std_e, secret, secret_q, est_usvp,
                                        est_usvp_s, est_bdd, est_bdd_s, return_value, verify, estimator_installed, table)
     else:
-        return_value = max(est_usvp, est_bdd)
+        return_value = min(est_usvp, est_bdd)
         data_point = create_data_point(lq, lwe_d, std_e, secret, secret_q, est_usvp,
                                        None, est_bdd, None, return_value, verify, estimator_installed, table)
 
