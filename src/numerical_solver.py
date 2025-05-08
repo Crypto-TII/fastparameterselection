@@ -317,7 +317,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
         return eq11(x) ** 2 + eq12(x) ** 2
 
     # Bounds to ensure std_e is positive
-    bounds = [(1e-3, None), (None, None)]
+    bounds = [(1e-3, None), (2, None)]
 
     initial_guess = [std_e_initial_guess, beta_initial_guess]
 
