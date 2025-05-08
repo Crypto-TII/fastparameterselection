@@ -2,6 +2,7 @@ import warnings
 from estimator import LWE, RC, ND
 import math
 from numpy import log2
+import traceback
 
 from formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
@@ -388,14 +389,16 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
             est_usvp_numerical = log2(est_usvp_numerical)
         except Exception as e:
             print(f"Error in numerical_std_e_usvp: {e}")
+            traceback.print_exc()  # Print the full traceback, including the line number
             est_usvp_numerical, est_usvp_numerical_status = 0, False
 
         try:
             est_bdd_numerical, est_bdd_numerical_status = numerical_std_e_bdd(
                 l, lwe_d, lq, std_s)
-            est_bdd_numerical = log2(est_usvp_numerical)
+            est_bdd_numerical = log2(est_bdd_numerical)
         except Exception as e:
             print(f"Error in numerical_std_e_bdd: {e}")
+            traceback.print_exc()  # Print the full traceback, including the line number
             est_bdd_numerical, est_bdd_numerical_status = 0, False
 
         try:
@@ -404,6 +407,7 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
             est_usvp_numerical_minimize = log2(est_usvp_numerical_minimize)
         except Exception as e:
             print(f"Error in numerical_std_e_usvp_minimize: {e}")
+            traceback.print_exc()  # Print the full traceback, including the line number
             est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = 0, False
 
         try:
@@ -412,6 +416,7 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
             est_bdd_numerical_minimize = log2(est_bdd_numerical_minimize)
         except Exception as e:
             print(f"Error in numerical_std_e_bdd_minimize: {e}")
+            traceback.print_exc()  # Print the full traceback, including the line number
             est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = 0, False
 
         if est_bdd_numerical_status:

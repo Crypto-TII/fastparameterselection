@@ -399,14 +399,38 @@ def numerical_std_e_usvp_minimize(l, n, logq, std_s):
 
     def zeta(std_e): return max(1, np.round(std_e / std_s))
 
-    def nom(std_e, beta): return 2 * n * \
-        (lnq - log(zeta(std_e))) * log(beta / const)
+    def nom(std_e, beta):
+        # Ensure zeta(std_e) is positive
+        zeta_value = zeta(std_e)
+        if zeta_value <= 0:
+            print(
+                f"Warning: zeta(std_e) is non-positive (zeta={zeta_value}). Setting zeta to a small positive value.")
+            zeta_value = 1e-10  # Set to a small positive value
+
+        # Ensure beta / const is positive
+        beta_ratio = beta / const
+        if beta_ratio <= 0:
+            print(
+                f"Warning: beta / const is non-positive (beta_ratio={beta_ratio}). Setting beta_ratio to a small positive value.")
+            beta_ratio = 1e-10  # Set to a small positive value
+
+        return 2 * n * (lnq - log(zeta_value)) * log(beta_ratio)
 
     def denom(std_e, beta):
+        # Ensure beta is positive
+        if beta <= 0:
+            print(
+                f"Warning: beta is non-positive (beta={beta}). Setting beta to a small positive value.")
+            beta = 1e-10  # Set beta to a small positive value
+
         value_inside_log = sqrt(beta) / (const * std_e)
-        # print(
-        #     f"Debug: value_inside_log={value_inside_log}, const={const}, std_e={std_e}, beta={beta}"
-        # )
+
+        # Ensure value_inside_log is positive
+        if value_inside_log <= 0:
+            print(
+                f"Warning: value_inside_log is non-positive (value_inside_log={value_inside_log}). Setting it to a small positive value.")
+            value_inside_log = 1e-10  # Set to a small positive value
+
         return lnq + log(value_inside_log)
 
     def eq11(x):
@@ -418,13 +442,6 @@ def numerical_std_e_usvp_minimize(l, n, logq, std_s):
         if (beta < const):
             print(
                 f"Error in {numerical_std_e_usvp.__name__}: could not find optimal d, maybe lambda is too small"
-            )
-            zeta_value = zeta(std_e)
-            log_zeta = log(zeta_value)
-            log_ratio = log(beta / const)
-            print(
-                f"Debug: beta={beta}, const={const}, std_e={std_e}, zeta={zeta_value}, "
-                f"log(zeta)={log_zeta}, log(beta/const)={log_ratio}"
             )
             exit(0)
         else:
@@ -482,6 +499,8 @@ def numerical_std_e_usvp(l, n, logq, std_s):
 
     def denom(std_e, beta):
         value_inside_log = sqrt(beta) / (const * std_e)
+        if value_inside_log <= 0:
+            value_inside_log = 1e-10
         return lnq + log(value_inside_log)
 
     def eq11(x):
