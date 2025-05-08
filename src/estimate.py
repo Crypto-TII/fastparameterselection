@@ -10,7 +10,7 @@ from param_calls import process_parameters
 def main(argv):
 
     opts = parse_options(argv)
-    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw = handle_options(
+    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only = handle_options(
         opts)
 
     if handle_errors(std_e, logq, lwe_d, l, param):
@@ -48,7 +48,8 @@ def main(argv):
         'secret': secret,
         'secret_q': secret_q,
         'hw': hw,
-        'output_dict': output_dict
+        'output_dict': output_dict,
+        'num_only': num_only,
     }
 
     data = process_parameters(params, table)
