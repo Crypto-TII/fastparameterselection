@@ -1,3 +1,4 @@
+import traceback
 from numpy import pi, exp, log, log2, sqrt, divide
 from scipy.optimize import fsolve, minimize
 
@@ -326,8 +327,10 @@ def numerical_std_e_bdd(l, n, logq, std_s):
     :param max_retries: Maximum number of retries.
     :return: std_e value.
     """
-    retry_range = [1.0, 10.0]
-    max_retries = 5
+
+    retry_range = [-20, 60]
+
+    max_retries = 100
     eta_initial_guess = (l - 16.4) / 0.292
 
     def eta_eq(eta):
@@ -357,16 +360,15 @@ def numerical_std_e_bdd(l, n, logq, std_s):
 
     # Retry logic
     for attempt in range(max_retries):
-        print(f"Attempt {attempt + 1} of {max_retries}...")
 
         # Generate a random starting point within the specified range
         std_e_initial_guess = random.uniform(*retry_range)
 
+        print(
+            f"Attempt {attempt + 1} of {max_retries}... initial guess {std_e_initial_guess}")
         # Solve using fsolve
         std_e_solution, info, ier, msg = fsolve(
             eq_for_sigmae, std_e_initial_guess, full_output=True)
-
-        print("using fsolve")
 
         std_e_solution = std_e_solution[0]
 
@@ -487,20 +489,45 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     """
     lnq = logq * ln2
 
+    max_retries = 1000
+
     # Initial guesses
     beta_initial_guess = (l - 16.4) / 0.292
     std_e_initial_guess = 3.19
+
+    retry_range = [-20, 60]
+    retry_range_beta = [beta_initial_guess - 100, beta_initial_guess + 100]
 
     def zeta(std_e):
         return max(1, np.round(std_e / std_s))
 
     def nom(std_e, beta):
-        return 2 * n * (lnq - log(zeta(std_e))) * log(beta / const)
+        zeta_value = zeta(std_e)
+        if zeta_value <= 0:
+            print(
+                f"Warning: zeta(std_e) is non-positive (zeta={zeta_value}). Setting zeta to a small positive value.")
+            zeta_value = 1e-10  # Set to a small positive value
+
+        beta_ratio = beta / const
+        if beta_ratio <= 0:
+            print(
+                f"Warning: beta / const is non-positive (beta_ratio={beta_ratio}). Setting beta_ratio to a small positive value.")
+            beta_ratio = 1e-10  # Set to a small positive value
+
+        return 2 * n * (lnq - log(zeta_value)) * log(beta_ratio)
 
     def denom(std_e, beta):
+        if beta <= 0:
+            print(
+                f"Warning: beta is non-positive (beta={beta}). Setting beta to a small positive value.")
+            beta = 1e-10  # Set beta to a small positive value
+
         value_inside_log = sqrt(beta) / (const * std_e)
         if value_inside_log <= 0:
-            value_inside_log = 1e-10
+            print(
+                f"Warning: value_inside_log is non-positive (value_inside_log={value_inside_log}). Setting it to a small positive value.")
+            value_inside_log = 1e-10  # Set to a small positive value
+
         return lnq + log(value_inside_log)
 
     def eq11(x):
@@ -508,20 +535,26 @@ def numerical_std_e_usvp(l, n, logq, std_s):
         return beta - nom(std_e, beta) / (denom(std_e, beta) ** 2)
 
     def d_optimal(std_e, beta):
-        if beta < const:
+        zeta_value = zeta(std_e)
+        if zeta_value <= 0:
             print(
-                f"Error in {numerical_std_e_usvp.__name__}: could not find optimal d, maybe lambda is too small"
-            )
-            zeta_value = zeta(std_e)
-            log_zeta = log(zeta_value)
-            log_ratio = log(beta / const)
+                f"Warning: zeta(std_e) is non-positive (zeta={zeta_value}). Setting zeta to a small positive value.")
+            zeta_value = 1e-10  # Set to a small positive value
+
+        beta_ratio = beta / const
+        if beta_ratio <= 0:
             print(
-                f"Debug: beta={beta}, const={const}, std_e={std_e}, zeta={zeta_value}, "
-                f"log(zeta)={log_zeta}, log(beta/const)={log_ratio}"
-            )
-            exit(0)
-        else:
-            return sqrt(2 * n * (lnq - log(zeta(std_e))) * beta / log(beta / const))
+                f"Warning: beta / const is non-positive (beta_ratio={beta_ratio}). Setting beta_ratio to a small positive value.")
+            beta_ratio = 1e-10  # Set to a small positive value
+
+        value_inside_sqrt = 2 * n * \
+            (lnq - log(zeta_value)) * beta / log(beta_ratio)
+        if value_inside_sqrt <= 0:
+            print(
+                f"Warning: value_inside_sqrt is non-positive (value_inside_sqrt={value_inside_sqrt}). Setting it to a small positive value.")
+            value_inside_sqrt = 1e-10  # Set to a small positive value
+
+        return sqrt(value_inside_sqrt)
 
     def eq12(x):
         std_e, beta = x
@@ -536,17 +569,62 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     # Initial guesses for fsolve
     initial_guess = [std_e_initial_guess, beta_initial_guess]
 
-    # Solve using fsolve
-    solution, info, ier, msg = fsolve(
-        system_of_equations, initial_guess, full_output=True)
+    # # Solve using fsolve
+    # solution, info, ier, msg = fsolve(
+    #     system_of_equations, initial_guess, full_output=True)
 
-    if ier != 1:  # Check if fsolve converged
+    # if ier != 1:  # Check if fsolve converged
+    #     print(
+    #         f"Warning: fsolve did not converge in {numerical_std_e_usvp.__name__}: {msg}")
+    #     print("Solution found (if any):", solution)
+    #     return std_e_initial_guess, ier  # Default value if fsolve fails
+
+    # std_e_solution, beta_solution = solution
+    # print(
+    #     f"numerical_std_e_usvp Converged: std_e={std_e_solution}, beta={beta_solution}")
+    # return std_e_solution, bool(ier)
+
+    # Retry logic
+    for attempt in range(max_retries):
+        try:
+            # Generate a random starting point within the specified range
+            initial_guess[0] = random.uniform(*retry_range)
+            initial_guess[1] = random.uniform(*retry_range_beta)
+
+            print(
+                f"Attempt {attempt + 1} of {max_retries}... initial guess {initial_guess}")
+
+            # Solve using fsolve
+            std_e_solution, info, ier, msg = fsolve(
+                system_of_equations, initial_guess, full_output=True)
+
+            std_e_solution = std_e_solution[0]
+
+            if ier == 1:  # Check if fsolve converged
+                print(
+                    f"numerical_std_e_usvp Converged on attempt {attempt + 1} with std_e={std_e_solution}")
+                return exp(std_e_solution), bool(ier)
+
+            print(f"Attempt {attempt + 1} failed to converge: {msg}")
+
+        except Exception as e:
+            print(f"Error during attempt {attempt + 1}: {e}")
+            traceback.print_exc()  # Print the full traceback for debugging
+
+    print("All attempts failed to converge.")
+
+    final_guess = numerical_std_e_bdd(l, n, logq, std_s)
+
+    final_guess = [log(final_guess), beta_initial_guess]
+
+    std_e_solution, info, ier, msg = fsolve(
+        system_of_equations, final_guess, full_output=True)
+
+    std_e_solution = std_e_solution[0]
+
+    if ier == 1:  # Check if fsolve converged
         print(
-            f"Warning: fsolve did not converge in {numerical_std_e_usvp.__name__}: {msg}")
-        print("Solution found (if any):", solution)
-        return std_e_initial_guess, ier  # Default value if fsolve fails
+            f"numerical_std_e_usvp Converged on attempt {attempt + 1} with std_e={exp(std_e_solution)}")
+        return exp(std_e_solution), bool(ier)
 
-    std_e_solution, beta_solution = solution
-    print(
-        f"numerical_std_e_usvp Converged: std_e={std_e_solution}, beta={beta_solution}")
-    return std_e_solution, bool(ier)
+    return None

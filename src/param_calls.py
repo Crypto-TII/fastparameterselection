@@ -401,23 +401,23 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
             traceback.print_exc()  # Print the full traceback, including the line number
             est_bdd_numerical, est_bdd_numerical_status = 0, False
 
-        try:
-            est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = numerical_std_e_usvp_minimize(
-                l, lwe_d, lq, std_s)
-            est_usvp_numerical_minimize = log2(est_usvp_numerical_minimize)
-        except Exception as e:
-            print(f"Error in numerical_std_e_usvp_minimize: {e}")
-            traceback.print_exc()  # Print the full traceback, including the line number
-            est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = 0, False
+        # try:
+        #     est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = numerical_std_e_usvp_minimize(
+        #         l, lwe_d, lq, std_s)
+        #     est_usvp_numerical_minimize = log2(est_usvp_numerical_minimize)
+        # except Exception as e:
+        #     print(f"Error in numerical_std_e_usvp_minimize: {e}")
+        #     traceback.print_exc()  # Print the full traceback, including the line number
+        #     est_usvp_numerical_minimize, est_usvp_numerical_minimize_status = 0, False
 
-        try:
-            est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = numerical_std_e_bdd_minimize(
-                l, lwe_d, lq, std_s)
-            est_bdd_numerical_minimize = log2(est_bdd_numerical_minimize)
-        except Exception as e:
-            print(f"Error in numerical_std_e_bdd_minimize: {e}")
-            traceback.print_exc()  # Print the full traceback, including the line number
-            est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = 0, False
+        # try:
+        #     est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = numerical_std_e_bdd_minimize(
+        #         l, lwe_d, lq, std_s)
+        #     est_bdd_numerical_minimize = log2(est_bdd_numerical_minimize)
+        # except Exception as e:
+        #     print(f"Error in numerical_std_e_bdd_minimize: {e}")
+        #     traceback.print_exc()  # Print the full traceback, including the line number
+        #     est_bdd_numerical_minimize, est_bdd_numerical_minimize_status = 0, False
 
         if est_bdd_numerical_status:
             lwe_parameters_bdd = LWE.Parameters(
@@ -431,39 +431,51 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
             lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
                 lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
 
-        if est_bdd_numerical_minimize_status:
-            lwe_parameters_bdd_minimize = LWE.Parameters(
-                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_bdd_numerical_minimize))
-            lwe_bdd_minimize = math.floor(math.log2(LWE.primal_bdd(
-                lwe_parameters_bdd_minimize, red_cost_model=RC.BDGL16)["rop"]))
+        # if est_bdd_numerical_minimize_status:
+        #     lwe_parameters_bdd_minimize = LWE.Parameters(
+        #         lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_bdd_numerical_minimize))
+        #     lwe_bdd_minimize = math.floor(math.log2(LWE.primal_bdd(
+        #         lwe_parameters_bdd_minimize, red_cost_model=RC.BDGL16)["rop"]))
 
-        if est_usvp_numerical_minimize_status:
-            lwe_parameters_usvp_minimize = LWE.Parameters(
-                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_usvp_numerical_minimize))
-            lwe_usvp_minimize = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters_usvp_minimize, red_cost_model=RC.BDGL16)["rop"]))
+        # if est_usvp_numerical_minimize_status:
+        #     lwe_parameters_usvp_minimize = LWE.Parameters(
+        #         lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_usvp_numerical_minimize))
 
-        print("est_usvp_numerical (minimize)",
-              est_usvp_numerical_minimize, est_usvp_numerical_minimize_status, lwe_usvp_minimize)
-        print("est_usvp_numerical (fsolve)",
-              est_usvp_numerical, est_usvp_numerical_status, lwe_usvp)
-        print("est_bdd_numerical (minimize)", est_bdd_numerical_minimize,
-              est_bdd_numerical_minimize_status, lwe_bdd_minimize)
-        print("est_bdd_numerical (fsolve)",
-              est_bdd_numerical, est_bdd_numerical_status, lwe_bdd)
+            # check if lwe_usvp_minize is infinite or not
+            # print("lwe_parameters_usvp_minimize", est_usvp_numerical_minimize)
+
+            # est = LWE.primal_usvp(
+            #     lwe_parameters_usvp_minimize, red_cost_model=RC.BDGL16)["rop"]
+            # if est == float('inf'):
+            #     print("est == float('inf')")
+            #     est_usvp_numerical_minimize = float('inf')
+            # else:
+            #     est_usvp_numerical_minimize = math.floor(math.log2(est))
+
+        # print("est_usvp_numerical (minimize)",
+        #       est_usvp_numerical_minimize, est_usvp_numerical_minimize_status, lwe_usvp_minimize)
+        # print("est_usvp_numerical (fsolve)",
+        #       est_usvp_numerical, est_usvp_numerical_status, lwe_usvp)
+        # print("est_bdd_numerical (minimize)", est_bdd_numerical_minimize,
+        #       est_bdd_numerical_minimize_status, lwe_bdd_minimize)
+        # print("est_bdd_numerical (fsolve)",
+        #       est_bdd_numerical, est_bdd_numerical_status, lwe_bdd)
 
         return_value = max(est_usvp_numerical, est_bdd_numerical)
         output_dict['std_e'] = return_value
 
         if verify and estimator_installed:
-            lwe_parameters_bdd = LWE.Parameters(
-                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_bdd_numerical))
-            lwe_parameters_usvp = LWE.Parameters(
-                lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_usvp_numerical))
-            lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-            lwe_usvp = math.floor(math.log2(LWE.primal_bdd(
-                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+            if est_bdd_numerical_status:
+                lwe_parameters_bdd = LWE.Parameters(
+                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_bdd_numerical))
+                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+
+            if est_usvp_numerical_status:
+                lwe_parameters_usvp = LWE.Parameters(
+                    lwe_d, 2 ** lq, ND.UniformMod(secret_q), ND.DiscreteGaussian(2**est_usvp_numerical))
+                lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
 
             estimates = {
                 est_usvp_numerical: lwe_usvp, est_bdd_numerical: lwe_bdd
@@ -472,7 +484,7 @@ def process_std_e_param(logq, l, lwe_d, std_s, verify, estimator_installed, secr
             if table:
                 data_point = {
                     SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
-                    STD_E_USVP: est_usvp_numerical, LWE_BDD: lwe_bdd, LWE_USVP: lwe_usvp, STD_E_BDD: est_bdd_numerical, OUTPUT: return_value
+                    STD_E_USVP: est_usvp_numerical, LWE_USVP: lwe_usvp, STD_E_BDD: est_bdd_numerical, LWE_BDD: lwe_bdd, OUTPUT: return_value
                 }
             else:
                 data_point = {
