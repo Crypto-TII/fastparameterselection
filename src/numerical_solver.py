@@ -3,6 +3,8 @@ from numpy import pi, exp, log, log2, sqrt, divide
 from scipy.optimize import fsolve, minimize
 from formulas import predicted_beta_usvp
 
+from scipy.interpolate import griddata
+
 import numpy as np
 import warnings
 import random
@@ -10,6 +12,8 @@ import random
 import inspect
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+from aux_functions import interpolate
 
 const = 2 * pi * exp(1)
 ln2 = log(2)
@@ -217,7 +221,7 @@ def numerical_logq_bdd(l, n, std_s, std_e):
             eq, lnq_initial_guess, full_output=True)
         if ier != 1:
             print(f"Warning: numerical solver for bdd did not converge: {msg}")
-        return divide(lnq_solution[0] + np.round(poly(l)), ln2)
+        return divide(lnq_solution[0] + interpolate(n, l), ln2)
 
 
 def numerical_logq_usvp(l, n, std_s, std_e):
@@ -232,14 +236,6 @@ def numerical_logq_usvp(l, n, std_s, std_e):
     """
 
     beta = (l - 16.4) / 0.292
-
-    x = np.array([80, 100, 128, 192, 256])
-    y = np.array([4, 3, 2, 1, 0.5])
-
-    # Fit a polynomial of degree 2 (you can increase the degree if needed)
-    degree = 2
-    coeffs = np.polyfit(x, y, degree)
-    poly = np.poly1d(coeffs)
 
     if (beta < const):
         print(
@@ -264,7 +260,7 @@ def numerical_logq_usvp(l, n, std_s, std_e):
             print(
                 f"Warning: numerical solver for usvp did not converge: {msg}")
         # we offset the result by a small amount found empirically for targeted security levels
-        return divide(lnq_solution[0] + np.round(poly(l)), ln2)
+        return divide(lnq_solution[0] + interpolate(n, l), ln2)
 
 
 # Tested using minimize instead of fslove, no real advantage found

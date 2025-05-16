@@ -26,16 +26,20 @@ from .conf import red_simulator as red_simulator_default
 
 pi = 3.141592653589793238462643383
 
+
 def entropy(x):
-    return -x*log(x,2) -(1-x)*log(1-x,2)
+    return -x*log(x, 2) - (1-x)*log(1-x, 2)
+
 
 def approx_binom(n, k):
-    return n*entropy(k/n)+0.5*log(n/(8*k*(n-k)),2)
+    return n*entropy(k/n)+0.5*log(n/(8*k*(n-k)), 2)
 
-def approx_binom_sum(n,k):
+
+def approx_binom_sum(n, k):
     beta = k/n
-    rho = sqrt(1+beta*log(beta,2)-(1-beta)*log(1-beta,2))
-    return (n-1)+log(erfc(sqrt(n)*rho),2)
+    rho = sqrt(1+beta*log(beta, 2)-(1-beta)*log(1-beta, 2))
+    return (n-1)+log(erfc(sqrt(n)*rho), 2)
+
 
 class PrimalUSVP:
     """
@@ -71,7 +75,7 @@ class PrimalUSVP:
         b = log(delta) * (2 * beta - 1) + log(params.q) - C
         n = params.n
         if a * n * n + b * n + c >= 0:  # trivial case
-            return min(n, m) #bug here
+            return min(n, m)  # bug here
 
         # solve for ad^2 + bd + c == 0
         disc = b * b - 4 * a * c  # the discriminant
@@ -111,14 +115,16 @@ class PrimalUSVP:
         if params._homogeneous:
             tau = False  # Tau false ==> instance is homogeneous
 
-        d = PrimalUSVP._solve_for_d(params, m, beta, tau, xi) if d is None else d
+        d = PrimalUSVP._solve_for_d(
+            params, m, beta, tau, xi) if d is None else d
         if d < beta:
             d = beta
         # if d == β we assume one SVP call, otherwise poly calls. This makes the cost curve jump, so
         # we avoid it here.
         if d == beta and d < m:
             d += 1
-        if d>m+1: print(m, d, beta)
+        if d > m+1:
+            print(m, d, beta)
         assert d <= m + 1
 
         if not tau:
@@ -132,7 +138,8 @@ class PrimalUSVP:
             lhs = log(sqrt(params.Xe.stddev**2 * (beta - 1) + tau**2))
             rhs = RR(
                 log(delta) * (2 * beta - d - 1)
-                + (log(tau) + log(xi) * params.n + log(params.q) * (d - params.n - 1)) / d
+                + (log(tau) + log(xi) * params.n +
+                   log(params.q) * (d - params.n - 1)) / d
             )
 
         return costf(red_cost_model, beta, d, predicate=lhs <= rhs)
@@ -298,17 +305,19 @@ class PrimalUSVP:
 
 primal_usvp = PrimalUSVP()
 
+
 def probability_enum(n, h, ng, w):
     prob = 0
-    for i in range(0,w+1):
-        prob+=RR(binomial(n-h,ng-i)*binomial(h,i)/binomial(n, ng))
-    return log(prob,2)
+    for i in range(0, w+1):
+        prob += RR(binomial(n-h, ng-i)*binomial(h, i)/binomial(n, ng))
+    return log(prob, 2)
+
 
 def ss_enum(ng, w):
     ss = 0
-    for i in range(0,w+1):
-        ss+=RR(binomial(ng, i) * 2**i)
-    return log(ss,2)
+    for i in range(0, w+1):
+        ss += RR(binomial(ng, i) * 2**i)
+    return log(ss, 2)
 
 
 class PrimalHybrid:
@@ -348,12 +357,13 @@ class PrimalHybrid:
 
         else:
             for i, _ in enumerate(r):
-                #eta = ZZ(d - (i-1))
-                #tmp = 2./d * ( (d-n)*log(q) + n*log(xi) ) - 2*(d-eta)*log(deltaf(beta)) + log(eta/(2*pi*exp(1)))
-                #print(i, r[i]/2., (d-1-2*i)*log(deltaf(beta))+ ((d-n)*log(q)+ n*log(xi))/d)
-                if gaussian_heuristic_log_input(r[i:]) <= D.stddev**2 * (d - i): #tmp <= log(D.stddev**2 * (d - i)):
-                    #print(i, gaussian_heuristic_log_input(r[i:]), D.stddev**2 * (d - i))
-                    #print(i, log(gaussian_heuristic_log_input(r[i:])),  tmp)
+                # eta = ZZ(d - (i-1))
+                # tmp = 2./d * ( (d-n)*log(q) + n*log(xi) ) - 2*(d-eta)*log(deltaf(beta)) + log(eta/(2*pi*exp(1)))
+                # print(i, r[i]/2., (d-1-2*i)*log(deltaf(beta))+ ((d-n)*log(q)+ n*log(xi))/d)
+                # tmp <= log(D.stddev**2 * (d - i)):
+                if gaussian_heuristic_log_input(r[i:]) <= D.stddev**2 * (d - i):
+                    # print(i, gaussian_heuristic_log_input(r[i:]), D.stddev**2 * (d - i))
+                    # print(i, log(gaussian_heuristic_log_input(r[i:])),  tmp)
                     return ZZ(d - (i - 1))
             return ZZ(2)
 
@@ -393,8 +403,8 @@ class PrimalHybrid:
 
         xi = PrimalUSVP._xi_factor(params.Xs, params.Xe)
 
-        #d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), m) + 1
-        #print('xi:', xi, 'beta:', beta, 'd:', d, 'Xs:', params.Xs, sqrt(RR(ceil(len(params.Xs) * params.Xs.density)/(params.n))))
+        # d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), m) + 1
+        # print('xi:', xi, 'beta:', beta, 'd:', d, 'Xs:', params.Xs, sqrt(RR(ceil(len(params.Xs) * params.Xs.density)/(params.n))))
         tau = 1
         # 1. Simulate BKZ-β
         # TODO: pick τ as non default value
@@ -403,9 +413,10 @@ class PrimalHybrid:
             tau = False
             d -= 1
 
-        #tau=False
-        #d-=1
-        r = simulator(d, params.n - zeta, params.q, beta, xi=xi, tau=tau, dual=True)
+        # tau=False
+        # d-=1
+        r = simulator(d, params.n - zeta, params.q,
+                      beta, xi=xi, tau=tau, dual=True)
         # print('beta:', beta)
         # for i, _ in enumerate(r):
         #     if i%100==0:
@@ -419,7 +430,8 @@ class PrimalHybrid:
             svp_cost = PrimalHybrid.babai_cost(d)
         else:
             # we scaled the lattice so that χ_e is what we want
-            eta = PrimalHybrid.svp_dimension(r, params.Xe, xi, params.q, params.n, beta)
+            eta = PrimalHybrid.svp_dimension(
+                r, params.Xe, xi, params.q, params.n, beta)
             if eta > d:
                 # Lattice reduction was not strong enough to "reveal" the LWE solution.
                 # A larger `beta` should perhaps be attempted.
@@ -447,7 +459,7 @@ class PrimalHybrid:
             # the number of non-zero entries
             h = ceil(len(params.Xs) * params.Xs.density)
             probability = RR(prob_drop(params.n, h, zeta))
-            #print("starting proba:", probability)
+            # print("starting proba:", probability)
             hw = 1
             while hw < min(h, zeta):
                 new_search_space = binomial(zeta, hw) * base**hw
@@ -455,35 +467,36 @@ class PrimalHybrid:
                     break
                 search_space += new_search_space
                 drop = prob_drop(params.n, h, zeta, fail=hw)
-                approx_probability = approx_binom(params.n-h, zeta-hw)+approx_binom(h, hw)-approx_binom(params.n, zeta)
+                approx_probability = approx_binom(
+                    params.n-h, zeta-hw)+approx_binom(h, hw)-approx_binom(params.n, zeta)
 
                 probability += drop
-                #print(hw, 'prob:', log(probability,2).n(), 'enum:', RR(probability_enum(params.n, h, zeta, hw)) )
+                # print(hw, 'prob:', log(probability,2).n(), 'enum:', RR(probability_enum(params.n, h, zeta, hw)) )
                 hw += 1
 
             svp_cost = svp_cost.repeat(ssf(search_space))
-            #approx_probability = approx_binom(params.n-h, zeta-hw)+approx_binom(h, hw)-approx_binom(params.n, zeta)
-            #print(hw, 'prob enum:', probability, log(probability,2).n(), 'approx proba:', approx_probability.n(), 'svp cost:', log(svp_cost["rop"],2).n(), 'approx svp cost:', hw+approx_binom(zeta,hw).n() )
+            # approx_probability = approx_binom(params.n-h, zeta-hw)+approx_binom(h, hw)-approx_binom(params.n, zeta)
+            # print(hw, 'prob enum:', probability, log(probability,2).n(), 'approx proba:', approx_probability.n(), 'svp cost:', log(svp_cost["rop"],2).n(), 'approx svp cost:', hw+approx_binom(zeta,hw).n() )
         hw -= 1
-        #print("svp_cost:", svp_cost)
+        # print("svp_cost:", svp_cost)
         if mitm and zeta > 0:
             if babai:
-                probability *= mitm_babai_probability(r, params.Xe.stddev, params.q)
+                probability *= mitm_babai_probability(
+                    r, params.Xe.stddev, params.q)
             else:
                 # TODO: the probability in this case needs to be analysed
                 probability *= 1
-        #print('proba after enum:', probability)
+        # print('proba after enum:', probability)
 
-        #print(zeta, hw, " proba before babai:", log(probability,2))
+        # print(zeta, hw, " proba before babai:", log(probability,2))
         if eta <= 10 and d >= 0:  # NOTE: η: somewhat arbitrary bound, d: we may guess it all
             probability *= RR(prob_babai(r, sqrt(d) * params.Xe.stddev))
-        #preproc_cost = (0.292*beta+16.4+3+log(d,2)) - probability_enum(params.n, h, zeta, hw)
-        #print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), )
-        #print(bkz_cost["rop"], RR(log(svp_cost["rop"],2)), RR(log(probability,2)), RR(log(search_space,2)))
+        # preproc_cost = (0.292*beta+16.4+3+log(d,2)) - probability_enum(params.n, h, zeta, hw)
+        # print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), )
+        # print(bkz_cost["rop"], RR(log(svp_cost["rop"],2)), RR(log(probability,2)), RR(log(search_space,2)))
 
-        #print(zeta, hw, " proba after babai:", log(probability,2))
-        #print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), probability_enum(params.n, h, zeta, hw), RR(log(probability,2)), ";",  RR(log(bkz_cost["rop"],2)), RR(0.292*beta+16.4+3+log(d,2)).n()   ) #RR(preproc_cost), RR(log(bkz_cost["rop"],2))
-
+        # print(zeta, hw, " proba after babai:", log(probability,2))
+        # print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), probability_enum(params.n, h, zeta, hw), RR(log(probability,2)), ";",  RR(log(bkz_cost["rop"],2)), RR(0.292*beta+16.4+3+log(d,2)).n()   ) #RR(preproc_cost), RR(log(bkz_cost["rop"],2))
 
         ret = Cost()
         ret["rop"] = bkz_cost["rop"] + svp_cost["rop"]
@@ -515,10 +528,10 @@ class PrimalHybrid:
         else:
             return Cost(rop=oo)
 
-        #preproc_cost = (0.292*beta+16.4+3+log(d,2)) - probability_enum(params.n, h, zeta, hw)
-        #enum_cost = ss_enum(zeta,hw)+2*log(d,2) - probability_enum(params.n, h, zeta, hw)
-        #print(zeta, hw, beta, ":", " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), "prob enum:", RR(probability_enum(params.n, h, zeta, hw)).n(), RR(log(ret["|S|"],2)).n(), RR(ss_enum(zeta,hw)).n(), RR(enum_cost).n(),  RR(log(ret["svp"],2)), RR(log(ret["prob"],2)))
-        #print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), probability_enum(params.n, h, zeta, hw), RR(log(probability,2)), RR(preproc_cost), RR(log(bkz_cost["rop"],2))   )
+        # preproc_cost = (0.292*beta+16.4+3+log(d,2)) - probability_enum(params.n, h, zeta, hw)
+        # enum_cost = ss_enum(zeta,hw)+2*log(d,2) - probability_enum(params.n, h, zeta, hw)
+        # print(zeta, hw, beta, ":", " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), "prob enum:", RR(probability_enum(params.n, h, zeta, hw)).n(), RR(log(ret["|S|"],2)).n(), RR(ss_enum(zeta,hw)).n(), RR(enum_cost).n(),  RR(log(ret["svp"],2)), RR(log(ret["prob"],2)))
+        # print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), probability_enum(params.n, h, zeta, hw), RR(log(probability,2)), RR(preproc_cost), RR(log(bkz_cost["rop"],2))   )
 
         return ret
 
@@ -565,16 +578,16 @@ class PrimalHybrid:
 
         # step 1. optimize β
 
-        #print("baseline cost beta:", baseline_cost["beta"])
+        # print("baseline cost beta:", baseline_cost["beta"])
         with local_minimum(
-            2, baseline_cost["beta"] + 50, precision=2, log_level=log_level + 1 #
+            2, baseline_cost["beta"] + 50, precision=2, log_level=log_level + 1
         ) as it:
             for beta in it:
                 it.update(f(beta))
-                #print(beta, it.y)
+                # print(beta, it.y)
             for beta in it.neighborhood:
                 it.update(f(beta))
-                #print('n', beta, it.y)
+                # print('n', beta, it.y)
             cost = it.y
 
         # print('min cost:', cost["beta"])
@@ -593,7 +606,6 @@ class PrimalHybrid:
         #     #print(bkz_cost, svp_cost)
         #     print("beta:", beta, "eta:", eta, "bkz:", log(bkz_cost["rop"],2).n(), "svp:", log(svp_cost["rop"],2).n(), "d:", d)
         #
-
 
         Logging.log("bdd", log_level, f"H1: {cost!r}")
 
@@ -710,7 +722,8 @@ class PrimalHybrid:
         )
 
         def find_zeta_max(params, red_cost_model):
-            usvp_cost = primal_usvp(params, red_cost_model=red_cost_model)["rop"]
+            usvp_cost = primal_usvp(
+                params, red_cost_model=red_cost_model)["rop"]
             zeta_max = 1
             while zeta_max < params.n:
                 # TODO: once support_size() is supported for NTRU, remove the below try/except
@@ -718,7 +731,7 @@ class PrimalHybrid:
                     if params.Xs.support_size(zeta_max) > usvp_cost:
                         # double it for mitm
                         return 2 * zeta_max
-                    zeta_max +=1
+                    zeta_max += 1
                 except NotImplementedError:
                     return params.n
             return params.n
@@ -734,8 +747,8 @@ class PrimalHybrid:
                             **kwds,
                         )
                     )
-                    #print('zeta:', zeta)
-                    #print(it.y['beta'])
+                    # print('zeta:', zeta)
+                    # print(it.y['beta'])
             # TODO: this should not be required
             cost = min(it.y, f(0, optimize_d=False, **kwds))
         else:

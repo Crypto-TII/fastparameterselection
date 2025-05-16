@@ -270,8 +270,8 @@ def probability_enum(n, h, ng, w):
     ng = int(ng)
     for i in range(0, w):
         prob += RR(binomial(n-h, ng-i)*binomial(h, i)/binomial(n, ng))
-    # if prob == 0:
-    #     prob = 1e-10
+    if prob == 0:
+        return -1
     return log2(prob)
 
 # needed only if EXACT EQUATIONS are called
@@ -416,9 +416,12 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, initial_guess=None):
             d_start = sqrt(2 * n * lnq * beta_start / log(beta_start / const))
             initial_guess = [n / 4, beta_start, d_start - n / 4]
 
-        if len(res) >= 3:
+        prob = probability_enum(n, h, res[0], wg)
+
+        if len(res) >= 3 and prob != -1:
             rt = 0.292 * res[1] + log2(8 * res[2]) + \
                 16.4 - probability_enum(n, h, res[0], wg)
+            print("probability: ", probability_enum(n, h, res[0], wg))
             if rt < rt_min and sol_tolerance < 7:
                 rt_min = rt
 
@@ -482,6 +485,7 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
         # except:
         #     print('error on wg = ', wg)
         #     continue
+        prob = probability_enum(n, h, res[0], wg)
         rt = 0.292*res[1]+log2(8*res[2])+16.4 - \
             probability_enum(n, h, res[0], wg)
         eq1a_tolerance = abs(eq1a(int(res[0]), int(res[1]), int(res[2])))

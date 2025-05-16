@@ -7,8 +7,11 @@ from const import (
     LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
     LAMBDA_USVP_S_TER, LAMBDA_BDD_BIN, LAMBDA_BDD_TER, LAMBDA_BDD_S_BIN,
     LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
-    N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
+    N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER, POINTS, VALUES
 )
+
+from scipy.interpolate import griddata
+import numpy as np
 
 sys.path.append('./latticeestimator')
 
@@ -405,3 +408,28 @@ def helper_headers(header):
 
     print("." * max_length_exp)
     print('\n')
+
+
+# Experimentally found values to offer a correction to the output of logq numerical
+def init_correction_values():
+    x_vals = np.array([80, 100, 128, 192, 256])
+    y_vals = np.array([2**10, 2**11, 2**15])
+    z = np.array([4, 3, 2, 1, 0.5])
+    t = np.array([190, 100, 80, 30, 20])
+
+    # Build the input grid and function values
+    points = []
+    values = []
+    for y in y_vals:
+        for xi, zi, ti in zip(x_vals, z, t):
+            val = zi + ti if y == 2**15 else zi
+            points.append([y, xi])
+            values.append(val)
+
+    points = np.array(points)
+    values = np.array(values)
+    return points, values
+
+
+def interpolate(y, x):
+    return griddata(POINTS, VALUES, [[y, x]], method='linear')[0]
