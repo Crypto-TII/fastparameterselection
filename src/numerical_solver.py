@@ -260,6 +260,8 @@ def numerical_logq_usvp(l, n, std_s, std_e):
             print(
                 f"Warning: numerical solver for usvp did not converge: {msg}")
         # we offset the result by a small amount found empirically for targeted security levels
+        print("solution: ", lnq_solution[0])
+        print("interpolate: ", interpolate(n, l))
         return divide(lnq_solution[0] + interpolate(n, l), ln2)
 
 

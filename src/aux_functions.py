@@ -1,3 +1,4 @@
+from scipy.interpolate import LinearNDInterpolator
 import math
 import csv
 import sys
@@ -410,26 +411,8 @@ def helper_headers(header):
     print('\n')
 
 
-# Experimentally found values to offer a correction to the output of logq numerical
-def init_correction_values():
-    x_vals = np.array([80, 100, 128, 192, 256])
-    y_vals = np.array([2**10, 2**11, 2**15])
-    z = np.array([4, 3, 2, 1, 0.5])
-    t = np.array([190, 100, 80, 30, 20])
-
-    # Build the input grid and function values
-    points = []
-    values = []
-    for y in y_vals:
-        for xi, zi, ti in zip(x_vals, z, t):
-            val = zi + ti if y == 2**15 else zi
-            points.append([y, xi])
-            values.append(val)
-
-    points = np.array(points)
-    values = np.array(values)
-    return points, values
-
-
 def interpolate(y, x):
-    return griddata(POINTS, VALUES, [[y, x]], method='linear')[0]
+    val = griddata(POINTS, VALUES, [[y, x]], method='linear')
+    if np.isnan(val[0]):
+        val = griddata(POINTS, VALUES, [[y, x]], method='nearest')
+    return val[0]
