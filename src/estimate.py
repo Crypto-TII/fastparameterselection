@@ -10,7 +10,7 @@ from param_calls import process_parameters
 def main(argv):
 
     opts = parse_options(argv)
-    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only = handle_options(
+    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only, correction = handle_options(
         opts)
 
     if handle_errors(std_e, logq, lwe_d, l, param):
@@ -45,6 +45,7 @@ def main(argv):
         'model_values': model_values,
         'verify': verify,
         'estimator_installed': estimator_installed,
+        'correction': correction,
         'secret': secret,
         'secret_q': secret_q,
         'hw': hw,

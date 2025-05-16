@@ -82,13 +82,14 @@ def process_parameters(params, table):
     hw = params['hw']
     output_dict = params['output_dict']
     num_only = params['num_only']
+    correction = params['correction']
 
     if param == 'n':
         data = process_n(logq, l, std_s, std_e, model_values['n_usvp'], model_values['n_usvp_s'],
                          model_values['n_bdd'], model_values['n_bdd_s'], verify, estimator_installed, secret, secret_q, table, num_only, output_dict)
     elif param == 'logq':
         data = process_logq(
-            l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict)
+            l, lwe_d, std_s, std_e, verify, estimator_installed, correction, secret, secret_q, hw, output_dict)
     elif param == 'std_e':
         data = process_std_e(
             logq, l, lwe_d, std_s, verify, estimator_installed, secret, secret_q, table, output_dict)
@@ -108,10 +109,10 @@ def process_n(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, e
     return data
 
 
-def process_logq(l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict):
+def process_logq(l, lwe_d, std_s, std_e, verify, estimator_installed, correction, secret, secret_q, hw, output_dict):
     if secret != 'sparse':
         data = process_logq_param(
-            l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, output_dict)
+            l, lwe_d, std_s, std_e, verify, estimator_installed, correction, secret, secret_q, output_dict)
     else:
         data = process_logq_param_hybrid(
             l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, hw, output_dict)
@@ -267,7 +268,7 @@ def process_n_param(logq, l, std_s, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, ver
     return data
 
 
-def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secret, secret_q, output_dict):
+def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, correction, secret, secret_q, output_dict):
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
@@ -301,9 +302,70 @@ def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secr
             lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
         lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
             lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+
+        num_calls = 2
+
+        corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_usvp_numerical, est_bdd_numerical, lwe_bdd, lwe_usvp
+
+        # we correct the obtained value using the lattice estimator
+        if correction:
+
+            if lwe_usvp >= l:
+                while (lwe_usvp >= l):
+                    corrected_lwe_usvp = lwe_usvp
+                    corrected_logq_usvp = est_usvp_numerical
+                    print("Applying correction lwe usvp > l", "logq ",
+                          corrected_logq_usvp, " est", corrected_lwe_usvp)
+                    est_usvp_numerical += 1
+                    num_calls += 1
+                    lwe_parameters_usvp = LWE.Parameters(
+                        lwe_d, 2 ** est_usvp_numerical, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                    lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                        lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+            else:
+                while (lwe_usvp < l):
+                    est_usvp_numerical -= 1
+                    num_calls += 1
+                    lwe_parameters_usvp = LWE.Parameters(
+                        lwe_d, 2 ** est_usvp_numerical, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                    lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                        lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+                    corrected_lwe_usvp = lwe_usvp
+                    corrected_logq_usvp = est_usvp_numerical
+                    print("Applying correction lwe usvp < l", "logq ",
+                          corrected_logq_usvp, " est", corrected_lwe_usvp)
+
+            if lwe_bdd >= l:
+                while (lwe_bdd >= l):
+                    corrected_lwe_bdd = lwe_bdd
+                    corrected_logq_bdd = est_bdd_numerical
+                    print("Applying correction lwe bdd > l", "logq ",
+                          corrected_logq_bdd, " est", corrected_lwe_bdd)
+                    est_bdd_numerical += 1
+                    num_calls += 1
+                    lwe_parameters_bdd = LWE.Parameters(
+                        lwe_d, 2 ** est_bdd_numerical, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                    lwe_bdd = math.floor(math.log2(LWE.primal_usvp(
+                        lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+            else:
+                while (lwe_bdd < l):
+                    est_bdd_numerical -= 1
+                    num_calls += 1
+                    lwe_parameters_bdd = LWE.Parameters(
+                        lwe_d, 2 ** est_bdd_numerical, ND.UniformMod(secret_q), ND.DiscreteGaussian(std_e))
+                    lwe_bdd = math.floor(math.log2(LWE.primal_usvp(
+                        lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+                    corrected_lwe_bdd = lwe_bdd
+                    corrected_logq_bdd = est_bdd_numerical
+                    print("Applying correction lwe bdd < l", "logq ",
+                          corrected_logq_bdd, " est", corrected_lwe_bdd)
+
+            print("Number of calls to the estimator: ", num_calls)
+            return_value = max(corrected_logq_bdd, corrected_logq_usvp)
+
         data_point = {
-            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: est_usvp_numerical,
-            LWE_USVP: lwe_usvp,  LOGQ_BDD: est_bdd_numerical, LWE_BDD: lwe_bdd, OUTPUT: return_value
+            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: corrected_logq_usvp,
+            LWE_USVP: corrected_lwe_usvp,  LOGQ_BDD: corrected_logq_bdd, LWE_BDD: corrected_lwe_bdd, OUTPUT: return_value
         }
     else:
         data_point = {

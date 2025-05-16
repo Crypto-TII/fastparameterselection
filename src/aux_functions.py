@@ -70,7 +70,7 @@ def parse_options(argv):
     :return: List of options and arguments.
     """
     try:
-        opts, args = getopt.getopt(argv, "h,v", [
+        opts, args = getopt.getopt(argv, "h,v,c", [
                                    "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=", "ntru", "table", "num-only"])
     except Exception as e:
         print(e)
@@ -162,6 +162,7 @@ def handle_options(opts):
     hw = 0
     table = False
     num_only = False
+    correction = False
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
             helper()
@@ -196,9 +197,11 @@ def handle_options(opts):
             table = True
         elif opt == '--num-only':
             num_only = True
+        elif opt == '-c':
+            correction = True
         else:
             helper()
-    return output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only
+    return output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only, correction
 
 # Exctracted from the Lattice Estimator
 
