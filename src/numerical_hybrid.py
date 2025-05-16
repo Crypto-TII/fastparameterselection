@@ -270,6 +270,8 @@ def probability_enum(n, h, ng, w):
     ng = int(ng)
     for i in range(0, w):
         prob += RR(binomial(n-h, ng-i)*binomial(h, i)/binomial(n, ng))
+    # if prob == 0:
+    #     prob = 1e-10
     return log2(prob)
 
 # needed only if EXACT EQUATIONS are called

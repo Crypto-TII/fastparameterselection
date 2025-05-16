@@ -188,6 +188,14 @@ def numerical_logq_bdd(l, n, std_s, std_e):
 
     beta = (l - 16.4) / 0.292
 
+    x = np.array([80, 100, 128, 192, 256])
+    y = np.array([4, 3, 2, 1, 0.5])
+
+    # Fit a polynomial of degree 2 (you can increase the degree if needed)
+    degree = 2
+    coeffs = np.polyfit(x, y, degree)
+    poly = np.poly1d(coeffs)
+
     if (beta < const):
         print(
             "Error: will not start optimization, most likely provided lambda is too small")
@@ -209,7 +217,7 @@ def numerical_logq_bdd(l, n, std_s, std_e):
             eq, lnq_initial_guess, full_output=True)
         if ier != 1:
             print(f"Warning: numerical solver for bdd did not converge: {msg}")
-        return divide(lnq_solution[0], ln2)
+        return divide(lnq_solution[0] + np.round(poly(l)), ln2)
 
 
 def numerical_logq_usvp(l, n, std_s, std_e):
@@ -224,6 +232,15 @@ def numerical_logq_usvp(l, n, std_s, std_e):
     """
 
     beta = (l - 16.4) / 0.292
+
+    x = np.array([80, 100, 128, 192, 256])
+    y = np.array([4, 3, 2, 1, 0.5])
+
+    # Fit a polynomial of degree 2 (you can increase the degree if needed)
+    degree = 2
+    coeffs = np.polyfit(x, y, degree)
+    poly = np.poly1d(coeffs)
+
     if (beta < const):
         print(
             "Error: will not start optimization, most likely provided lambda is too small")
@@ -246,76 +263,78 @@ def numerical_logq_usvp(l, n, std_s, std_e):
         if ier != 1:
             print(
                 f"Warning: numerical solver for usvp did not converge: {msg}")
-        return divide(lnq_solution[0], ln2)
+        # we offset the result by a small amount found empirically for targeted security levels
+        return divide(lnq_solution[0] + np.round(poly(l)), ln2)
 
 
-def numerical_std_e_bdd_minimize(l, n, logq, std_s):
-    """
-    Estimate the std_e value for the BDD model using numerical methods, with retry logic for convergence.
+# Tested using minimize instead of fslove, no real advantage found
+# def numerical_std_e_bdd_minimize(l, n, logq, std_s):
+#     """
+#     Estimate the std_e value for the BDD model using numerical methods, with retry logic for convergence.
 
-    :param l: Security parameter.
-    :param n: Dimension.
-    :param logq: Logarithm of the modulus.
-    :param std_s: Standard deviation of the secret.
-    :param retry_range: Tuple specifying the range for random starting points.
-    :param max_retries: Maximum number of retries.
-    :return: std_e value.
-    """
-    retry_range = [1.0, 10.0]
-    max_retries = 5
-    eta_initial_guess = (l - 16.4) / 0.292
+#     :param l: Security parameter.
+#     :param n: Dimension.
+#     :param logq: Logarithm of the modulus.
+#     :param std_s: Standard deviation of the secret.
+#     :param retry_range: Tuple specifying the range for random starting points.
+#     :param max_retries: Maximum number of retries.
+#     :return: std_e value.
+#     """
+#     retry_range = [1.0, 10.0]
+#     max_retries = 5
+#     eta_initial_guess = (l - 16.4) / 0.292
 
-    def eta_eq(eta):
-        return l - (0.292 * eta + log2(8 * eta) + 16.4)
+#     def eta_eq(eta):
+#         return l - (0.292 * eta + log2(8 * eta) + 16.4)
 
-    eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
+#     eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
 
-    lnq = logq * ln2
+#     lnq = logq * ln2
 
-    def d_optimal(beta):
-        return sqrt(n * lnq / log(_delta(beta)))
+#     def d_optimal(beta):
+#         return sqrt(n * lnq / log(_delta(beta)))
 
-    def eq8(beta):
-        return l - (0.292 * beta + log2(8 * d_optimal(beta)) + 16.4)
+#     def eq8(beta):
+#         return l - (0.292 * beta + log2(8 * d_optimal(beta)) + 16.4)
 
-    beta_solution = fsolve(eq8, eta_solution, full_output=False)
-    d = max(d_optimal(beta_solution[0]), n)
-    eta = eta_solution[0]
-    beta = beta_solution[0]
+#     beta_solution = fsolve(eq8, eta_solution, full_output=False)
+#     d = max(d_optimal(beta_solution[0]), n)
+#     eta = eta_solution[0]
+#     beta = beta_solution[0]
 
-    def zeta(ln_std_e):
-        return max(0, ln_std_e - log(std_s))
+#     def zeta(ln_std_e):
+#         return max(0, ln_std_e - log(std_s))
 
-    def eq_for_sigmae(ln_std_e):
-        return eta - d + 1 / log(_delta(beta)) * \
-            (lnq - ln_std_e - 0.5 * log(const) - n / d * (lnq - zeta(ln_std_e)))
+#     def eq_for_sigmae(ln_std_e):
+#         return eta - d + 1 / log(_delta(beta)) * \
+#             (lnq - ln_std_e - 0.5 * log(const) - n / d * (lnq - zeta(ln_std_e)))
 
-    def objective(ln_std_e):
-        return eq_for_sigmae(ln_std_e) ** 2
+#     def objective(ln_std_e):
+#         return eq_for_sigmae(ln_std_e) ** 2
 
-    # Retry logic
-    for attempt in range(max_retries):
-        print(f"Attempt {attempt + 1} of {max_retries}...")
+#     # Retry logic
+#     for attempt in range(max_retries):
+#         print(f"Attempt {attempt + 1} of {max_retries}...")
 
-        # Generate a random starting point within the specified range
-        std_e_initial_guess = random.uniform(*retry_range)
+#         # Generate a random starting point within the specified range
+#         std_e_initial_guess = random.uniform(*retry_range)
 
-        # Minimize the objective function
-        # bounds = [(1e-3, None)]  # Ensure std_e is positive
+#         # Minimize the objective function
+#         # bounds = [(1e-3, None)]  # Ensure std_e is positive
 
-        std_e_solution = minimize(
-            objective, [std_e_initial_guess])
+#         std_e_solution = minimize(
+#             objective, [std_e_initial_guess])
 
-        if std_e_solution.success:
-            print(
-                f"numerical_std_e_bdd_minimize Converged on attempt {attempt + 1} with std_e={exp(std_e_solution.x[0])}")
-            return exp(std_e_solution.x[0]), std_e_solution.success
+#         if std_e_solution.success:
+#             print(
+#                 f"numerical_std_e_bdd_minimize Converged on attempt {attempt + 1} with std_e={exp(std_e_solution.x[0])}")
+#             return exp(std_e_solution.x[0]), std_e_solution.success
 
-        print(
-            f"Attempt {attempt + 1} failed to converge: {std_e_solution.message}")
+#         print(
+#             f"Attempt {attempt + 1} failed to converge: {std_e_solution.message}")
 
-    print("All attempts failed to converge.")
-    return None
+#     print("All attempts failed to converge.")
+#     return None
 
 
 def numerical_std_e_bdd(l, n, logq, std_s):
@@ -330,8 +349,8 @@ def numerical_std_e_bdd(l, n, logq, std_s):
     :param max_retries: Maximum number of retries.
     :return: std_e value.
     """
-
     retry_range = [-20, 60]
+    std_e_initial_guess = 1
 
     max_retries = 100
     eta_initial_guess = (l - 16.4) / 0.292
@@ -365,10 +384,11 @@ def numerical_std_e_bdd(l, n, logq, std_s):
     for attempt in range(max_retries):
 
         # Generate a random starting point within the specified range
-        std_e_initial_guess = random.uniform(*retry_range)
+        if attempt != 0:
+            std_e_initial_guess = random.uniform(*retry_range)
 
-        # print(
-        #     f"Attempt {attempt + 1} of {max_retries}... initial guess {std_e_initial_guess}")
+        print(
+            f"Attempt {attempt + 1} of {max_retries}... initial guess {std_e_initial_guess}")
         # Solve using fsolve
         std_e_solution, info, ier, msg = fsolve(
             eq_for_sigmae, std_e_initial_guess, full_output=True)
@@ -376,142 +396,110 @@ def numerical_std_e_bdd(l, n, logq, std_s):
         std_e_solution = std_e_solution[0]
 
         if ier == 1:  # Check if fsolve converged
-            # print(
-            #     f"numerical_std_e_bdd Converged on attempt {attempt + 1} with std_e={std_e_solution, exp(std_e_solution)}")
+            print(
+                f"numerical_std_e_bdd Converged on attempt {attempt + 1} with std_e={std_e_solution, exp(std_e_solution)}")
+            print("solution: ", eq_for_sigmae(std_e_solution))
             return exp(std_e_solution), bool(ier)
 
-        # print(f"Attempt {attempt + 1} failed to converge: {msg}")
+        print(f"Attempt {attempt + 1} failed to converge: {msg}")
 
-    # print("All attempts failed to converge.")
+    print("All attempts failed to converge.")
     return None
 
+# Tested using minimize instead of fslove, no real advantage found
+# def numerical_std_e_usvp_minimize(l, n, logq, std_s):
+#     """
+#     Estimate the std_e value for the USVP model using numerical methods.
 
-def numerical_std_e_usvp_minimize(l, n, logq, std_s):
-    """
-    Estimate the std_e value for the USVP model using numerical methods.
+#     :param l: Security parameter.
+#     :param n: Dimension.
+#     :param logq: Logarithm of the modulus.
+#     :param std_s: Standard deviation of the secret.
+#     :return: std_e value.
+#     """
+#     lnq = logq * ln2
 
-    :param l: Security parameter.
-    :param n: Dimension.
-    :param logq: Logarithm of the modulus.
-    :param std_s: Standard deviation of the secret.
-    :return: std_e value.
-    """
-    lnq = logq * ln2
+#     # Initial guesses
+#     beta_initial_guess = (l - 16.4) / 0.292
+#     std_e_initial_guess = 3.19
 
-    # Initial guesses
-    beta_initial_guess = (l - 16.4) / 0.292
-    std_e_initial_guess = 3.19
+#     def zeta(std_e): return max(1, np.round(std_e / std_s))
 
-    def zeta(std_e): return max(1, np.round(std_e / std_s))
+#     def nom(std_e, beta):
+#         # Ensure zeta(std_e) is positive
+#         zeta_value = zeta(std_e)
+#         if zeta_value <= 0:
+#             print(
+#                 f"Warning: zeta(std_e) is non-positive (zeta={zeta_value}). Setting zeta to a small positive value.")
+#             zeta_value = 1e-10  # Set to a small positive value
 
-    def nom(std_e, beta):
-        # Ensure zeta(std_e) is positive
-        zeta_value = zeta(std_e)
-        if zeta_value <= 0:
-            print(
-                f"Warning: zeta(std_e) is non-positive (zeta={zeta_value}). Setting zeta to a small positive value.")
-            zeta_value = 1e-10  # Set to a small positive value
+#         # Ensure beta / const is positive
+#         beta_ratio = beta / const
+#         if beta_ratio <= 0:
+#             print(
+#                 f"Warning: beta / const is non-positive (beta_ratio={beta_ratio}). Setting beta_ratio to a small positive value.")
+#             beta_ratio = 1e-10  # Set to a small positive value
 
-        # Ensure beta / const is positive
-        beta_ratio = beta / const
-        if beta_ratio <= 0:
-            print(
-                f"Warning: beta / const is non-positive (beta_ratio={beta_ratio}). Setting beta_ratio to a small positive value.")
-            beta_ratio = 1e-10  # Set to a small positive value
+#         return 2 * n * (lnq - log(zeta_value)) * log(beta_ratio)
 
-        return 2 * n * (lnq - log(zeta_value)) * log(beta_ratio)
+#     def denom(std_e, beta):
+#         # Ensure beta is positive
+#         if beta <= 0:
+#             print(
+#                 f"Warning: beta is non-positive (beta={beta}). Setting beta to a small positive value.")
+#             beta = 1e-10  # Set beta to a small positive value
 
-    def denom(std_e, beta):
-        # Ensure beta is positive
-        if beta <= 0:
-            print(
-                f"Warning: beta is non-positive (beta={beta}). Setting beta to a small positive value.")
-            beta = 1e-10  # Set beta to a small positive value
+#         value_inside_log = sqrt(beta) / (const * std_e)
 
-        value_inside_log = sqrt(beta) / (const * std_e)
+#         # Ensure value_inside_log is positive
+#         if value_inside_log <= 0:
+#             print(
+#                 f"Warning: value_inside_log is non-positive (value_inside_log={value_inside_log}). Setting it to a small positive value.")
+#             value_inside_log = 1e-10  # Set to a small positive value
 
-        # Ensure value_inside_log is positive
-        if value_inside_log <= 0:
-            print(
-                f"Warning: value_inside_log is non-positive (value_inside_log={value_inside_log}). Setting it to a small positive value.")
-            value_inside_log = 1e-10  # Set to a small positive value
+#         return lnq + log(sqrt(beta) / (const * std_e))
 
-        return lnq + log(sqrt(beta) / (const * std_e))
+#     def eq11(x):
+#         std_e, beta = x
+#         return beta - nom(std_e, beta) / (denom(std_e, beta) ** 2)
 
-    def eq11(x):
-        std_e, beta = x
-        return beta - nom(std_e, beta) / (denom(std_e, beta) ** 2)
+#     def d_optimal(std_e, beta):
+#         # This check is not need if we add bounds to minimize
+#         if (beta < const):
+#             print(
+#                 f"Error in {numerical_std_e_usvp.__name__}: could not find optimal d, maybe lambda is too small"
+#             )
+#             exit(0)
+#         else:
+#             return sqrt(2 * n * (lnq - log(zeta(std_e))) * beta / log(beta / const))
 
-    def d_optimal(std_e, beta):
-        # This check is not need if we add bounds to minimize
-        if (beta < const):
-            print(
-                f"Error in {numerical_std_e_usvp.__name__}: could not find optimal d, maybe lambda is too small"
-            )
-            exit(0)
-        else:
-            return sqrt(2 * n * (lnq - log(zeta(std_e))) * beta / log(beta / const))
+#     def eq12(x):
+#         std_e, beta = x
+#         return l - (0.292 * beta + log2(8 * d_optimal(std_e, beta)) + 16.4)
 
-    def eq12(x):
-        std_e, beta = x
-        return l - (0.292 * beta + log2(8 * d_optimal(std_e, beta)) + 16.4)
+#     def objective(x):
+#         return eq11(x) ** 2 + eq12(x) ** 2
 
-    def objective(x):
-        return eq11(x) ** 2 + eq12(x) ** 2
+#     # Bounds to ensure std_e is positive and beta is bigger than const
+#     # bounds = [(1e-3, const), (None, None)]
 
-    # Bounds to ensure std_e is positive and beta is bigger than const
-    # bounds = [(1e-3, const), (None, None)]
+#     initial_guess = [std_e_initial_guess, beta_initial_guess]
 
-    initial_guess = [std_e_initial_guess, beta_initial_guess]
+#     std_e_solution = minimize(objective, initial_guess, bounds=[
+#                               (-10, 1), (None, None)])
 
-    std_e_solution = minimize(objective, initial_guess, bounds=[
-                              (-10, 1), (None, None)])
+#     if not std_e_solution.success:
+#         sol = std_e_solution.x
+#         residuals = objective(sol)
+#         print(
+#             f"Optimization did not converge in {numerical_std_e_usvp.__name__}: {std_e_solution.message}")
+#         print("Solution found:", sol)
+#         print("Residuals at solution:", residuals)
 
-    if not std_e_solution.success:
-        sol = std_e_solution.x
-        residuals = objective(sol)
-        print(
-            f"Optimization did not converge in {numerical_std_e_usvp.__name__}: {std_e_solution.message}")
-        print("Solution found:", sol)
-        print("Residuals at solution:", residuals)
+#         # Default value if optimization fails
+#         return std_e_initial_guess, std_e_solution.success
 
-        # Default value if optimization fails
-        return std_e_initial_guess, std_e_solution.success
-
-    return exp(std_e_solution.x[0]), std_e_solution.success
-
-
-# Global list to store points considered during fsolve
-fsolve_points = []
-
-
-def find_beta_for_condition(n, lnq, std_s, const, beta_range=(1, 1000), resolution=1000):
-    """
-    Find the value of beta for which the first part (pow(n, 2)) is greater than
-    the second part (2 * n * denominator * (0.5 * beta - std_s * const)).
-
-    :param n: Dimension.
-    :param lnq: Logarithm of the modulus.
-    :param std_s: Standard deviation of the secret.
-    :param const: Constant value (e.g., 2 * pi * exp(1)).
-    :param beta_range: Tuple specifying the range of beta values to search (min, max).
-    :param resolution: Number of points to evaluate within the range.
-    :return: The value of beta that satisfies the condition, or None if not found.
-    """
-    beta_values = np.linspace(beta_range[0], beta_range[1], resolution)
-
-    for beta in beta_values:
-        denominator = beta / log(beta / const)
-        first_part = pow(n, 2)
-        second_part = 2 * n * denominator * (0.5 * beta - std_s * const)
-
-        if first_part > second_part:
-            print(
-                f"Condition met: beta={beta}, first_part={first_part}, second_part={second_part}")
-            return beta
-
-    print("No value of beta satisfies the condition within the given range.")
-    return None
+#     return exp(std_e_solution.x[0]), std_e_solution.success
 
 
 def numerical_std_e_usvp(l, n, logq, std_s):

@@ -8,12 +8,12 @@ from formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
     model_n_usvp, model_n_usvp_s, model_n_bdd, model_n_bdd_s,
 )
-from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_std_e_bdd_minimize, numerical_std_e_usvp_minimize, numerical_lambda_bdd, numerical_lambda_usvp
+from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_usvp
 from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper
 
 from const import (
-    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, HW, HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, EST
+    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, EST
 )
 
 import sys
@@ -302,12 +302,12 @@ def process_logq_param(l, lwe_d, std_s, std_e, verify, estimator_installed, secr
         lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
             lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
         data_point = {
-            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: est_usvp_numerical,
-            LOGQ_BDD: est_bdd_numerical, LWE_USVP: lwe_usvp, LWE_BDD: lwe_bdd, OUTPUT: return_value
+            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: est_usvp_numerical,
+            LWE_USVP: lwe_usvp,  LOGQ_BDD: est_bdd_numerical, LWE_BDD: lwe_bdd, OUTPUT: return_value
         }
     else:
         data_point = {
-            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: est_usvp_numerical,
+            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: est_usvp_numerical,
             LOGQ_BDD: est_bdd_numerical, OUTPUT: return_value
         }
     data.append(data_point)
@@ -346,11 +346,11 @@ def process_logq_param_hybrid(l, lwe_d, std_s, std_e, verify, estimator_installe
         primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
             FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
         data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
         }
     else:
         data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, HYBRID: est_hybrid
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid
         }
 
     return_value = est_hybrid

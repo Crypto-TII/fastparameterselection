@@ -371,7 +371,8 @@ def create_explanation_dict(headers):
         "output": "Recommended value to be used considering all the outputs of the formulas and numerical methods",
         "pow": "Closest power of 2 to the LWE dimension recommended in Output",
         "hw": "Hamming weight of the secret",
-        "hybrid": "Output of the numerical approximation of the hybrid attack",
+        "hybrid": "Output of the numerical approximation for lambda of the hybrid attack",
+        "logq hybrid": "Output of the numerical approximation for logq of the hybrid attack",
         "est hybrid": "Output of the Lattice Estimator for the hybrid attack",
         "est": "Output of the Lattice Estimator"
     }
