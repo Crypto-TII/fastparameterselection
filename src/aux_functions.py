@@ -11,6 +11,9 @@ from const import (
     N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER, POINTS, VALUES
 )
 
+from nd import NoiseDistribution as ND
+
+
 from scipy.interpolate import griddata
 import numpy as np
 
@@ -70,8 +73,8 @@ def parse_options(argv):
     :return: List of options and arguments.
     """
     try:
-        opts, args = getopt.getopt(argv, "h,v,c", [
-                                   "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=", "ntru", "table", "num-only"])
+        opts, args = getopt.getopt(argv, "a,b,h,v,c", [
+                                   "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only"])
     except Exception as e:
         print(e)
         helper()
@@ -117,29 +120,51 @@ def check_parameters(std_e, logq, lwe_d, l, param):
     return errors
 
 
-def set_secret(secret, output_dict):
+def set_distribution(secret, params):
     """
-    Set the secret distribution and its standard deviation.
+    Set the secret/error distribution and its standard deviation.
+    """
 
-    :param secret: Secret distribution (binary or ternary).
-    :param output_dict: Dictionary to store the output values.
-    :return: Tuple of standard deviation of the secret and secret modulus.
-    """
-    std_s = 0
-    secret_q = 0
+    print(params)
+
     if secret == 'binary':
-        std_s = UniformModStd(2)
-        secret_q = 2
-        output_dict['std_s'] = 0.5
+        secret_dist = ND.UniformMod(2)
     elif secret == 'ternary':
-        std_s = UniformModStd(3)
-        secret_q = 3
-        output_dict['std_s'] = math.sqrt(2./3)
-    else:
-        if secret != 'sparse':
-            print("Secret distribution not supported")
+        secret_dist = ND.UniformMod(3)
+    elif secret == 'sparse':
+        try:
+            secret_dist = ND.SparseTernary(
+                n=params['n'], p=params['hw']/2, m=params['hw']/2)
+        except:
+            print("Error: hamming weight --hw is required for sparse secret")
             sys.exit()
-    return std_s, secret_q
+    elif secret == 'uniformmod':
+        secret_dist = ND.UniformMod(params['q'])
+    elif secret == 'uniform':
+        try:
+            secret_dist = ND.Uniform(params['a'], params['b'])
+        except:
+            print("Error: interval bounds --a and --b are required for uniform secret")
+            sys.exit()
+    elif secret == 'gaussian':
+        secret_dist = ND.DiscreteGaussian(params['std'])
+        # try:
+        #     secret_dist = ND.DiscreteGaussian(params['std'])
+        # except:
+        #     print("Error: standard deviation --std is required for gaussian secret")
+        #     sys.exit()
+    elif secret == 'binomial':
+        try:
+            secret_dist = ND.CenteredBinomial(params['eta'])
+        except:
+            print("Error: parameter --eta is required for binomial secret")
+            sys.exit()
+    else:
+        print("Secret distribution not supported")
+        print("Available options: binary, ternary, sparse, uniformmod, uniform, gaussian, binomial")
+        print("dist: ", secret)
+        sys.exit()
+    return secret_dist
 
 
 def handle_options(opts):
@@ -153,27 +178,33 @@ def handle_options(opts):
     verify = 0
     ntru_flag = False
     lwe_d = 0
-    logq = 0
-    std_e = 3.19  # Default value for the standard deviation of the error
-    secret = "binary"  # Default value for the secret distribution
-    # Default value for the standard deviation of the secret
-    std_s, secret_q = set_secret(secret, output_dict)
-    l = 0
     hw = 0
+    logq = 0
+    secret_dist_tag = "binary"  # Default value for the secret distribution
+    error_dist_tag = "gaussian"  # Default value for the error distribution
+    # Default value for the standard deviation of the secret
+    params = {
+        'n': lwe_d,       # LWE dimension
+        'hw': hw,         # Hamming weight
+        'std': 3.19,     # Standard deviation for Gaussian
+        'a': 0,           # Lower bound for uniform distribution
+        'b': 1,           # Upper bound for uniform distribution
+        'eta': 1,         # Parameter for binomial distribution
+        'q': 2            # Modulus for uniformmod distribution
+    }
+    secret_dist = set_distribution(secret_dist_tag, params)
+    error_dist = set_distribution(error_dist_tag, params)
+    l = 0
     table = False
     num_only = False
     correction = False
+
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
             helper()
         elif opt == '--hw':
             hw = int(arg)
-        elif opt == '--secret':
-            secret = arg
-            std_s, secret_q = set_secret(secret, output_dict)
-        elif opt == '--error':
-            std_e = float(arg)
-            output_dict['std_e'] = std_e
+            params['hw'] = hw
         elif opt == '--param':
             param = arg
         elif opt == '--n':
@@ -183,6 +214,7 @@ def handle_options(opts):
                 print("Error: Invalid LWE dimension format")
                 sys.exit()
             output_dict['n'] = lwe_d
+            params['n'] = lwe_d
         elif opt == '--lambda':
             l = int(arg)
             output_dict['lambda'] = l
@@ -199,31 +231,45 @@ def handle_options(opts):
             num_only = True
         elif opt == '-c':
             correction = True
+        elif opt == '--std':
+            params['std'] = float(arg)
+        elif opt == '-a':
+            params['a'] = float(arg)
+        elif opt == '-b':
+            params['b'] = float(arg)
+        elif opt == '--eta':
+            params['eta'] = float(arg)
+        elif opt == '--secret':
+            secret_dist_tag = str(arg)
+        elif opt == '--error':
+            error_dist_tag = str(arg)
         else:
             helper()
-    return output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only, correction
 
-# Exctracted from the Lattice Estimator
+    secret_dist = set_distribution(secret_dist_tag, params)
+    error_dist = set_distribution(error_dist_tag, params)
+
+    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction
 
 
-def UniformModStd(q):
-    """
-    Calculate the standard deviation of a uniform distribution modulo q.
+# def UniformModStd(q):
+#     """
+#     Calculate the standard deviation of a uniform distribution modulo q.
 
-    :param q: Modulus.
-    :return: Standard deviation.
-    """
-    a = -(q // 2)
-    b = -a - 1 if q % 2 == 0 else -a
+#     :param q: Modulus.
+#     :return: Standard deviation.
+#     """
+#     a = -(q // 2)
+#     b = -a - 1 if q % 2 == 0 else -a
 
-    if b < a:
-        raise ValueError(
-            f"upper limit must be larger than lower limit but got: {b} < {a}")
-    m = b - a + 1
-    mean = (a + b) / float(2)
-    stddev = math.sqrt((m**2 - 1) / float(12))
+#     if b < a:
+#         raise ValueError(
+#             f"upper limit must be larger than lower limit but got: {b} < {a}")
+#     m = b - a + 1
+#     mean = (a + b) / float(2)
+#     stddev = math.sqrt((m**2 - 1) / float(12))
 
-    return stddev
+#     return stddev
 
 
 def load_all_from_csv(file_path):

@@ -10,10 +10,10 @@ from param_calls import process_parameters
 def main(argv):
 
     opts = parse_options(argv)
-    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw, num_only, correction = handle_options(
+    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction = handle_options(
         opts)
 
-    if handle_errors(std_e, logq, lwe_d, l, param):
+    if handle_errors(error_dist.stddev, logq, lwe_d, l, param):
         return
 
     estimator_installed = check_estimator_installed()
@@ -22,7 +22,7 @@ def main(argv):
         return
 
     lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_functions_params(
-        secret)
+        secret_dist.tag)
 
     model_values = {
         'lambda_usvp': lambda_usvp,
@@ -40,14 +40,12 @@ def main(argv):
         'logq': logq,
         'l': l,
         'lwe_d': lwe_d,
-        'std_s': std_s,
-        'std_e': std_e,
         'model_values': model_values,
         'verify': verify,
         'estimator_installed': estimator_installed,
         'correction': correction,
-        'secret': secret,
-        'secret_q': secret_q,
+        'secret_dist': secret_dist,
+        'error_dist': error_dist,
         'hw': hw,
         'output_dict': output_dict,
         'num_only': num_only,

@@ -176,6 +176,7 @@ def model_lambda_usvp(d, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: Lambda value.
     """
+
     sig = std_e
     chi = std_e/std_s
 
@@ -211,7 +212,7 @@ def model_lambda_usvp_s(d, logq, params):
 # Eq. (18)
 
 
-def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
+def model_lambda_bdd(d, logq, std_s, std_e, params):
     """
     Model the lambda value for the BDD model.
 
@@ -223,7 +224,6 @@ def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
     :param params: Model parameters.
     :return: Lambda value.
     """
-    sig = std_e
     chi = std_e/std_s
 
     lnq = np.multiply(logq, ln2)
@@ -318,11 +318,9 @@ def model_n_bdd(l, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: n value.
     """
-    sigma = std_e
     zeta = std_e / std_s
     beta_approx = (l - np.log(l))/0.292  # approximate beta from lambda
     lnq = np.multiply(logq, ln2)
-    n = l
 
     A = 2*lnq
     B = beta_approx
@@ -347,9 +345,6 @@ def model_n_bdd_s(l, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: n value.
     """
-    sigma = std_e
-
-    chi = std_e/std_s
 
     lnq = np.multiply(logq, ln2)
 
