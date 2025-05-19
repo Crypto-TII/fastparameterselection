@@ -151,11 +151,20 @@ def predicted_beta_usvp(d, lnq, sig, chi):
     :return: Predicted beta value.
     """
     x = np.divide(d, lnq)
+
+    print("d", d, "lnq", lnq)
+
     f1 = np.divide(np.multiply(d, np.log(x)),
                    np.multiply(const, lnq - np.log(sig)))
     f2 = np.multiply(x, np.log(np.divide(d, lnq - np.log(sig))))
 
     # Beta calculation
+
+    print(np.multiply(d, np.log(x)))
+    print("d", d, "x", x, "log x", np.log(x))
+
+    print("chi", chi, "f1", f1, "f2", f2, "const * sig", const * sig)
+
     beta = np.divide(np.multiply(2 * d, np.multiply(lnq - np.log(chi), np.log(f1))),
                      np.power(lnq + 0.5 * np.log(f2) - np.log(const * sig), 2))
     return beta
