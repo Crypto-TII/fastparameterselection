@@ -180,48 +180,80 @@ def numerical_n_usvp(l, logq, std_s, std_e):
 
 
 def numerical_logq_bdd(l, n, std_s, std_e):
-    """
-    Estimate the logq value for the BDD model using numerical methods.
 
-    :param l: Security parameter.
-    :param n: Dimension.
-    :param std_s: Standard deviation of the secret.
-    :param std_e: Standard deviation of the error.
-    :return: logq value.
-    """
+    eta_initial_guess = (l - 16.4) / 0.292
+    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+    eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
+    eta = eta_solution[0]
 
-    beta = (l - 16.4) / 0.292
+    def d_optimal(lnq, beta): return sqrt(n * lnq / log(_delta(beta)))
+    def eq8(lnq, beta): return l - (0.292 * beta +
+                                    log2(8 * d_optimal(lnq, beta)) + 16.4)
 
-    x = np.array([80, 100, 128, 192, 256])
-    y = np.array([4, 3, 2, 1, 0.5])
+    ln_std_e = log(std_e)
+    zeta = max(0, ln_std_e - log(std_s))
+    def d(lnq, beta): return max(d_optimal(lnq, beta), n)
 
-    # Fit a polynomial of degree 2 (you can increase the degree if needed)
-    degree = 2
-    coeffs = np.polyfit(x, y, degree)
-    poly = np.poly1d(coeffs)
+    def eq_for_lnq_and_beta(lnq, beta): return eta - d(lnq, beta) + 1 / log(_delta(
+        beta)) * (lnq - ln_std_e - 0.5 * log(const) - n / d(lnq, beta) * (lnq - zeta))
 
-    if (beta < const):
-        print(
-            "Error: will not start optimization, most likely provided lambda is too small")
-        exit(0)
+    def system_bdd_eta_n(x):  # x[0] = n, x[1] = beta
+        f1 = eq_for_lnq_and_beta(x[0], x[1])
+        f2 = eq8(x[0], x[1])
+        return f1, f2
 
-    # comes from a simplfied the formula below: (remove log(beta / const), log(zeta) and - 2 * log(std_e) - log(const) from denom)
-    lnq_initial_guess = 2*n*log(beta/const) / beta
-    zeta = std_e / std_s
+    lnq_initial_guess = 121
+    solutions_lnq_and_beta = fsolve(
+        system_bdd_eta_n, [lnq_initial_guess, eta], full_output=True)
+    lnq_solution = solutions_lnq_and_beta[0][0]
+    if not solutions_lnq_and_beta[2] == 1:
+        print(solutions_lnq_and_beta[3])
+    return lnq_solution/ln2
 
-    def nom(lnq): return 2 * n * lnq * log(beta / const)
-    def denom(lnq): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - \
-        2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
 
-    def eq(lnq): return beta - nom(lnq) / (denom(lnq) ** 2)
+# def numerical_logq_bdd(l, n, std_s, std_e):
+#     """
+#     Estimate the logq value for the BDD model using numerical methods.
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        lnq_solution, info, ier, msg = fsolve(
-            eq, lnq_initial_guess, full_output=True)
-        if ier != 1:
-            print(f"Warning: numerical solver for bdd did not converge: {msg}")
-        return divide(lnq_solution[0] + interpolate(n, l), ln2)
+#     :param l: Security parameter.
+#     :param n: Dimension.
+#     :param std_s: Standard deviation of the secret.
+#     :param std_e: Standard deviation of the error.
+#     :return: logq value.
+#     """
+
+#     beta = (l - 16.4) / 0.292
+
+#     x = np.array([80, 100, 128, 192, 256])
+#     y = np.array([4, 3, 2, 1, 0.5])
+
+#     # Fit a polynomial of degree 2 (you can increase the degree if needed)
+#     degree = 2
+#     coeffs = np.polyfit(x, y, degree)
+#     poly = np.poly1d(coeffs)
+
+#     if (beta < const):
+#         print(
+#             "Error: will not start optimization, most likely provided lambda is too small")
+#         exit(0)
+
+#     # comes from a simplfied the formula below: (remove log(beta / const), log(zeta) and - 2 * log(std_e) - log(const) from denom)
+#     lnq_initial_guess = 2*n*log(beta/const) / beta
+#     zeta = std_e / std_s
+
+#     def nom(lnq): return 2 * n * lnq * log(beta / const)
+#     def denom(lnq): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - \
+#         2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
+
+#     def eq(lnq): return beta - nom(lnq) / (denom(lnq) ** 2)
+
+#     with warnings.catch_warnings():
+#         warnings.simplefilter("ignore")
+#         lnq_solution, info, ier, msg = fsolve(
+#             eq, lnq_initial_guess, full_output=True)
+#         if ier != 1:
+#             print(f"Warning: numerical solver for bdd did not converge: {msg}")
+#         return divide(lnq_solution[0] + interpolate(n, l), ln2)
 
 
 def numerical_logq_usvp(l, n, std_s, std_e):
