@@ -3,7 +3,7 @@
 LAMBDAS=("80" "100" "128" "192" "256")
 NS=("1024" "2048" "4096" "32768")
 SECRETS=("binary" "ternary")
-ERROR="3.19"
+ERROR="gaussian"
 
 for n in "${NS[@]}"; do
   for secret in "${SECRETS[@]}"; do
@@ -17,7 +17,7 @@ for n in "${NS[@]}"; do
     fi
 
     for lambda in "${LAMBDAS[@]}"; do
-      python3 src/estimate.py --param "logq" --lambda "$lambda" --n "$n" --secret "$secret" --error "$ERROR" -v --table
+      python3 src/estimate.py --param "logq" --lambda "$lambda" --n "$n" --secret "$secret" --error "$ERROR" --std "3.19" -v --table
     done
   done
 done
