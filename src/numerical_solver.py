@@ -16,6 +16,7 @@ def _delta(beta):
     :param beta: Beta value.
     :return: Delta value.
     """
+    beta = max(beta, 100)  # Ensure beta is at positive
     return (beta / (2 * pi * e) * (pi * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
 
 
@@ -178,7 +179,9 @@ def numerical_logq_bdd(l, n, std_s, std_e):
     eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
     eta = eta_solution[0]
 
-    def d_optimal(lnq, beta): return sqrt(n * lnq / log(_delta(beta)))
+    def d_optimal(lnq, beta):
+        lnq = max(lnq, 1)  # Ensure lnq is at positive
+        return sqrt(n * lnq / log(_delta(beta)))
     def eq8(lnq, beta): return l - (0.292 * beta +
                                     log2(8 * d_optimal(lnq, beta)) + 16.4)
 

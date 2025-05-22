@@ -125,8 +125,6 @@ def set_distribution(secret, params):
     Set the secret/error distribution and its standard deviation.
     """
 
-    print(params)
-
     if secret == 'binary':
         secret_dist = ND.UniformMod(2)
     elif secret == 'ternary':
@@ -249,7 +247,7 @@ def handle_options(opts):
     secret_dist = set_distribution(secret_dist_tag, params)
     error_dist = set_distribution(error_dist_tag, params)
 
-    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction
+    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag
 
 
 # def UniformModStd(q):

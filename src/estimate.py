@@ -10,7 +10,7 @@ from param_calls import process_parameters
 def main(argv):
 
     opts = parse_options(argv)
-    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction = handle_options(
+    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag = handle_options(
         opts)
 
     if handle_errors(error_dist.stddev, logq, lwe_d, l, param):
@@ -46,6 +46,7 @@ def main(argv):
         'correction': correction,
         'secret_dist': secret_dist,
         'error_dist': error_dist,
+        'error_tag': error_dist_tag,
         'hw': hw,
         'output_dict': output_dict,
         'num_only': num_only,
