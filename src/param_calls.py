@@ -316,7 +316,7 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             print("Applying correction lwe usvp > l", "logq ",
                   corrected_logq_usvp, "std e ", error_dist.stddev, " est", corrected_lwe_usvp)
 
-            if param == 'log q':
+            if param == 'logq':
                 est_usvp_numerical += 1
             elif param == 'std_e':
                 est_usvp_numerical -= 0.5
@@ -330,7 +330,7 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
     else:
         while (lwe_usvp < l):
             print("lwe usvp", lwe_usvp, "lwe bdd", lwe_bdd, "l", l)
-            if param == 'log q':
+            if param == 'logq':
                 est_usvp_numerical -= 1
             elif param == 'std_e':
                 est_usvp_numerical += 0.5
@@ -351,7 +351,7 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             print("Applying correction lwe bdd > l", "logq ",
                   corrected_logq_bdd, " est", corrected_lwe_bdd)
 
-            if param == 'log q':
+            if param == 'logq':
                 est_bdd_numerical += 1
             elif param == 'std_e':
                 est_bdd_numerical -= 0.5
@@ -367,10 +367,10 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
     else:
         while (lwe_bdd < l):
 
-            if param == 'log q':
-                est_bdd_numerical += 1
+            if param == 'logq':
+                est_bdd_numerical -= 1
             elif param == 'std_e':
-                est_bdd_numerical -= 0.5
+                est_bdd_numerical += 0.5
 
             num_calls += 1
             _, lwe_parameters_bdd = get_parameters(
@@ -432,7 +432,7 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
 
         if correction:
             return_value, corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp = correction_logic(
-                l, lwe_d, None, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, num_calls, 'logq')
+                l, lwe_d, None, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'logq', num_calls)
 
         data_point = {
             SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: corrected_logq_usvp,
