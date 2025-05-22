@@ -10,7 +10,7 @@ from formulas import (
 )
 from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_usvp
 from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
-from aux_functions import closest_power_of_2, helper, set_distribution
+from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
 from const import (
     SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, LWE_USVP_F, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, LOGQ_USVP_F, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, EST
@@ -278,115 +278,6 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
     return data
 
 
-def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param):
-
-    lwe_parameters_usvp = None
-    lwe_parameters_bdd = None
-
-    if param == 'logq':
-        lwe_parameters_usvp = LWE.Parameters(
-            lwe_d, 2 ** est_usvp_numerical, secret_dist, error_dist)
-        lwe_parameters_bdd = LWE.Parameters(
-            lwe_d, 2 ** est_bdd_numerical, secret_dist, error_dist)
-    if param == 'std_e':
-        # TODO: numerics for std only works for gaussian distribution right?
-        error_dist_usvp = set_distribution(
-            error_dist_tag, {'std': 2**est_usvp_numerical})
-        lwe_parameters_usvp = LWE.Parameters(
-            lwe_d, 2**lnq, secret_dist, error_dist_usvp)
-        error_dist_bdd = set_distribution(
-            error_dist_tag, {'std': 2**est_bdd_numerical})
-
-        print("Error dist bdd", error_dist_bdd.stddev)
-
-        lwe_parameters_bdd = LWE.Parameters(
-            lwe_d, 2**lnq, secret_dist, error_dist_bdd)
-
-    return lwe_parameters_usvp, lwe_parameters_bdd
-
-
-def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, param, num_calls, error_dist_tag=None):
-
-    print("lwe usvp", lwe_usvp, "lwe bdd", lwe_bdd, "l", l)
-
-    if lwe_usvp >= l:
-        while (lwe_usvp >= l):
-            corrected_lwe_usvp = lwe_usvp
-            corrected_logq_usvp = est_usvp_numerical
-            print("Applying correction lwe usvp > l", "logq ",
-                  corrected_logq_usvp, "std e ", error_dist.stddev, " est", corrected_lwe_usvp)
-
-            if param == 'logq':
-                est_usvp_numerical += 1
-            elif param == 'std_e':
-                est_usvp_numerical -= 0.5
-
-            num_calls += 1
-            lwe_parameters_usvp, _ = get_parameters(
-                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
-
-            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-    else:
-        while (lwe_usvp < l):
-            print("lwe usvp", lwe_usvp, "lwe bdd", lwe_bdd, "l", l)
-            if param == 'logq':
-                est_usvp_numerical -= 1
-            elif param == 'std_e':
-                est_usvp_numerical += 0.5
-            num_calls += 1
-            lwe_parameters_usvp, _ = get_parameters(
-                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
-            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-            corrected_lwe_usvp = lwe_usvp
-            corrected_logq_usvp = est_usvp_numerical
-            print("Applying correction lwe usvp < l", "logq ",
-                  corrected_logq_usvp, " est", corrected_lwe_usvp)
-
-    if lwe_bdd >= l:
-        while (lwe_bdd >= l):
-            corrected_lwe_bdd = lwe_bdd
-            corrected_logq_bdd = est_bdd_numerical
-            print("Applying correction lwe bdd > l", "logq ",
-                  corrected_logq_bdd, " est", corrected_lwe_bdd)
-
-            if param == 'logq':
-                est_bdd_numerical += 1
-            elif param == 'std_e':
-                est_bdd_numerical -= 0.5
-
-            num_calls += 1
-            _, lwe_parameters_bdd = get_parameters(
-                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
-            try:
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-            except Exception:
-                continue
-    else:
-        while (lwe_bdd < l):
-
-            if param == 'logq':
-                est_bdd_numerical -= 1
-            elif param == 'std_e':
-                est_bdd_numerical += 0.5
-
-            num_calls += 1
-            _, lwe_parameters_bdd = get_parameters(
-                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
-            lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-            corrected_lwe_bdd = lwe_bdd
-            corrected_logq_bdd = est_bdd_numerical
-            print("Applying correction lwe bdd < l", "logq ",
-                  corrected_logq_bdd, " est", corrected_lwe_bdd)
-
-    print("Number of calls to the estimator: ", num_calls)
-
-    return max(corrected_logq_bdd, corrected_logq_usvp), corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp
-
-
 def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, output_dict):
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
@@ -517,8 +408,8 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
 
     for lq in logq:
 
-        lwe_bdd_minimize, lwe_usvp_minimize, lwe_bdd, lwe_usvp = 0, 0, 0, 0
-        est_usvp_numerical, est_bdd_numerical, est_bdd_numerical_minimize, est_usvp_numerical_minimize = 1, 1, 1, 1
+        lwe_bdd, lwe_usvp = 0, 0
+        est_usvp_numerical, est_bdd_numerical = 1, 1
 
         try:
             est_usvp_numerical, est_usvp_numerical_status = numerical_std_e_usvp(
@@ -538,74 +429,7 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
             traceback.print_exc()  # Print the full traceback, including the line number
             est_bdd_numerical, est_bdd_numerical_status = 0, False
 
-        # if est_bdd_numerical_status:
-        #     lwe_parameters_bdd = LWE.Parameters(
-        #         lwe_d, 2 ** lq, secret_dist, ND.DiscreteGaussian(2**est_bdd_numerical))
-        #     lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-        #         lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-
-        # if est_usvp_numerical_status:
-        #     lwe_parameters_usvp = LWE.Parameters(
-        #         lwe_d, 2 ** lq, secret_dist, ND.DiscreteGaussian(2**est_usvp_numerical))
-        #     lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-        #         lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-
         return_value = max(est_usvp_numerical, est_bdd_numerical)
-
-        # if correction:
-
-        #     if lwe_usvp >= l:
-        #         while (lwe_usvp >= l):
-        #             corrected_lwe_usvp = lwe_usvp
-        #             corrected_logq_usvp = est_usvp_numerical
-        #             print("Applying correction lwe usvp > l", "logq ",
-        #                   corrected_logq_usvp, " est", corrected_lwe_usvp)
-        #             est_usvp_numerical += 1
-        #             num_calls += 1
-        #             lwe_parameters_usvp = LWE.Parameters(
-        #                 lwe_d, 2 ** est_usvp_numerical, secret_dist, ND.DiscreteGaussian(std_e))
-        #             lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-        #                 lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-        #     else:
-        #         while (lwe_usvp < l):
-        #             est_usvp_numerical -= 1
-        #             num_calls += 1
-        #             lwe_parameters_usvp = LWE.Parameters(
-        #                 lwe_d, 2 ** est_usvp_numerical, secret_dist, ND.DiscreteGaussian(std_e))
-        #             lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-        #                 lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-        #             corrected_lwe_usvp = lwe_usvp
-        #             corrected_logq_usvp = est_usvp_numerical
-        #             print("Applying correction lwe usvp < l", "logq ",
-        #                   corrected_logq_usvp, " est", corrected_lwe_usvp)
-
-        #     if lwe_bdd >= l:
-        #         while (lwe_bdd >= l):
-        #             corrected_lwe_bdd = lwe_bdd
-        #             corrected_logq_bdd = est_bdd_numerical
-        #             print("Applying correction lwe bdd > l", "logq ",
-        #                   corrected_logq_bdd, " est", corrected_lwe_bdd)
-        #             est_bdd_numerical += 1
-        #             num_calls += 1
-        #             lwe_parameters_bdd = LWE.Parameters(
-        #                 lwe_d, 2 ** est_bdd_numerical, secret_dist, ND.DiscreteGaussian(std_e))
-        #             lwe_bdd = math.floor(math.log2(LWE.primal_usvp(
-        #                 lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-        #     else:
-        #         while (lwe_bdd < l):
-        #             est_bdd_numerical -= 1
-        #             num_calls += 1
-        #             lwe_parameters_bdd = LWE.Parameters(
-        #                 lwe_d, 2 ** est_bdd_numerical, secret_dist, ND.DiscreteGaussian(std_e))
-        #             lwe_bdd = math.floor(math.log2(LWE.primal_usvp(
-        #                 lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-        #             corrected_lwe_bdd = lwe_bdd
-        #             corrected_logq_bdd = est_bdd_numerical
-        #             print("Applying correction lwe bdd < l", "logq ",
-        #                   corrected_logq_bdd, " est", corrected_lwe_bdd)
-
-        #     print("Number of calls to the estimator: ", num_calls)
-        #     return_value = max(corrected_logq_bdd, corrected_logq_usvp)
 
         output_dict['std_e'] = return_value
 
@@ -631,6 +455,16 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
             num_calls = 2
 
             if correction:
+
+                # If we do not have convergence in some of the numerics we use the result of the other. In case both fail, we set the default value to 2
+                if not est_usvp_numerical_status and est_bdd_numerical_status:
+                    est_usvp_numerical = est_bdd_numerical
+                elif est_usvp_numerical_status and not est_bdd_numerical_status:
+                    est_bdd_numerical = est_usvp_numerical
+                elif not est_usvp_numerical_status and not est_bdd_numerical_status:
+                    est_usvp_numerical = 2
+                    est_bdd_numerical = 2
+
                 return_value, corrected_std_e_usvp, corrected_std_e_bdd, corrected_lwe_bdd, corrected_lwe_usvp = correction_logic(
                     l, lwe_d, lq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'std_e', num_calls, error_dist_tag)
 

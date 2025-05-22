@@ -1,4 +1,3 @@
-from scipy.interpolate import LinearNDInterpolator
 import math
 import csv
 import sys
@@ -13,17 +12,13 @@ from const import (
 
 from nd import NoiseDistribution as ND
 
-
-from scipy.interpolate import griddata
-import numpy as np
-
 sys.path.append('./latticeestimator')
 
 
 def check_estimator_installed():
     try:
-        global LWE, ND
-        from estimator import LWE, ND
+        global LWE, RC
+        from estimator import LWE, RC
         return True
     except ImportError:
         print("Warning: Failed to import lattice_estimator, some options will not work")
@@ -250,26 +245,6 @@ def handle_options(opts):
     return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag
 
 
-# def UniformModStd(q):
-#     """
-#     Calculate the standard deviation of a uniform distribution modulo q.
-
-#     :param q: Modulus.
-#     :return: Standard deviation.
-#     """
-#     a = -(q // 2)
-#     b = -a - 1 if q % 2 == 0 else -a
-
-#     if b < a:
-#         raise ValueError(
-#             f"upper limit must be larger than lower limit but got: {b} < {a}")
-#     m = b - a + 1
-#     mean = (a + b) / float(2)
-#     stddev = math.sqrt((m**2 - 1) / float(12))
-
-#     return stddev
-
-
 def load_all_from_csv(file_path):
     """
     Load all entries from a CSV file.
@@ -404,21 +379,21 @@ def create_explanation_dict(headers):
         "lwe est": "The output of running the Lattice Estimator using the output of our formulas and the rest of the LWE parameters",
         "usvp": "Output of the formula which estimates the cost of the (unique) SVP attack",
         "usvp_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) SVP attack",
-        "bdd": "Output of the formula which estimates the cost of the (unique) BDD attack",
-        "bdd_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) BDD attack",
+        "bdd": "Output of the formula which estimates the cost of the BDD attack",
+        "bdd_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the BDD attack",
         "logq usvp": "Output of the numerical approximation of log q for the (unique) SVP attack",
-        "logq bdd": "Output of the numerical approximation of log q for the (unique) BDD attack",
+        "logq bdd": "Output of the numerical approximation of log q for the BDD attack",
         "usvp num": "Output of the numerical approximation of the (unique) SVP attack",
-        "bdd num": "Output of the numerical approximation of the (unique) BDD attack",
+        "bdd num": "Output of the numerical approximation of the BDD attack",
         "log2(std_e) usvp": "Output of the numerical approximation of the (log2) standard deviation of the error for the (unique) SVP attack",
-        "log2(std_e) bdd": "Output of the numerical approximation of the (log2) standard deviation of the error for the (unique) BDD attack",
+        "log2(std_e) bdd": "Output of the numerical approximation of the (log2) standard deviation of the error for the BDD attack",
         "bdd 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_bdd",
         "usvp 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_usvp",
         "diff": "The difference between the output of the previous column and the output of the Lattice Estimator",
         "est usvp": "Output of the Lattice Estimator for the (unique) SVP attack",
-        "est bdd": "Output of the Lattice Estimator for the (unique) BDD attack",
+        "est bdd": "Output of the Lattice Estimator for the BDD attack",
         "est usvp_s": "Output of the Lattice Estimator using the result from the simplified formula for the (unique) SVP attack",
-        "est bdd_s": "Output of the Lattice Estimator using the result from the simplified formula for the (unique) BDD attack",
+        "est bdd_s": "Output of the Lattice Estimator using the result from the simplified formula for the BDD attack",
         "output": "Recommended value to be used considering all the outputs of the formulas and numerical methods",
         "pow": "Closest power of 2 to the LWE dimension recommended in Output",
         "hw": "Hamming weight of the secret",
@@ -458,8 +433,111 @@ def helper_headers(header):
     print('\n')
 
 
-def interpolate(y, x):
-    val = griddata(POINTS, VALUES, [[y, x]], method='linear')
-    if np.isnan(val[0]):
-        val = griddata(POINTS, VALUES, [[y, x]], method='nearest')
-    return val[0]
+def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param):
+
+    lwe_parameters_usvp = None
+    lwe_parameters_bdd = None
+
+    if param == 'logq':
+        lwe_parameters_usvp = LWE.Parameters(
+            lwe_d, 2 ** est_usvp_numerical, secret_dist, error_dist)
+        lwe_parameters_bdd = LWE.Parameters(
+            lwe_d, 2 ** est_bdd_numerical, secret_dist, error_dist)
+    if param == 'std_e':
+        # TODO: numerics for std only works for gaussian distribution
+        error_dist_usvp = set_distribution(
+            error_dist_tag, {'std': 2**est_usvp_numerical})
+        lwe_parameters_usvp = LWE.Parameters(
+            lwe_d, 2**lnq, secret_dist, error_dist_usvp)
+        error_dist_bdd = set_distribution(
+            error_dist_tag, {'std': 2**est_bdd_numerical})
+
+        print("Error dist bdd", error_dist_bdd.stddev)
+
+        lwe_parameters_bdd = LWE.Parameters(
+            lwe_d, 2**lnq, secret_dist, error_dist_bdd)
+
+    return lwe_parameters_usvp, lwe_parameters_bdd
+
+
+def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, param, num_calls, error_dist_tag=None):
+
+    print("lwe usvp", lwe_usvp, "lwe bdd", lwe_bdd, "l", l)
+
+    if lwe_usvp >= l:
+        while (lwe_usvp >= l):
+            corrected_lwe_usvp = lwe_usvp
+            corrected_logq_usvp = est_usvp_numerical
+            print("Applying correction lwe usvp > l", "logq ",
+                  corrected_logq_usvp, "std e ", error_dist.stddev, " est", corrected_lwe_usvp)
+
+            if param == 'logq':
+                est_usvp_numerical += 1
+            elif param == 'std_e':
+                est_usvp_numerical -= 0.5
+
+            num_calls += 1
+            lwe_parameters_usvp, _ = get_parameters(
+                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
+
+            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+    else:
+        while (lwe_usvp < l):
+            print("lwe usvp", lwe_usvp, "lwe bdd", lwe_bdd, "l", l)
+            if param == 'logq':
+                est_usvp_numerical -= 1
+            elif param == 'std_e':
+                est_usvp_numerical += 0.5
+            num_calls += 1
+            lwe_parameters_usvp, _ = get_parameters(
+                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
+            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+            corrected_lwe_usvp = lwe_usvp
+            corrected_logq_usvp = est_usvp_numerical
+            print("Applying correction lwe usvp < l", "logq ",
+                  corrected_logq_usvp, " est", corrected_lwe_usvp)
+
+    if lwe_bdd >= l:
+        while (lwe_bdd >= l):
+            corrected_lwe_bdd = lwe_bdd
+            corrected_logq_bdd = est_bdd_numerical
+            print("Applying correction lwe bdd > l", "logq ",
+                  corrected_logq_bdd, " est", corrected_lwe_bdd)
+
+            if param == 'logq':
+                est_bdd_numerical += 1
+            elif param == 'std_e':
+                est_bdd_numerical -= 0.5
+
+            num_calls += 1
+            _, lwe_parameters_bdd = get_parameters(
+                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
+            try:
+                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+            except Exception:
+                continue
+    else:
+        while (lwe_bdd < l):
+
+            if param == 'logq':
+                est_bdd_numerical -= 1
+            elif param == 'std_e':
+                est_bdd_numerical += 0.5
+
+            num_calls += 1
+            _, lwe_parameters_bdd = get_parameters(
+                lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
+            lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+            corrected_lwe_bdd = lwe_bdd
+            corrected_logq_bdd = est_bdd_numerical
+            print("Applying correction lwe bdd < l", "logq ",
+                  corrected_logq_bdd, " est", corrected_lwe_bdd)
+
+    print("Number of calls to the estimator: ", num_calls)
+
+    # TODO: verify that returning max makes sense in all cases
+    return max(corrected_logq_bdd, corrected_logq_usvp), corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp

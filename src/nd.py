@@ -333,9 +333,11 @@ class NoiseDistribution:
         else:
             density = 0.0
 
+        tag = "Uniform (" + str(a) + " " + str(b) + ")"
+
         return NoiseDistribution(
             n=n, stddev=stddev, mean=mean, bounds=(
-                a, b), density=density, tag="Uniform"
+                a, b), density=density, tag=tag
         )
 
     @staticmethod
