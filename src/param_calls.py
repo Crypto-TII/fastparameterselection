@@ -22,51 +22,6 @@ sys.path.append('./latticeestimator')
 warnings.filterwarnings('error')
 
 
-def run_verification(lq, secret, est_usvp, est_bdd, est_usvp_pow, est_bdd_pow):
-    """
-    Run verification using the Lattice Estimator.
-
-    :param lq: Logarithm of the modulus.
-    :param secret: Secret distribution.
-    :param est_usvp: Estimated usvp value.
-    :param est_bdd: Estimated bdd value.
-    :param est_usvp_pow: Estimated usvp power of 2 value.
-    :param est_bdd_pow: Estimated bdd power of 2 value.
-    :return: Tuple of verification results.
-    """
-    lwe_parameters_usvp = []
-    lwe_parameters_bdd = []
-    if secret == 'binary':
-        lwe_parameters_usvp = LWE.Parameters(
-            est_usvp, 2 ** lq, ND.UniformMod(2), ND.DiscreteGaussian(3.19))
-        lwe_parameters_bdd = LWE.Parameters(
-            est_bdd, 2 ** lq, ND.UniformMod(2), ND.DiscreteGaussian(3.19))
-        lwe_parameters_usvp_pow = LWE.Parameters(
-            est_usvp_pow, 2 ** lq, ND.UniformMod(2), ND.DiscreteGaussian(3.19))
-        lwe_parameters_bdd_pow = LWE.Parameters(
-            est_bdd_pow, 2 ** lq, ND.UniformMod(2), ND.DiscreteGaussian(3.19))
-    else:
-        lwe_parameters_usvp = LWE.Parameters(
-            est_usvp, 2 ** lq, ND.UniformMod(3), ND.DiscreteGaussian(3.19))
-        lwe_parameters_bdd = LWE.Parameters(
-            est_bdd, 2 ** lq, ND.UniformMod(3), ND.DiscreteGaussian(3.19))
-        lwe_parameters_usvp_pow = LWE.Parameters(
-            est_usvp_pow, 2 ** lq, ND.UniformMod(3), ND.DiscreteGaussian(3.19))
-        lwe_parameters_bdd_pow = LWE.Parameters(
-            est_bdd_pow, 2 ** lq, ND.UniformMod(3), ND.DiscreteGaussian(3.19))
-
-    lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-        lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-    lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-        lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-    lwe_usvp_pow = math.floor(math.log2(LWE.primal_usvp(
-        lwe_parameters_usvp_pow, red_cost_model=RC.BDGL16)["rop"]))
-    lwe_bdd_pow = math.floor(math.log2(LWE.primal_bdd(
-        lwe_parameters_bdd_pow, red_cost_model=RC.BDGL16)["rop"]))
-
-    return lwe_usvp, lwe_bdd, lwe_usvp_pow, lwe_bdd_pow
-
-
 def process_parameters(params, table):
     param = params['param']
     logq = params['logq']
@@ -141,14 +96,13 @@ def process_lambda(logq, lwe_d, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, l
     return data
 
 
-def process_est(logq, lwe_d, std_e, secret_q):
-    print("Running Lattice Estimator")
+def process_est(logq, lwe_d, error_dist, secret_dist):
     for lq in logq:
+        print("Running Lattice Estimator with parameters ", "logq ", lq, "lwe dim. ",
+              lwe_d, "error dist. ", error_dist.tag, error_dist, "secret dist. ", secret_dist.tag, secret_dist)
         parameters = LWE.Parameters(
-            lwe_d, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
-        # LWE.estimate(parameters, red_cost_model=RC.BDGL16)
-        print(LWE.arora_gb(parameters))
-        # print(LWE.primal_usvp(parameters))
+            lwe_d, 2 ** lq, secret_dist, error_dist)
+        LWE.estimate(parameters, red_cost_model=RC.BDGL16)
     return [], []
 
 
@@ -550,6 +504,8 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
                                        None, est_bdd, None, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only)
 
     return data_point
+
+# TODO: add generic error distribution
 
 
 def create_data_point(lq, lwe_d, std_e, secret_dist, est_usvp, est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only):

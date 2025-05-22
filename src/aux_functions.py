@@ -109,7 +109,7 @@ def check_parameters(std_e, logq, lwe_d, l, param):
             errors.append("Error: LWE dimension must be bigger than 0")
 
     if param != 'lambda':
-        if l <= 0:
+        if l <= 0 and param != 'est':
             errors.append("Error: lambda must be bigger than 0")
 
     return errors
@@ -338,29 +338,34 @@ def helper():
     print("  --n <n>                 LWE dimension (e.g., 1024)")
     print("  --lambda <lambda>       Security parameter (e.g., 80)")
     print("  --logq <logq>           Log q values (e.g., 20;24-28;30;33;37;42)")
-    print(
-        "  --secret <secret>       Secret distribution (binary, ternary, sparse) [optional, default: binary]")
-    print(
-        "  --error <error>         Standard deviation of the error (e.g., 3.19) [optional, default: 3.19]")
+    print("  --secret <secret>       Secret distribution (binary, ternary, sparse, uniformmod, uniform, gaussian, binomial)")
+    print("  --error <error>         Error distribution (binary, ternary, sparse, uniformmod, uniform, gaussian, binomial)")
     print("  --hw <hw>               Hamming weight (for sparse secrets) (e.g., 64)")
+    print("  --std <std>             Standard deviation for Gaussian distribution (e.g., 3.19)")
+    print("  --eta <eta>             Parameter for binomial distribution (e.g., 1)")
+    print("  -a <a>                  Lower bound for uniform distribution (e.g., 0)")
+    print("  -b <b>                  Upper bound for uniform distribution (e.g., 1)")
     print("  --verify                Verify results against the Lattice Estimator")
     print("  --table                 Output results from all the formulas")
     print("  --ntru                  Check NTRU parameters")
+    print("  --num-only              Output only numerical results")
+    print("  -c                      Apply correction logic")
     print("  -h, --help              Show this help message and exit")
     print("\nExamples:")
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "3.19"')
-    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "binary" --error "3.19"')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19"')
-    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary"')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse"')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --hw "64" --secret "sparse"')
-    print('\nWith verification and table output:')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --secret "binary" --error "3.19" -v --table')
-    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20" --secret "binary" --error "3.19" -v --table')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "3.19" -v --table')
-    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary" -v --table')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse" -v --table')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --hw "64" --secret "sparse" -v --table')
+    print('  # Example 1: Estimate lambda with binary secret')
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19"')
+    print('\n  # Example 2: Estimate n with sparse secret')
+    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "sparse" --hw "64"')
+    print('\n  # Example 3: Estimate logq with ternary secret')
+    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "ternary" --error "gaussian" --std "3.19"')
+    print('\n  # Example 4: Estimate std_e')
+    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary" --error "gaussian"')
+    print('\n  # Example 5: Check NTRU parameters')
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse" --ntru')
+    print('\n  # Example 6: Output results in table format with verification using the Lattice Estimator')
+    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --secret "binary" --error "gaussian" --std "3.19" -v --table')
+    print('\n  # Example 7: Apply correction logic for logq')
+    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -c')
     sys.exit()
 
 
