@@ -85,7 +85,6 @@ def process_std_e(logq, l, lwe_d, verify, estimator_installed, secret_dist, erro
 
 def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict):
     secret = secret_dist.tag
-    print("Secret: ", secret)
     if secret != 'SparseTernary':
         data = process_lambda_param(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s,
                                     lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict)
@@ -519,9 +518,6 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
             lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
         lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
             lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
-
-        print("LWE BDD: ", lwe_bdd)
-        print("LWE USVP: ", lwe_usvp)
 
         if not num_only:
             estimates = {

@@ -160,6 +160,14 @@ def set_distribution(secret, params):
     return secret_dist
 
 
+def get_secret_value(opts):
+
+    for opt, arg in opts:
+        if opt == '--secret':
+            return arg
+    return None
+
+
 def handle_options(opts):
     """
     Handle the command-line options.

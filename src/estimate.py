@@ -2,7 +2,7 @@ import sys
 from aux_functions import (
     check_estimator_installed, set_functions_params, parse_options, handle_options,
     print_table, helper_headers, handle_errors,
-    print_warnings, check_ntru, export_to_csv
+    print_warnings, check_ntru, export_to_csv, get_secret_value
 )
 from param_calls import process_parameters
 
@@ -22,7 +22,7 @@ def main(argv):
         return
 
     lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_functions_params(
-        secret_dist.tag)
+        get_secret_value(opts))
 
     model_values = {
         'lambda_usvp': lambda_usvp,

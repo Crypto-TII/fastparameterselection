@@ -187,9 +187,7 @@ def model_lambda_usvp(d, logq, std_s, std_e, params):
     """
 
     sig = std_e
-    chi = max(1, round(std_e/std_s))
-
-    print("sig", sig, "chi", chi)
+    chi = std_e/std_s
 
     lnq = np.multiply(logq, ln2)
 
