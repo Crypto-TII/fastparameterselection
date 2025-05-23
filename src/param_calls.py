@@ -83,11 +83,11 @@ def process_std_e(logq, l, lwe_d, verify, estimator_installed, secret_dist, erro
     return data
 
 
-def process_lambda(logq, lwe_d, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict):
+def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict):
     secret = secret_dist.tag
     print("Secret: ", secret)
     if secret != 'SparseTernary':
-        data = process_lambda_param(logq, lwe_d, std_e, lambda_usvp, lambda_usvp_s,
+        data = process_lambda_param(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s,
                                     lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict)
     else:
         data = process_lambda_param_hybrid(
@@ -446,13 +446,13 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
     return data
 
 
-def process_lambda_param(logq, lwe_d, std_e, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict):
+def process_lambda_param(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict):
     data = []
     if len(logq) > 1:
         output_dict['lambda'] = []
 
     for lq in logq:
-        data_point = process_lambda_for_lq(lq, lwe_d, std_e, lambda_usvp, lambda_usvp_s,
+        data_point = process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s,
                                            lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only)
         return_value = data_point[OUTPUT]
         if len(logq) > 1:
@@ -489,7 +489,7 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
             est_bdd_s = None
             est_bdd = None
             est_usvp = None
-        data_point = create_data_point(lq, lwe_d, std_e, secret_dist, est_usvp,
+        data_point = create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp,
                                        est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only)
     else:
         if not num_only:
@@ -500,7 +500,7 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
             est_bdd_s = None
             est_bdd = None
             est_usvp = None
-        data_point = create_data_point(lq, lwe_d, std_e, secret_dist, est_usvp,
+        data_point = create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp,
                                        None, est_bdd, None, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only)
 
     return data_point
@@ -508,17 +508,20 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
 # TODO: add generic error distribution
 
 
-def create_data_point(lq, lwe_d, std_e, secret_dist, est_usvp, est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only):
+def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only):
 
     secret = secret_dist.tag
 
     if verify and estimator_installed:
         lwe_parameters = LWE.Parameters(
-            lwe_d, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+            lwe_d, 2 ** lq, secret_dist, error_dist)
         lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
             lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
         lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
             lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
+
+        print("LWE BDD: ", lwe_bdd)
+        print("LWE USVP: ", lwe_usvp)
 
         if not num_only:
             estimates = {

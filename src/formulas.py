@@ -152,7 +152,7 @@ def predicted_beta_usvp(d, lnq, sig, chi):
     """
     x = np.divide(d, lnq)
 
-    print("d", d, "lnq", lnq)
+    # print("d", d, "lnq", lnq)
 
     f1 = np.divide(np.multiply(d, np.log(x)),
                    np.multiply(const, lnq - np.log(sig)))
@@ -160,10 +160,10 @@ def predicted_beta_usvp(d, lnq, sig, chi):
 
     # Beta calculation
 
-    print(np.multiply(d, np.log(x)))
-    print("d", d, "x", x, "log x", np.log(x))
+    # print(np.multiply(d, np.log(x)))
+    # print("d", d, "x", x, "log x", np.log(x))
 
-    print("chi", chi, "f1", f1, "f2", f2, "const * sig", const * sig)
+    # print("chi", chi, "f1", f1, "f2", f2, "const * sig", const * sig)
 
     beta = np.divide(np.multiply(2 * d, np.multiply(lnq - np.log(chi), np.log(f1))),
                      np.power(lnq + 0.5 * np.log(f2) - np.log(const * sig), 2))
@@ -187,7 +187,9 @@ def model_lambda_usvp(d, logq, std_s, std_e, params):
     """
 
     sig = std_e
-    chi = std_e/std_s
+    chi = max(1, round(std_e/std_s))
+
+    print("sig", sig, "chi", chi)
 
     lnq = np.multiply(logq, ln2)
 

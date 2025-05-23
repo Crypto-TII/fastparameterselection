@@ -245,17 +245,26 @@ def handle_options(opts):
     return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag
 
 
-def load_all_from_csv(file_path):
+def export_to_csv(data, output_file):
     """
-    Load all entries from a CSV file.
+    Export data to a CSV file.
 
-    :param file_path: Path to the CSV file.
-    :return: List of entries.
+    :param data: List of dictionaries containing table rows.
+    :param output_file: Path to the output CSV file.
     """
-    with open(file_path, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        entries = [row for row in reader]
-    return entries
+    if not data:
+        print("No data to export.")
+        return
+
+    # Get the headers from the keys of the first dictionary
+    headers = data[0].keys()
+
+    with open(output_file, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(data)
+
+    print(f"Data exported to {output_file}")
 
 
 def closest_power_of_2(n):

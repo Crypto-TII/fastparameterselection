@@ -2,7 +2,7 @@ import sys
 from aux_functions import (
     check_estimator_installed, set_functions_params, parse_options, handle_options,
     print_table, helper_headers, handle_errors,
-    print_warnings, check_ntru
+    print_warnings, check_ntru, export_to_csv
 )
 from param_calls import process_parameters
 
@@ -53,6 +53,8 @@ def main(argv):
     }
 
     data = process_parameters(params, table)
+
+    export_to_csv(data, "output.csv")
 
     if param in ['n', 'logq', 'std_e', 'lambda']:
         headers = list(data[0].keys()) if data else []
