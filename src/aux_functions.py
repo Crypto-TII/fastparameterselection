@@ -250,6 +250,11 @@ def handle_options(opts):
     secret_dist = set_distribution(secret_dist_tag, params)
     error_dist = set_distribution(error_dist_tag, params)
 
+    if secret_dist_tag != 'binary' and secret_dist_tag != 'ternary':
+        num_only = True
+    if error_dist_tag != 'gaussian':
+        num_only = True
+
     return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag
 
 
