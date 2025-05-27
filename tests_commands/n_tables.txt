@@ -4,3 +4,17 @@ python3 src/estimate.py --param "n" --lambda "110" --logq "31;42;52;61" --secret
 python3 src/estimate.py --param "n" --lambda "120" --logq "28;39;48;57" --secret "binary" --error "gaussian" --std "3.19" --table -v
 python3 src/estimate.py --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19" --table -v
 python3 src/estimate.py --param "n" --lambda "140" --logq "24;34;41;49" --secret "binary" --error "gaussian" --std "3.19" --table -v
+
+python3 src/estimate.py --param "n" --lambda "80" --logq "43" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "100" --logq "34" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "110" --logq "32" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "120" --logq "29" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "128" --logq "27" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "140" --logq "25" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+
+python3 src/estimate.py --param "n" --lambda "80" --logq "1400" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "100" --logq "1100" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "110" --logq "1000" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "120" --logq "930" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "128" --logq "880" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+python3 src/estimate.py --param "n" --lambda "140" --logq "810" --secret "ternary" --error "gaussian" --std "3.19" --table -v

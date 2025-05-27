@@ -115,49 +115,51 @@ def check_parameters(std_e, logq, lwe_d, l, param):
     return errors
 
 
-def set_distribution(secret, params):
+def set_distribution(dist_type, params, is_error=False):
     """
-    Set the secret/error distribution and its standard deviation.
-    """
+    Set the secret/error distribution and its parameters.
 
-    if secret == 'binary':
-        secret_dist = ND.UniformMod(2)
-    elif secret == 'ternary':
-        secret_dist = ND.UniformMod(3)
-    elif secret == 'sparse':
+    :param dist_type: Distribution type (e.g., 'binary', 'gaussian').
+    :param params: Dictionary of parameters.
+    :param is_error: Boolean flag to indicate if this is for the error distribution.
+    :return: Distribution object.
+    """
+    prefix = '' if is_error else 's_'  # Use 's_' prefix for secret parameters
+
+    if dist_type == 'binary':
+        dist = ND.UniformMod(2)
+    elif dist_type == 'ternary':
+        dist = ND.UniformMod(3)
+    elif dist_type == 'sparse':
         try:
-            secret_dist = ND.SparseTernary(
+            dist = ND.SparseTernary(
                 n=params['n'], p=params['hw']/2, m=params['hw']/2)
         except:
-            print("Error: hamming weight --hw is required for sparse secret")
+            print("Error: Hamming weight --hw is required for sparse secret")
             sys.exit()
-    elif secret == 'uniformmod':
-        secret_dist = ND.UniformMod(params['q'])
-    elif secret == 'uniform':
+    elif dist_type == 'uniformmod':
+        dist = ND.UniformMod(params['q'])
+    elif dist_type == 'uniform':
         try:
-            secret_dist = ND.Uniform(params['a'], params['b'])
+            dist = ND.Uniform(params[f'{prefix}a'], params[f'{prefix}b'])
         except:
-            print("Error: interval bounds --a and --b are required for uniform secret")
+            print(
+                f"Error: Interval bounds --{prefix}a and --{prefix}b are required for uniform distribution")
             sys.exit()
-    elif secret == 'gaussian':
-        secret_dist = ND.DiscreteGaussian(params['std'])
-        # try:
-        #     secret_dist = ND.DiscreteGaussian(params['std'])
-        # except:
-        #     print("Error: standard deviation --std is required for gaussian secret")
-        #     sys.exit()
-    elif secret == 'binomial':
+    elif dist_type == 'gaussian':
+        dist = ND.DiscreteGaussian(params[f'{prefix}std'])
+    elif dist_type == 'binomial':
         try:
-            secret_dist = ND.CenteredBinomial(params['eta'])
+            dist = ND.CenteredBinomial(params[f'{prefix}eta'])
         except:
-            print("Error: parameter --eta is required for binomial secret")
+            print(
+                f"Error: Parameter --{prefix}eta is required for binomial distribution")
             sys.exit()
     else:
-        print("Secret distribution not supported")
-        print("Available options: binary, ternary, sparse, uniformmod, uniform, gaussian, binomial")
-        print("dist: ", secret)
+        print(f"{'Error' if is_error else 'Secret'} distribution not supported")
         sys.exit()
-    return secret_dist
+
+    return dist
 
 
 def get_secret_value(opts):
@@ -187,14 +189,18 @@ def handle_options(opts):
     params = {
         'n': lwe_d,       # LWE dimension
         'hw': hw,         # Hamming weight
-        'std': 3.19,     # Standard deviation for Gaussian
-        'a': 0,           # Lower bound for uniform distribution
-        'b': 1,           # Upper bound for uniform distribution
-        'eta': 1,         # Parameter for binomial distribution
+        's_std': 3.19,    # Standard deviation for Gaussian (secret)
+        'std': 3.19,      # Standard deviation for Gaussian (error)
+        's_a': 0,         # Lower bound for uniform distribution (secret)
+        'a': 0,           # Lower bound for uniform distribution (error)
+        's_b': 1,         # Upper bound for uniform distribution (secret)
+        'b': 1,           # Upper bound for uniform distribution (error)
+        's_eta': 1,       # Parameter for binomial distribution (secret)
+        'eta': 1,         # Parameter for binomial distribution (error)
         'q': 2            # Modulus for uniformmod distribution
     }
     secret_dist = set_distribution(secret_dist_tag, params)
-    error_dist = set_distribution(error_dist_tag, params)
+    error_dist = set_distribution(error_dist_tag, params, is_error=True)
     l = 0
     table = False
     num_only = False
@@ -232,14 +238,22 @@ def handle_options(opts):
             num_only = True
         elif opt == '-c':
             correction = True
+        elif opt == '--s-std':
+            params['s_std'] = float(arg)  # Secret distribution std
         elif opt == '--std':
-            params['std'] = float(arg)
+            params['std'] = float(arg)  # Error distribution std
+        elif opt == '--s-a':
+            params['s_a'] = float(arg)  # Secret distribution lower bound
         elif opt == '-a':
-            params['a'] = float(arg)
+            params['a'] = float(arg)  # Error distribution lower bound
+        elif opt == '--s-b':
+            params['s_b'] = float(arg)  # Secret distribution upper bound
         elif opt == '-b':
-            params['b'] = float(arg)
+            params['b'] = float(arg)  # Error distribution upper bound
+        elif opt == '--s-eta':
+            params['s_eta'] = float(arg)  # Secret distribution eta
         elif opt == '--eta':
-            params['eta'] = float(arg)
+            params['eta'] = float(arg)  # Error distribution eta
         elif opt == '--secret':
             secret_dist_tag = str(arg)
         elif opt == '--error':
@@ -473,11 +487,11 @@ def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_
     if param == 'std_e':
         # TODO: numerics for std only works for gaussian distribution
         error_dist_usvp = set_distribution(
-            error_dist_tag, {'std': 2**est_usvp_numerical})
+            error_dist_tag, {'std': 2**est_usvp_numerical}, is_error=True)
         lwe_parameters_usvp = LWE.Parameters(
             lwe_d, 2**lnq, secret_dist, error_dist_usvp)
         error_dist_bdd = set_distribution(
-            error_dist_tag, {'std': 2**est_bdd_numerical})
+            error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True)
 
         print("Error dist bdd", error_dist_bdd.stddev)
 

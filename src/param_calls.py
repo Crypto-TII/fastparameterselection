@@ -43,7 +43,7 @@ def process_parameters(params, table):
                          model_values['n_bdd'], model_values['n_bdd_s'], verify, estimator_installed, secret_dist, table, num_only, output_dict)
     elif param == 'logq':
         data = process_logq(
-            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, output_dict)
+            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict)
     elif param == 'std_e':
         data = process_std_e(
             logq, l, lwe_d, verify, estimator_installed, secret_dist, error_dist, correction, error_dist_tag, table, output_dict)
@@ -64,13 +64,13 @@ def process_n(logq, l, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimato
     return data
 
 
-def process_logq(l, lwe_d, std_e, verify, estimator_installed, correction, secret_dist, hw, output_dict):
+def process_logq(l, lwe_d, std_e, verify, estimator_installed, correction, secret_dist, hw, table, output_dict):
 
     secret = secret_dist.tag
 
     if secret != 'SparseTernary':
         data = process_logq_param(
-            l, lwe_d, std_e, verify, estimator_installed, correction, secret_dist, output_dict)
+            l, lwe_d, std_e, verify, estimator_installed, correction, secret_dist, table, output_dict)
     else:
         data = process_logq_param_hybrid(
             l, lwe_d, verify, estimator_installed, secret_dist, hw, output_dict)
@@ -231,7 +231,7 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
     return data
 
 
-def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, output_dict):
+def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, table, output_dict):
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
@@ -272,21 +272,35 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
 
         corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_usvp_numerical, est_bdd_numerical, lwe_bdd, lwe_usvp
 
+        print(
+            f"Corrected logq_bdd: {corrected_logq_bdd}, logq_usvp: {corrected_logq_usvp}, lwe_bdd: {corrected_lwe_bdd}, lwe_usvp: {corrected_lwe_usvp}")
+
         num_calls = 2
 
         if correction:
             return_value, corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp = correction_logic(
                 l, lwe_d, None, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'logq', num_calls)
 
-        data_point = {
-            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: corrected_logq_usvp,
-            LWE_USVP: corrected_lwe_usvp, LOGQ_BDD: corrected_logq_bdd, LWE_BDD: corrected_lwe_bdd, OUTPUT: return_value
-        }
+        if table:
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: corrected_logq_usvp,
+                LWE_USVP: corrected_lwe_usvp, LOGQ_BDD: corrected_logq_bdd, LWE_BDD: corrected_lwe_bdd, OUTPUT: return_value
+            }
+        else:
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d,
+                LWE_USVP: corrected_lwe_usvp, LWE_BDD: corrected_lwe_bdd, OUTPUT: return_value
+            }
     else:
-        data_point = {
-            SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: est_usvp_numerical,
-            LOGQ_BDD: est_bdd_numerical, OUTPUT: return_value
-        }
+        if table:
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOGQ_USVP: est_usvp_numerical,
+                LOGQ_BDD: est_bdd_numerical, OUTPUT: return_value
+            }
+        else:
+            data_point = {
+                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, OUTPUT: return_value
+            }
     data.append(data_point)
 
     print(data)  # Print the result
@@ -389,13 +403,13 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
         if verify and estimator_installed:
             if est_bdd_numerical_status:
                 lwe_parameters_bdd = LWE.Parameters(
-                    lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_bdd_numerical}))
+                    lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True))
                 lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
                     lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
 
             if est_usvp_numerical_status:
                 lwe_parameters_usvp = LWE.Parameters(
-                    lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_bdd_numerical}))
+                    lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True))
                 lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
                     lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
 
@@ -504,8 +518,6 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
 
     return data_point
 
-# TODO: add generic error distribution
-
 
 def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only):
 
@@ -531,8 +543,8 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
         if table:
             if not num_only:
                 data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp,
-                    USVP_S: est_usvp_s, USVP_NUM: est_num_usvp, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, BDD_NUM: est_num_bdd, OUTPUT: return_value
+                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp,
+                    USVP_S: est_usvp_s, USVP_NUM: est_num_usvp,  LWE_USVP: lwe_usvp, BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_num_bdd, LWE_BDD: lwe_bdd, OUTPUT: return_value
                 }
             else:
                 data_point = {
