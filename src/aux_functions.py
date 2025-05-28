@@ -430,7 +430,6 @@ def create_explanation_dict(headers):
         "log2(std_e) bdd": "Output of the numerical approximation of the (log2) standard deviation of the error for the BDD attack",
         "bdd 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_bdd",
         "usvp 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_usvp",
-        "diff": "The difference between the output of the previous column and the output of the Lattice Estimator",
         "est usvp": "Output of the Lattice Estimator for the (unique) SVP attack",
         "est bdd": "Output of the Lattice Estimator for the BDD attack",
         "est usvp_s": "Output of the Lattice Estimator using the result from the simplified formula for the (unique) SVP attack",
