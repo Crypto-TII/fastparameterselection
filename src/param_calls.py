@@ -13,7 +13,7 @@ from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
 from const import (
-    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, LWE_USVP_F, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, LOGQ_USVP_F, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, EST
+    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, LWE_USVP_C, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, LWE_BDD_C, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, LOGQ_USVP_F, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, STD_E_USVP_C, STD_E_BDD_C, EST, NUM_CALLS_USVP, NUM_CALLS_BDD
 )
 
 import sys
@@ -400,6 +400,9 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
 
         output_dict['std_e'] = return_value
 
+        num_calls_usvp = 0
+        num_calls_bdd = 0
+
         if verify and estimator_installed:
             if est_bdd_numerical_status:
                 lwe_parameters_bdd = LWE.Parameters(
@@ -407,38 +410,75 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
                 lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
                     lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
 
+                num_calls_bdd = 1
+
+                print("BDD PARAMETERS: ", lwe_parameters_bdd)
+                print("est_bdd_numerical: ", est_bdd_numerical)
+                print("2**est_bdd_numerical: ", 2**est_bdd_numerical)
+                print("BDD LWE: ", lwe_bdd)
+
             if est_usvp_numerical_status:
                 lwe_parameters_usvp = LWE.Parameters(
-                    lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True))
+                    lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_usvp_numerical}, is_error=True))
                 lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
                     lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+
+                num_calls_usvp = 1
+
+                print("USVP PARAMETERS: ", lwe_parameters_usvp)
+                print("est_usvp_numerical: ", est_usvp_numerical)
+                print("2**est_usvp_numerical: ", 2**est_usvp_numerical)
+                print("USVP LWE: ", lwe_usvp)
 
             estimates = {
                 est_usvp_numerical: lwe_usvp, est_bdd_numerical: lwe_bdd
             }
 
-            corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_usvp_numerical, est_bdd_numerical, lwe_bdd, lwe_usvp
+            print(
+                f"Corrected std_e_bdd: {est_bdd_numerical}, std_e_usvp: {est_usvp_numerical}, lwe_bdd: {lwe_bdd}, lwe_usvp: {lwe_usvp}")
 
-            num_calls = 2
+            corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
+            est_bdd_numerical_aux, est_usvp_numerical_aux, lwe_bdd_aux, lwe_usvp_aux = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
+
+            num_calls_usvp = 1
+            num_calls_bdd = 1
 
             if correction:
 
                 # If we do not have convergence in some of the numerics we use the result of the other. In case both fail, we set the default value to 2
-                if not est_usvp_numerical_status and est_bdd_numerical_status:
-                    est_usvp_numerical = est_bdd_numerical
-                elif est_usvp_numerical_status and not est_bdd_numerical_status:
-                    est_bdd_numerical = est_usvp_numerical
-                elif not est_usvp_numerical_status and not est_bdd_numerical_status:
-                    est_usvp_numerical = 2
-                    est_bdd_numerical = 2
 
-                return_value, corrected_std_e_usvp, corrected_std_e_bdd, corrected_lwe_bdd, corrected_lwe_usvp = correction_logic(
-                    l, lwe_d, lq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'std_e', num_calls, error_dist_tag)
+                print("est_usvp_numerical_status: ", est_usvp_numerical_status)
+                print("est_bdd_numerical_status: ", est_bdd_numerical_status)
 
-            if table:
+                # if not est_usvp_numerical_status and est_bdd_numerical_status:
+                #     est_usvp_numerical = est_bdd_numerical
+                #     lwe_usvp = lwe_bdd
+                # elif est_usvp_numerical_status and not est_bdd_numerical_status:
+                #     est_bdd_numerical = est_usvp_numerical
+                #     lwe_bdd = lwe_usvp
+                # elif not est_usvp_numerical_status and not est_bdd_numerical_status:
+                #     est_usvp_numerical = 2
+                #     est_bdd_numerical = 2
+                # else:
+                #     if lwe_bdd != l:
+                #         est_bdd_numerical = min(
+                #             est_bdd_numerical, est_usvp_numerical)
+                #     if lwe_usvp != l:
+                #         est_usvp_numerical = min(
+                #             est_bdd_numerical, est_usvp_numerical)
+
+                return_value, corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp, num_calls_usvp, num_calls_bdd = correction_logic(
+                    l, lwe_d, lq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'std_e', num_calls_usvp, num_calls_bdd, error_dist_tag)
+
+            if table and correction:
                 data_point = {
                     SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
-                    STD_E_USVP: corrected_std_e_usvp, LWE_USVP: corrected_lwe_usvp, STD_E_BDD: corrected_std_e_bdd, LWE_BDD: corrected_lwe_bdd, OUTPUT: return_value
+                    STD_E_USVP: est_usvp_numerical_aux, LWE_USVP: lwe_usvp_aux, STD_E_USVP_C: corrected_std_e_usvp, LWE_USVP_C: corrected_lwe_usvp, NUM_CALLS_USVP: num_calls_usvp, STD_E_BDD: est_bdd_numerical_aux, LWE_BDD: lwe_bdd_aux, STD_E_BDD_C: corrected_std_e_bdd, LWE_BDD_C: corrected_lwe_bdd, NUM_CALLS_BDD: num_calls_bdd, OUTPUT: return_value
+                }
+            elif table and not correction:
+                data_point = {
+                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
+                    STD_E_USVP: est_usvp_numerical_aux, LWE_USVP: lwe_usvp_aux, STD_E_BDD: est_bdd_numerical_aux, LWE_BDD: lwe_bdd_aux, OUTPUT: return_value
                 }
             else:
                 data_point = {

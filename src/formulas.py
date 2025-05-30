@@ -86,7 +86,7 @@ def check_overstreched(params):
     :return: Beta value if overstretched, -1 otherwise.
     """
     n = params['n']
-    lgq = params['lgq']
+    lgq = params['logq']
     stds = params['std_s']
     stde = params['std_e']
 

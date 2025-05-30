@@ -154,9 +154,8 @@ def numerical_n_usvp(l, logq, std_s, std_e):
             print(
                 f"Error in {numerical_n_usvp.__name__}: could not find optimal d, maybe lambda is too small"
             )
-            exit(0)
+            return 1
         else:
-            # TODO arent we missing the zeta here?
             return sqrt(2 * n * lnq * beta / log(beta / const))
 
     def eq12(n, beta): return l - (0.292 * beta +
@@ -240,7 +239,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
             print(
                 f"Error in {numerical_n_usvp.__name__}: could not find optimal d, maybe lambda is too small"
             )
-            exit(0)
+            return 1
         else:
             # return sqrt(2 * n * (lnq - log(zeta(std_e))) * beta / log(beta / const))
             return sqrt(2 * n * lnq * beta / log(beta / const))
@@ -263,7 +262,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     # Solve using fsolve
     guess_range = 50
     guess_range_beta = beta_initial_guess + 200
-    max_attempts = 100
+    max_attempts = 1000
 
     ier = 0
     msg = ""
@@ -292,13 +291,13 @@ def numerical_std_e_usvp(l, n, logq, std_s):
         print(
             f"Warning: fsolve did not converge in {numerical_std_e_usvp.__name__}: {msg}")
         print("Solution found (if any):", solution)
-        return std_e_initial_guess, ier  # Default value if fsolve fails
+        return std_e_initial_guess, False  # Default value if fsolve fails
 
     std_e_solution, beta_solution = solution
     print(
         f"numerical_std_e_usvp Converged: std_e={std_e_solution}, beta={beta_solution}")
 
-    return std_e_solution, bool(ier)
+    return std_e_solution, True
 
 
 def numerical_logq_usvp(l, n, std_s, std_e):
@@ -328,9 +327,8 @@ def numerical_logq_usvp(l, n, std_s, std_e):
             print(
                 f"Error in {numerical_n_usvp.__name__}: could not find optimal d, maybe lambda is too small"
             )
-            exit(0)
+            return 1
         else:
-            print("lnq: ", lnq, "beta: ", beta)
             return sqrt(2 * n * lnq * beta / log(beta / const))
 
     def eq12(lnq, beta): return l - (0.292 * beta +

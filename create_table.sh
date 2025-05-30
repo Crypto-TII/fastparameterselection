@@ -1,23 +1,39 @@
 #!/bin/bash
 
-# Input file containing the commands
+# Default values for input and output files
 COMMANDS_FILE="tests_commands/std_e.txt"
-
-# Output file to store the compiled results
 COMPILED_OUTPUT="compiled_output.csv"
-
-# Debug log file
 DEBUG_LOG="debug_log.txt"
 
-# Clear the compiled output and debug log files if they exist
-> "$COMPILED_OUTPUT"
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --commands-file)
+            COMMANDS_FILE="$2"
+            shift 2
+            ;;
+        --compiled-output)
+            COMPILED_OUTPUT="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Debug log file
 > "$DEBUG_LOG"
+
+# Clear the compiled output file if it exists
+> "$COMPILED_OUTPUT"
 
 # Initialize a flag to track if the header has been written
 HEADER_WRITTEN=false
 
-# Loop through each line in the commands file
-while IFS= read -r command; do
+# Use a while loop with a subshell to ensure the last line is processed
+while IFS= read -r command || [[ -n "$command" ]]; do
     # Log the command being executed
     echo "Running command: $command" >> "$DEBUG_LOG"
 
@@ -38,23 +54,7 @@ while IFS= read -r command; do
         fi
 
         # Append the content of output.csv (excluding the header) to the compiled output file
-        # Format numbers: integers remain as integers, floats limited to 2 decimal places
-        tail -n +2 output.csv | awk -F, '{
-            for (i=1; i<=NF; i++) {
-                if ($i ~ /^[0-9]+$/) {
-                    # Integer: print as-is
-                    printf "%d", $i
-                } else if ($i ~ /^[0-9.-]+$/) {
-                    # Float: limit to 2 decimal places
-                    printf "%.2f", $i
-                } else {
-                    # Non-numeric: print as-is
-                    printf "%s", $i
-                }
-                if (i < NF) printf "," # Add a comma between fields
-            }
-            printf "\n"
-        }' >> "$COMPILED_OUTPUT"
+        tail -n +2 output.csv >> "$COMPILED_OUTPUT"
     else
         echo "Warning: output.csv not found after running command: $command" >> "$DEBUG_LOG"
     fi
