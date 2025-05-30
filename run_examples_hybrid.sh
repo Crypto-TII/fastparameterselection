@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# n = 2**10
+python3 src/estimate.py --param "lambda" --n "1024" --logq "35" --hw "128" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "1024" --logq "27" --hw "128" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --hw "128" --secret "sparse" -v
+
+python3 src/estimate.py --param "lambda" --n "1024" --logq "36" --hw "192" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "1024" --logq "29" --hw "192" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --hw "192" --secret "sparse" -v
+
+# n = 2**13
+python3 src/estimate.py --param "lambda" --n "8192" --logq "200" --hw "128" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "8192" --logq "119" --hw "128" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "8192" --logq "87" --hw "128" --secret "sparse" -v
+
+python3 src/estimate.py --param "lambda" --n "8192" --logq "210" --hw "192" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "8192" --logq "128" --hw "192" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "8192" --logq "91" --hw "192" --secret "sparse" -v
+
+# n = 2**15
+python3 src/estimate.py --param "lambda" --n "32768" --logq "850" --hw "128" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "32768" --logq "500" --hw "128" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "32768" --logq "330" --hw "128" --secret "sparse" -v
+
+python3 src/estimate.py --param "lambda" --n "32768" --logq "850" --hw "192" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "32768" --logq "565" --hw "192" --secret "sparse" -v
+python3 src/estimate.py --param "lambda" --n "32768" --logq "410" --hw "192" --secret "sparse" -v

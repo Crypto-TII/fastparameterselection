@@ -65,8 +65,10 @@ def main(argv):
         print("Parameter " + param + " not valid")
         return
 
+    print("Output dictionary:", params)
+
     if ntru_flag:
-        check_ntru(output_dict)
+        check_ntru(params)
 
     print_warnings(verify, estimator_installed)
 

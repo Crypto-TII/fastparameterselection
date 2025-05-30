@@ -85,14 +85,17 @@ def check_overstreched(params):
     :param params: Dictionary of parameters.
     :return: Beta value if overstretched, -1 otherwise.
     """
-    n = params['n']
+    n = params['lwe_d']
     lgq = params['logq']
-    stds = params['std_s']
-    stde = params['std_e']
+    stds = params['secret_dist'].stddev
+    stde = params['error_dist'].stddev
 
     lnq = multiply(lgq, ln2)
 
-    dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
+    print("n", n, "lgq", lgq, "stds", stds, "stde", stde)
+
+    # dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
+    dense_det_log = math.log(math.sqrt(stds*n)+math.sqrt(stde*n))
 
     for beta in range(50, 1000):
         alpha_beta = delta(beta)**2

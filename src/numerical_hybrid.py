@@ -1,9 +1,16 @@
 import random
-from sage.all import RR, binomial
+from sage.all import RR, binomial, RealDistribution, prod
 from numpy import pi, exp, log, log2, sqrt, ceil
 from scipy.optimize import fsolve
 
 import warnings
+
+
+# EXACT EQUATIONS:
+# eq1a = lambda ng_, beta_, d_: l - (0.292*beta_+16.4+3+log2(d_)) + probability_enum(n, h, ng_, wg)-1 # log2(binomial(n-h,ng_-wg)*binomial(h,wg)/binomial(n, ng_) + binomial(n-h,ng_-wg+1)*binomial(h,wg-1)/binomial(n, ng_)) #approx_binom(n-h, ng_-wg)+approx_binom(h, wg)-approx_binom(n, ng_) - 2   #log2(binomial(n-h,ng_-wg)*binomial(h,wg)/binomial(n, ng_) + binomial(n-h,ng_-wg+1)*binomial(h,wg-1)/binomial(n, ng_)) #(approx_binom(ng_,wg)+wg)+log2(d_) - (0.292*beta_+16.4+3)+2  #0.5*(ng_*entropy(wg/ng_)+wg) #- 0.5*log2(8*n*wg/ng_*(1-wg/ng_)) #0.5*(log2(math.comb(ng_, wg),2)+wg)
+# eq1b = lambda ng_, beta_, d_:  l - ss_enum(ng_,wg)-2*log2(d_) + probability_enum(n, h, ng_, wg)-12 #approx_binom(n-h, ng_-wg)+approx_binom(h, wg)-approx_binom(n, ng_)
+# eq2 = lambda ng_, beta_, d_, logq: d_ - ceil(sqrt(n * int(logq) * ln2 / log(_delta(beta_)))) + ng_ - 1 #adding ceil over sqrt() makes the eq. precise
+# eq3 = lambda ng_, beta_, d_, logq: (-d_+1)*log2(_delta(beta_))+ ((d_-n+ng_-1)*int(logq)+ (n-ng_)*log2(xi))/d_ - log2(2*sigma_e*sigma_e) #success probability of Babai=1, i.e. ||b_d*|| = sigma_e \approx 4
 
 # [logq, h, beta, ng, d, wg, lambda]
 all_params14 = [[250.0, 64, 311, 7315, 17222, 8, 152.10], [300.0, 64, 243, 7105, 17690, 6, 135.44],
@@ -226,22 +233,45 @@ def _delta(beta):
     return (beta / (2 * pi * e) * (pi * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
 
 
-def log_delta(beta):
+def log2_delta(beta):
+    """
+
+    :param beta: bkz block size
+    :return: log2(_delta(beta))
+    """
     return ((1 / (2 * (beta - 1))) * log2(beta / (2 * pi * e)) + (1 / (2 * (beta - 1))) * (1 / beta) * log2(pi * beta))
 
 
 def entropy(x):
+    """
+    :param x:
+    :return: Binary entropy function of x
+    """
+    if x == 0 or x==1: return 0
     return -x*log2(x) - (1-x)*log2(1-x)
 
 
 def approx_binom(n, k):
+    """
+
+    :param n: integer
+    :param k: integer
+    :return: apprixmation to binom(n,k) from Wiki
+    """
+    if n<=0 or k<=0 or n<=k: return 0
     return n*entropy(k/n)+0.5*log2(n/(8*k*(n-k)))
 
 
 def approx_startpoint_bdd(n, logq, h):
+    """
+    This function is used to compute the starting point for numerical_lambda_hybrid_v2()
+    :param n: LWE dimension
+    :param logq: LWE modulus
+    :param h: Ternary secret weight
+    :return: tuple (beta, d)
+    """
     sigma_s = sqrt(h/n)
     sigma_e = 3.19
-    # eq1 = lambda beta, d: d*log2(beta)/beta - (1-n/d)*logq - n/d*log2(sigma_e/sigma_s) + log2(sigma_e)
 
     lnq = logq * ln2
     zeta = round(sigma_e/sigma_s)
@@ -259,119 +289,117 @@ def approx_startpoint_bdd(n, logq, h):
 
     beta_solution = fsolve(eq6, beta_initial_guess, full_output=False)
 
-    # compute d (from 'FHE Formulas.pdf')
     d_optimal = sqrt(
         2 * n * lnq * beta_solution[0] / log(beta_solution[0] / const))
     return [beta_solution[0], d_optimal]
 
 
 def probability_enum(n, h, ng, w):
+    """
+    This function used to compute exact complexity of hybrid
+    :param n: LWE dimension
+    :param h: Ternary secret weight
+    :param ng: Number of guessed coordinates
+    :param w: Weight of guessed secret
+    :return: Probability that the secret has weight w on ng coordinates
+    """
     prob = 0
     ng = int(ng)
-    for i in range(0, w):
+    if ng<0: return  -1
+    for i in range(0, w+1):
         prob += RR(binomial(n-h, ng-i)*binomial(h, i)/binomial(n, ng))
     if prob == 0:
         return -1
     return log2(prob)
 
-# needed only if EXACT EQUATIONS are called
-
 
 def ss_enum(ng, w):
+    """
+    This function used to compute exact complexity of hybrid
+    :param ng: Number of guessed coordinates
+    :param w: Weight of guessed secret
+    :return: Number of vectros of dim ng of weight up to (including) w
+    """
     ss = 0
-    for i in range(0, w):
+    for i in range(0, w+1):
         ss += RR(binomial(ng, i) * 2**i)
     return log2(ss)
 
 
-def numerical_lambda_hybrid_runoptimize(n, logq, sigma_e, h, initial_guess):
-    lnq = logq * ln2
+def babai_prob(n, logq, sigma_e, h, beta, d):
+    """
+    The function is taken from the LatticeEstimator (GSA + Babai probability)
+    :param n: LWE dimension
+    :param logq: LWE modulus
+    :param sigma_e: LWE error st. dev
+    :param h:  Ternary secret weight
+    :param beta: BKZ parameter
+    :param d: optimal lattice dimension
+    :return: probability of Babai algorithm
+    """
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
-    rt_min = float('inf')
-    sol_tolerance_min = 10
-    for wg in range(2, 52):
-        # 0.5*(ng_*entropy(wg/ng_)+wg) #- 0.5*log2(8*n*wg/ng_*(1-wg/ng_)) #0.5*(log2(math.comb(ng_, wg),2)+wg)
-        def eq1(ng_, beta_, d_): return (approx_binom(ng_, wg)+wg) + \
-            log2(d_) - (0.292*beta_+16.4+3)+2
-        # adding ceil over sqrt() makes the eq. precise
+    log_vol = RR(logq * (d - n - 1) + log2(xi) * n)
+    r_log = [(d - 1 - 2 * i) * RR(log2_delta(beta)) + log_vol / d for i in range(d)]
+    r = [2 ** (2 * r_) for r_ in r_log]
 
-        def eq2(ng_, beta_, d_): return d_ - \
-            ceil(sqrt(n * lnq / log(_delta(beta_)))) + ng_ - 1
-
-        def eq3(ng_, beta_, d_): return (-d_+1)*log2(_delta(beta_)) + \
-            ((d_-n+ng_-1)*logq + (n-ng_)*log2(xi))/d_ - log2(2*sigma_e*sigma_e)
-
-        def system(x):
-            f1 = eq1(x[0], x[1], x[2])
-            f2 = eq2(x[0], x[1], x[2])
-            f3 = eq3(x[0], x[1], x[2])
-            return f1, f2, f3
-
-        try:
-            res = fsolve(system, [initial_guess[0], initial_guess[1],
-                         initial_guess[2]], maxfev=2**21, full_output=False)
-        except:
-            print('error in numerical_lambda_hybrid_runoptimize on wg = ', wg)
-            continue
-
-        sol_tolerance = abs(eq1(res[0], res[1], res[2]))+abs(
-            eq2(res[0], res[1], res[2]))+abs(eq3(res[0], res[1], res[2]))
-        rt = 0.292*res[1]+log2(8*res[2])+16.4 - \
-            probability_enum(n, h, res[0], wg)
-        if (rt < rt_min and abs(sol_tolerance) < 7):
-            rt_min = rt
-            break
-
-    return rt_min
+    norm = sqrt(d) * sigma_e
+    denom = float(2 * norm) ** 2
+    T = RealDistribution("beta", ((len(r) - 1) / 2, 1.0 / 2))
+    probs = [1 - T.cum_distribution_function(1 - r_ / denom) for r_ in r]
+    P = prod(probs)
+    if P <= 0: return -500 #float('-inf')
+    else: return log2(P)
 
 
-def numerical_lambda_hybrid(n, logq, sigma_e, h, initial_guess=None):
-    lnq = logq * ln2
-    rt_min = float('inf')
-
-    if initial_guess == None:
-        initial_guess = approx_startpoint_bdd(n, logq, h)
-
-    bound_trials = 400
-    beta_start = initial_guess[0]
-    d_start = sqrt(2 * n * lnq * beta_start / log(beta_start / const))
-    while bound_trials > 0:
-        bound_trials -= 1
-        rt = numerical_lambda_hybrid_runoptimize(
-            n, logq, sigma_e, h, [n/4, beta_start, d_start-n/4])
-        if not (rt == float('inf')):
-            break
-        beta_start = max(40, initial_guess[0]+random.randint(-3000, 30))
-        d_start = sqrt(2 * n * lnq * beta_start / log(beta_start / const))
-
-    if bound_trials == 0:
-        print("numerical_lambda_hybrid_runoptimize couldn't find a solution after",
-              200-bound_trials, "trial for this parameters set")
-        return rt_min
-
-    if (rt < rt_min):
-        rt_min = rt
-
-    return rt_min
+# d = m+n-ng
+def exact_runtime(n, logq, sigma_e, h, beta, d, ng, w):
+    """
+    The function is needed to filter solutions
+    :param n: LWE dimension
+    :param logq: LWE modulus
+    :param sigma_e: LWE error st. dev
+    :param h: Ternary secret weight
+    :param beta: BKZ parameter
+    :param d: optimal lattice dimension
+    :param ng: Number of guessed coordinates
+    :param w: Weight of guessed secret
+    :return: tuple (runtime of bkz, runtime of enumeration, babai probability) on log2-scale
+    """
+    ng = int(ng)
+    prob = probability_enum(n, h, ng, w)
+    t_bkz  = 0.292*beta + log2(8*d) + 16.4 - prob + 2
+    t_enum = ss_enum(ng,w)+2*log2(d) - prob + 1
+    babai = babai_prob(n-ng, logq, sigma_e, h, beta, d)
+    return t_bkz, t_enum, babai
 
 
-# Runs trials within each wg
-def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, initial_guess=None):
-    lnq = logq * ln2
+def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
+    """
+    Caller's function for sec. level of hybrid attack
+    :param n: LWE dimension
+    :param logq: LWE modulus
+    :param sigma_e: LWE error st. dev
+    :param h: Ternary secret weight
+    :return: security level for hybrid attack. Return float('inf') if numerical solver fails
+    """
+
     sigma_s = sqrt(h / n)
     xi = sigma_e / sigma_s
+
     rt_min = float('inf')
-    sol_tolerance = 100
+    sol_tolerance = 100 #max solution tolerance
+
+    #Brute-forcing for w
     for wg in range(2, 52):
         def eq1(ng_, beta_, d_): return (approx_binom(ng_, wg) + wg) + \
-            log2(d_) - (0.292 * beta_ + 16.4 + 3) + 2
+                                        log2(d_) - (0.292 * beta_ + 16.4 + 3) + 2
 
         def eq2(ng_, beta_, d_): return d_ - \
-            ceil(sqrt(n * lnq / log(_delta(beta_)))) + ng_ - 1
+                                        ceil(sqrt(n * logq  / log2_delta(beta_))) + ng_ - 1
 
         def eq3(ng_, beta_, d_): return (-d_ + 1) * log2(_delta(beta_)) + ((d_ - n +
-                                                                            ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - log2(2 * sigma_e * sigma_e)
+                                                                            ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - 2*log2(2*sigma_e)
 
         def system(x):
             f1 = eq1(x[0], x[1], x[2])
@@ -379,11 +407,11 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, initial_guess=None):
             f3 = eq3(x[0], x[1], x[2])
             return f1, f2, f3
 
-        if initial_guess is None:
-            initial_bdd = approx_startpoint_bdd(n, logq, h)
-            beta_start = initial_bdd[0]
-            d_start = sqrt(2 * n * lnq * beta_start / log(beta_start / const))
-            initial_guess = [n / 4, beta_start, d_start - n / 4]
+        # Finding initial point using bdd
+        initial_bdd = approx_startpoint_bdd(n, logq, h)
+        beta_start = initial_bdd[0]
+        d_start = sqrt(2 * n * logq * ln2 * beta_start / log(beta_start / const))
+        initial_guess = [n / 4, beta_start, d_start - n / 4]
 
         bound_trials = 250
         while bound_trials > 0:
@@ -405,66 +433,115 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, initial_guess=None):
                 print("Error: Result from fsolve has fewer than 3 elements")
                 continue
 
+            # TODO: compute sol_tolerance only if a solution is found
             sol_tolerance = abs(eq1(res[0], res[1], res[2])) + abs(
                 eq2(res[0], res[1], res[2])) + abs(eq3(res[0], res[1], res[2]))
 
-            if sol_tolerance < 7:
-                # print(bound_trials, "- Solution tolerance:", sol_tolerance)
+            if sol_tolerance < 2:
                 break
 
             beta_start = max(40, initial_guess[1] + random.randint(-1500, 30))
-            d_start = sqrt(2 * n * lnq * beta_start / log(beta_start / const))
+            d_start = sqrt(2 * n * logq * ln2 * beta_start / log(beta_start / const))
             initial_guess = [n / 4, beta_start, d_start - n / 4]
 
         prob = probability_enum(n, h, res[0], wg)
 
         if len(res) >= 3 and prob != -1:
+
             rt = 0.292 * res[1] + log2(8 * res[2]) + \
-                16.4 - probability_enum(n, h, res[0], wg)
-            print("probability: ", probability_enum(n, h, res[0], wg))
-            if rt < rt_min and sol_tolerance < 7:
+                 16.4 - probability_enum(n, h, res[0], wg)
+            beta = int(res[1])
+            d = int(res[2])
+            ng = ceil(sqrt(n * logq / log2_delta(beta))) - d + 1
+            bkz_exact, enum_exact, babai = exact_runtime(n, logq, sigma_e, h, beta, d, ng, wg)
+            rt_exact = bkz_exact - babai
+            #print(wg, rt,  rt_exact, sol_tolerance)
+            if rt_exact < rt_min and sol_tolerance < 7:
+                #print("min!:", res, rt, wg, sol_tolerance )
                 rt_min = rt
 
     return rt_min
 
- # EXACT EQUATIONS:
-# eq1a = lambda ng_, beta_, d_: l - (0.292*beta_+16.4+3+log2(d_)) + probability_enum(n, h, ng_, wg)-1 # log2(binomial(n-h,ng_-wg)*binomial(h,wg)/binomial(n, ng_) + binomial(n-h,ng_-wg+1)*binomial(h,wg-1)/binomial(n, ng_)) #approx_binom(n-h, ng_-wg)+approx_binom(h, wg)-approx_binom(n, ng_) - 2   #log2(binomial(n-h,ng_-wg)*binomial(h,wg)/binomial(n, ng_) + binomial(n-h,ng_-wg+1)*binomial(h,wg-1)/binomial(n, ng_)) #(approx_binom(ng_,wg)+wg)+log2(d_) - (0.292*beta_+16.4+3)+2  #0.5*(ng_*entropy(wg/ng_)+wg) #- 0.5*log2(8*n*wg/ng_*(1-wg/ng_)) #0.5*(log2(math.comb(ng_, wg),2)+wg)
-# eq1b = lambda ng_, beta_, d_:  l - ss_enum(ng_,wg)-2*log2(d_) + probability_enum(n, h, ng_, wg)-12 #approx_binom(n-h, ng_-wg)+approx_binom(h, wg)-approx_binom(n, ng_)
-# eq2 = lambda ng_, beta_, d_, logq: d_ - ceil(sqrt(n * int(logq) * ln2 / log(_delta(beta_)))) + ng_ - 1 #adding ceil over sqrt() makes the eq. precise
-# eq3 = lambda ng_, beta_, d_, logq: (-d_+1)*log2(_delta(beta_))+ ((d_-n+ng_-1)*int(logq)+ (n-ng_)*log2(xi))/d_ - log2(2*sigma_e*sigma_e) #success probability of Babai=1, i.e. ||b_d*|| = sigma_e \approx 4
 
+def numerical_logq_starting_point(n, l, sigma_e, h):
+    """
+    Starting point for logq computations adapted from numerical_logq_bdd()
+    :param n: LWE dimension
+    :param l: Target sec. level
+    :param sigma_e: LWE error st. dev
+    :param h: Ternary secret weight
+    :return: tuple (logq, beta).
+    """
+    eta_initial_guess = (l - 16.4) / 0.292
+    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+    eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
+    eta = eta_solution[0]
+
+    std_s = sqrt(h / n)
+
+    def d_optimal(logq, beta):
+        if logq<=0 or beta<=0: return 0
+        return sqrt(n * logq/ log2_delta(beta))
+
+    def d(logq, beta): return max(d_optimal(logq, beta), 2*n)
+    def eq8(logq, beta): return l - (0.292 * beta +
+                                    log2(8 * d(logq, beta)) + 16.4)
+
+    log_std_e = log2(sigma_e)
+    zeta = max(0, log_std_e - log2(std_s))
+
+    def eq_for_lnq_and_beta(logq, beta): return eta - d(logq, beta) + 1 / log2_delta(beta) * (logq - log_std_e - 0.5 * log2(const) - n / d(logq, beta) * (logq - zeta))
+
+    def system_bdd_eta_n(x):  # x[0] = n, x[1] = beta
+        f1 = eq_for_lnq_and_beta(x[0], x[1])
+        f2 = eq8(x[0], x[1])
+        return f1, f2
+
+    logq_initial_guess = 121
+    solutions_lnq_and_beta = fsolve(
+        system_bdd_eta_n, [logq_initial_guess, eta_initial_guess], full_output=True)
+    logq_solution = solutions_lnq_and_beta[0][0]
+    beta_solustion = solutions_lnq_and_beta[0][1]
+    if not solutions_lnq_and_beta[2] == 1:
+        return 700, 80
+    return logq_solution, beta_solustion
 
 def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
+    """
+    Internal function. Brute-forces over wg-weight
+    :param n: LWE dimension
+    :param l: Target sec. level
+    :param sigma_e: LWE error st.dev
+    :param h:  Ternary secret weight
+    :param initial_guess: tuple (logq, beta)
+    :return: list of tuples [l, n, h, logq, beta, d, ng, wg]
+    """
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
-    rtdiff_min = float('inf')
-    ng_min, beta_min, d_min, logq_min = 0.0, 0.0, 0.0, float('inf')
 
-    beta_initial_guess = (l - log2(8*4*n) - 16.4) / 0.292
-    logq_initial_guess = initial_guess
+    beta_initial_guess = initial_guess[1] #(l - log2(8*2*n) - 16.4) / 0.292
+    logq_initial_guess = initial_guess[0]
     d_initial_guess = ceil(
-        sqrt(n * logq_initial_guess * ln2 / log(_delta(beta_initial_guess))))
+        sqrt(n * logq_initial_guess / log2_delta(beta_initial_guess)))+ 1 - n/16
 
-    sol_qs = []
     sols = []
 
-    for wg in range(2, 55):
+    for wg in range(2, 34):
         def eq1a(ng_, beta_, d_): return l - (0.292*beta_+16.4+3+log2(d_)) + approx_binom(n-h,
-                                                                                          ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 1  # - 0.8028164000061224
+                                                                                          ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 2
 
-        def eq1b(ng_, beta_, d_): return l - approx_binom(ng_, wg) - wg - 2*log2(d_) + approx_binom(
-            n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 12  # + 1.8586100196043844
-        # - 0.8388965696794912                                            #adding ceil over sqrt() makes the eq. precise -
+        def eq1b(ng_, d_): return l - approx_binom(ng_, wg) - wg - 2*log2(d_) + approx_binom(
+            n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 1
 
         def eq2(ng_, beta_, d_, logq): return d_ - \
-            ceil(sqrt(n * logq / log_delta(beta_))) + ng_ - 1
+            ceil(sqrt(n * logq / log2_delta(beta_))) + ng_ - 1
 
-        def eq3(ng_, beta_, d_, logq): return (-d_+1)*log_delta(beta_) + ((d_-n+ng_-1)
-                                                                          * logq + (n-ng_)*log2(xi))/d_ - log2(2*sigma_e*sigma_e)  # - 0.24517475390399568
+        def eq3(ng_, beta_, d_, logq): return (-d_+1)*log2_delta(beta_) + ((d_-n+ng_-1)
+                                                                          * logq + (n-ng_)*log2(xi))/d_  - 2*log2(sigma_e) #- log2(2*sigma_e) - 0.5*log2(d_)
 
         def system(x):
             f1a = eq1a(x[0], x[1], x[2])
-            f1b = eq1b(x[0], x[1], x[2])
+            f1b = eq1b(x[0],  x[2])
             f2 = eq2(x[0], x[1], x[2], x[3])
             f3 = eq3(x[0], x[1], x[2], x[3])
             return f1a, f1b, f2, f3
@@ -480,89 +557,114 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
         except Exception as e:
             print(f"Error in fsolve: {e}")
             continue
-        # try:
-        #     res = fsolve(system, [n/16, beta_initial_guess, d_initial_guess, logq_initial_guess], maxfev = 2**21, full_output=False)
-        # except:
-        #     print('error on wg = ', wg)
-        #     continue
-        prob = probability_enum(n, h, res[0], wg)
-        rt = 0.292*res[1]+log2(8*res[2])+16.4 - \
-            probability_enum(n, h, res[0], wg)
-        eq1a_tolerance = abs(eq1a(int(res[0]), int(res[1]), int(res[2])))
-        sol_tolerance = abs(eq1a(res[0], res[1], res[2]))+abs(eq1b(res[0], res[1], res[2]))+abs(
+
+        sol_tolerance = abs(eq1a(res[0], res[1], res[2]))+abs(eq1b(res[0], res[2]))+abs(
             eq2(res[0], res[1], res[2], res[3]))+abs(eq3(res[0], res[1], res[2], res[3]))
 
-        if (abs(sol_tolerance) < 2.5 and eq1a_tolerance < 0.7 and abs(l-rt) < 2.5):
-            ng_min = int(res[0])
-            beta_min = int(res[1])
-            d_min = int(res[2])
-            logq_min = int(res[3])
-            sol_qs.append(logq_min)
-            sols.append([wg, ng_min, beta_min, d_min, logq_min])
-    return sol_qs, sols
+        if sol_tolerance > 45: continue
+
+
+        beta = int(res[1])
+        d = int(res[2])
+        logq = int(res[3])
+        ng = ceil(sqrt(n * logq / log2_delta(beta))) - d + 1
+        if ng<=0: continue
+        bkz_exact, enum_exact, babai = exact_runtime(n, logq, sigma_e, h, beta, d, ng, wg)
+        rt = max(bkz_exact, enum_exact) - babai
+
+        eq1a_tolerance_exact = abs(eq1a(ng, beta, d))
+
+        sol_tolerance_exact = abs(eq1a(ng, beta, d))+abs(eq1b(ng, d))+abs(
+            eq2(ng, beta, d, logq))+abs(eq3(ng, beta, d, logq))
+
+        #print(wg, rt, logq, " : ", bkz_exact, babai, ";", sol_tolerance, sol_tolerance_exact, eq1a_tolerance_exact, abs(eq1b(ng, d)),
+        #     abs(eq3(ng, beta, d, logq)))
+
+        if (abs(sol_tolerance) < 35 and eq1a_tolerance_exact < 7 and abs(l-rt) < 15):
+            sols.append([l, n, h, logq, beta, d, ng, wg])
+            #print(l, n, h, logq, beta, d, ng, wg )
+    return sols
+
 
 #
 # caller's function: runs numerical_logq_hybrid_runoptimize with different initial guesses
 # checks obtained candidates for logq by calling check_candidates_logq()
 #
-
-
 def numerical_logq_hybrid(n, l, h):
-    initial_guess = 700
+    """
+    :param n: LWE dimension
+    :param l: Target sec. level
+    :param h: Ternary secret weight
+    :return: logq best scored by check_candidates_logq_exact()
+    """
+
+    #TODO: make 3.19 as input parameter
+    initial_guess = numerical_logq_starting_point(n, l, 3.19, h)
     res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess)
+
+    # experimentally verified bounds to shift initial points
+    if n <= 2**11: B = 100
+    elif n <= 2**13: B = 200
+    else: B = 300
 
     # if no candidates found, try again with new initial guess up to bound_trials  times
     bound_trials = 200
-    while len(res[0]) == 0 and bound_trials > 0:
+    while len(res) == 0 and bound_trials > 0:
         bound_trials -= 1
-        initial_guess = random.randint(30, 2500)
-        res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess)
-        if len(res[0]) > 0:
+        shift = random.randint(-B, B)
+        init_guess2 = [max(12, initial_guess[0]+shift), max(40, initial_guess[1]-shift)]
+        res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, init_guess2)
+        print("re-start numerical_logq_hybrid_runoptimize #", 200-bound_trials, "...")
+        if len(res) > 0:
             break
 
-    if len(res[0]) == 0:
+    if len(res) == 0:
         print("numerical_logq_hybrid_runoptimize couldn't find a solution after",
               200-bound_trials, "trial for this parameters set")
-        return float('inf')
+        return 450 #float('inf')
 
-    initial_points = []
-    for el in res[1]:
-        initial_points.append([el[1], el[2], el[3]])
-    # print(initial_points)
-    best_logq = check_candidates_logq(res[0], h, l, n, 1e2, initial_points)
+
+    best_logq = check_candidates_logq_exact(res)
+
     return best_logq
 
-#
-#  recieves a list of logqs and their corresponding [ng, beta, d] found by numerical_logq_hybrid_runoptimize
-#  ouputs logs[i] that gives l_ closes to the target security level l according to numerical_lambda_hybrid_v2()
-#
+def check_candidates_logq_exact(candidate_list):
+    """
+    receives a list of logqs and their corresponding [ng, beta, d] found by numerical_logq_hybrid_runoptimize
+    outputs logq that gives l_ closes to the target security level l according to exact_runtime()
+    :param candidate_list:
+    :return: smallest(?) logq scored by exact_runtime()
+    """
+    best_diff = 70
+    best_logq = float("inf")
+    found = False
 
-
-def check_candidates_logq(logqs, h, l, n, best_diff, initial_guesses):
-
-    diff_tolerance = 110
-    if best_diff >= diff_tolerance:
-        print('best_diff exceeds < ', diff_tolerance, '. Aborting.')
-        return float('inf')
-
-    sigma_e = 3.19
-    best_logq = None
-
-    if len(logqs) == 1:
-        return logqs[0]
-
-    for i, logq in enumerate(logqs):
-        l_ = numerical_lambda_hybrid_v2(
-            n, logq, sigma_e, h, initial_guess=initial_guesses[i])
-        # print(logq, l_, l, abs(l_-l))
-        if abs(l_-l) < best_diff:
+    #sols.append([l, n, h, logq, beta, d, ng, wg])
+    for el in candidate_list:
+        l = el[0] #target sec. level
+        n = el[1]
+        h = el[2]
+        logq = el[3]
+        beta = el[4]
+        d = el[5]
+        ng = el[6]
+        w = el[7]
+        tbz, tenum, babai =  exact_runtime(n, logq, 3.19, h, beta, d, ng, w)
+        rt = max(tbz,tenum) - babai
+        if abs( rt - l) < best_diff+5 and logq<best_logq: # for some reason, it's better to output the smallest found logq. I don't know why
+            best_diff = abs( max(tbz,tenum) - babai  - l)
             best_logq = logq
-            best_diff = abs(l_-l)
-            # print(best_logq, best_diff)
+            #print(logq, l, max(tbz,tenum)-babai, best_diff  )
+            found = True
+            print('found logq:', logq)
 
-    if best_logq is None:
-        best_diff += 10
-        print('No solution found setting best_diff to', best_diff)
-        return check_candidates_logq(logqs, h, l, n, best_diff, initial_guesses)
+    if not found:
+        print('No solution found setting best_diff to', best_diff, 'returning fixed value')
+        return candidate_list[0][3]
 
-    return best_logq
+    return round(best_logq)
+
+
+
+
+
