@@ -1,10 +1,4 @@
 secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
-SparseTernary,1024,35,128,105,99
-SparseTernary,1024,27,128,141,127
-SparseTernary,1024,20,128,181,168
-SparseTernary,1024,36,192,107,100
-SparseTernary,1024,29,192,140,126
-SparseTernary,1024,20,192,216,188
 SparseTernary,8192,200,128,127,128
 SparseTernary,8192,119,128,196,195
 SparseTernary,8192,87,128,239,243
