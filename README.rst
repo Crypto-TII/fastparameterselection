@@ -8,6 +8,8 @@ Our tool is constructed by studying the uSVP, BDD and Hybrid attacks against LWE
 Basic Usage
 ----------------------------
 
+We present the basic usage of the tool below. For more advanced usage, please refer to the `readthedocs <https://fastparameterselection.readthedocs.io/en/latest/>`_ section.
+
 Find an estimation of the security level by running:
 
 .. code-block:: bash
