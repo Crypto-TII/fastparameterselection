@@ -20,7 +20,6 @@ extensions = [
     'sphinx.ext.autodoc',          # Automatically generate documentation from docstrings
     'sphinx.ext.napoleon',         # Support for NumPy and Google style docstrings
     'sphinx.ext.viewcode',         # Add links to source code
-    'sphinx_autodoc_typehints',    # Include type hints in the documentation
     'sphinx.ext.mathjax',  # Enable MathJax for LaTeX math rendering
 ]
 
