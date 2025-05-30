@@ -27,7 +27,7 @@ def check_estimator_installed():
 
 def check_ntru(output_dict):
     beta_ = check_overstreched(output_dict)
-    if beta_ > 0 and output_dict['lambda'] > 0 and (output_dict['lambda'] - 0.292 * beta_) > 20:
+    if beta_ > 0 and output_dict['l'] > 0 and (output_dict['l'] - 0.292 * beta_) > 20:
         print("Warning: the ntru parameters are in the overstretched regime")
 
 

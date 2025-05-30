@@ -78,6 +78,35 @@ def delta(k):
     return (delta)
 
 
+def delta_exact(beta):
+    """
+    Borrowed from the Lattice Estimator
+    :param beta:
+    :return:
+    """
+
+    small = (
+            (2, 1.02190),
+            (5, 1.01862),
+            (10, 1.01616),
+            (15, 1.01485),
+            (20, 1.01420),
+            (25, 1.01342),
+            (28, 1.01331),
+            (40, 1.01295),
+    )
+    if beta <= 2:
+        return 1.0219
+    elif beta < 40:
+        for i in range(1, len(small)):
+            if small[i][0] > beta:
+                return RR(small[i - 1][1])
+    elif beta == 40:
+        return small[-1][1]
+    else:
+        return (beta / (2 * PI * e) * (PI * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
+
+
 def check_overstreched(params):
     """
     Check if the parameters are in the overstretched regime.
@@ -92,20 +121,21 @@ def check_overstreched(params):
 
     lnq = multiply(lgq, ln2)
 
-    print("n", n, "lgq", lgq, "stds", stds, "stde", stde)
-
     # dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
     dense_det_log = math.log(math.sqrt(stds*n)+math.sqrt(stde*n))
 
     for beta in range(50, 1000):
-        alpha_beta = delta(beta)**2
-        alpha_beta_log = math.log(alpha_beta)
-        m = math.round(0.5+lnq/(2*alpha_beta_log))
+        for lgq_value in lgq:
+            alpha_beta = delta_exact(beta)**2
+            alpha_beta_log = math.log(alpha_beta)
+            print(0.5+lgq_value/(2*alpha_beta_log))
+            # THIS FAILs. using python in-built round
+            m = round(0.5+lgq_value/(2*alpha_beta_log))
 
-        rhs_log = 0.5*(m-1)*lnq-0.5*(m-1)**2*alpha_beta_log
+            rhs_log = 0.5*(m-1)*lgq_value-0.5*(m-1)**2*alpha_beta_log
 
-        if dense_det_log < rhs_log:
-            return beta
+            if dense_det_log < rhs_log:
+                return beta
 
     return -1
 
