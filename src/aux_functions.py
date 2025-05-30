@@ -519,7 +519,6 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             corrected_usvp = est_usvp_numerical
             print("Applying correction lwe usvp >= l", "logq ",
                   corrected_usvp, "std e ", error_dist.stddev, " est", corrected_lwe_usvp)
-            exit(0)
 
             if param == 'logq':
                 est_usvp_numerical += 1

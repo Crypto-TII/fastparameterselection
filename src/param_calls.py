@@ -450,22 +450,25 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
                 print("est_usvp_numerical_status: ", est_usvp_numerical_status)
                 print("est_bdd_numerical_status: ", est_bdd_numerical_status)
 
-                # if not est_usvp_numerical_status and est_bdd_numerical_status:
-                #     est_usvp_numerical = est_bdd_numerical
-                #     lwe_usvp = lwe_bdd
-                # elif est_usvp_numerical_status and not est_bdd_numerical_status:
-                #     est_bdd_numerical = est_usvp_numerical
-                #     lwe_bdd = lwe_usvp
-                # elif not est_usvp_numerical_status and not est_bdd_numerical_status:
-                #     est_usvp_numerical = 2
-                #     est_bdd_numerical = 2
-                # else:
-                #     if lwe_bdd != l:
-                #         est_bdd_numerical = min(
-                #             est_bdd_numerical, est_usvp_numerical)
-                #     if lwe_usvp != l:
-                #         est_usvp_numerical = min(
-                #             est_bdd_numerical, est_usvp_numerical)
+                if not est_usvp_numerical_status and est_bdd_numerical_status:
+                    est_usvp_numerical = est_bdd_numerical
+                    lwe_usvp = lwe_bdd
+                elif est_usvp_numerical_status and not est_bdd_numerical_status:
+                    est_bdd_numerical = est_usvp_numerical
+                    lwe_bdd = lwe_usvp
+                elif not est_usvp_numerical_status and not est_bdd_numerical_status:
+                    est_usvp_numerical = 2
+                    est_bdd_numerical = 2
+                # elif est_usvp_numerical_status and est_bdd_numerical_status:
+                    # if usvp_lwe is closer to l than bdd_lwe, we use it, otherwise we use bdd_lwe
+                    # print("lwe_usvp ", lwe_usvp,
+                    #       "lwe_bdd ", lwe_bdd, "lambda ", l)
+                    # if abs(lwe_usvp - l) < abs(lwe_bdd - l):
+                    #     est_bdd_numerical = est_usvp_numerical
+                    #     lwe_bdd = lwe_usvp
+                    # else:
+                    #     est_usvp_numerical = est_bdd_numerical
+                    #     lwe_usvp = lwe_bdd
 
                 return_value, corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp, num_calls_usvp, num_calls_bdd = correction_logic(
                     l, lwe_d, lq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'std_e', num_calls_usvp, num_calls_bdd, error_dist_tag)
