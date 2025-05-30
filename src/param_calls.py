@@ -569,10 +569,14 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
     if verify and estimator_installed:
         lwe_parameters = LWE.Parameters(
             lwe_d, 2 ** lq, secret_dist, error_dist)
-        lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-            lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
-        lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-            lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
+        try:
+            lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
+                lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
+            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
+                lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
+        except Exception as e:
+            print(f"Error in the Lattice Estimator: {e}")
+            exit(0)
 
         if not num_only:
             estimates = {
