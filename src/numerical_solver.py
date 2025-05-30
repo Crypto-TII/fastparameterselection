@@ -1,8 +1,8 @@
-from numpy import pi, exp, log, log2, sqrt, divide
-from scipy.optimize import fsolve, minimize
+from numpy import pi, exp, log, log2, sqrt
+from scipy.optimize import fsolve
 
 import numpy as np
-import warnings
+import random
 
 const = 2 * pi * exp(1)
 ln2 = log(2)
@@ -16,6 +16,7 @@ def _delta(beta):
     :param beta: Beta value.
     :return: Delta value.
     """
+    beta = max(beta, 100)  # Ensure beta is at positive
     return (beta / (2 * pi * e) * (pi * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
 
 
@@ -100,7 +101,9 @@ def numerical_n_bdd(l, logq, std_s, std_e):
     eta = eta_solution[0]
 
     lnq = logq * ln2
-    def d_optimal(n, beta): return sqrt(n * lnq / log(_delta(beta)))
+
+    def d_optimal(n, beta): return sqrt(
+        n * lnq / log(_delta(beta)))  # TODO missing log(zeta) here? Same issue in the Estimator
     def eq8(n, beta): return l - (0.292 * beta +
                                   log2(8 * d_optimal(n, beta)) + 16.4)
 
@@ -148,8 +151,10 @@ def numerical_n_usvp(l, logq, std_s, std_e):
 
     def d_optimal(n, beta):
         if (beta < const):
-            print("Error: could not find optimal d, maybe lambda is too small")
-            exit(0)
+            print(
+                f"Error in {numerical_n_usvp.__name__}: could not find optimal d, maybe lambda is too small"
+            )
+            return 1
         else:
             return sqrt(2 * n * lnq * beta / log(beta / const))
 
@@ -167,163 +172,243 @@ def numerical_n_usvp(l, logq, std_s, std_e):
 
 
 def numerical_logq_bdd(l, n, std_s, std_e):
+
+    eta_initial_guess = (l - 16.4) / 0.292
+    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+    eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
+    eta = eta_solution[0]
+
+    def d_optimal(lnq, beta):
+        lnq = max(lnq, 1)  # Ensure lnq is at positive
+        return sqrt(n * lnq / log(_delta(beta)))
+    def eq8(lnq, beta): return l - (0.292 * beta +
+                                    log2(8 * d_optimal(lnq, beta)) + 16.4)
+
+    ln_std_e = log(std_e)
+    zeta = max(0, ln_std_e - log(std_s))
+    def d(lnq, beta): return max(d_optimal(lnq, beta), n)
+
+    def eq_for_lnq_and_beta(lnq, beta): return eta - d(lnq, beta) + 1 / log(_delta(
+        beta)) * (lnq - ln_std_e - 0.5 * log(const) - n / d(lnq, beta) * (lnq - zeta))
+
+    def system_bdd_eta_n(x):  # x[0] = n, x[1] = beta
+        f1 = eq_for_lnq_and_beta(x[0], x[1])
+        f2 = eq8(x[0], x[1])
+        return f1, f2
+
+    lnq_initial_guess = 121
+    solutions_lnq_and_beta = fsolve(
+        system_bdd_eta_n, [lnq_initial_guess, eta], full_output=True)
+    lnq_solution = solutions_lnq_and_beta[0][0]
+    if not solutions_lnq_and_beta[2] == 1:
+        print(solutions_lnq_and_beta[3])
+    return lnq_solution/ln2
+
+
+def numerical_std_e_usvp(l, n, logq, std_s):
     """
-    Estimate the logq value for the BDD model using numerical methods.
+    Estimate the n value for the USVP model using numerical methods.
 
     :param l: Security parameter.
-    :param n: Dimension.
+    :param logq: Logarithm of the modulus.
     :param std_s: Standard deviation of the secret.
     :param std_e: Standard deviation of the error.
-    :return: logq value.
+    :return: n value.
     """
-    
-    beta = (l - 16.4) / 0.292
+    lnq = logq * ln2
+    # zeta = max(1, round(std_e / std_s))
 
-    if (beta < const):
-        print("Error: will not start optimization, most likely provided lambda is too small")
-        exit(0)
+    # Initial guesses for n and beta
+    std_e_initial_guess = 3.19
+    beta_initial_guess = (l - 16.4) / 0.292
 
-    lnq_initial_guess = 2*n*log(beta/const) / beta #comes from a simplfied the formula below: (remove log(beta / const), log(zeta) and - 2 * log(std_e) - log(const) from denom)
-    zeta = std_e / std_s
-    
-    def nom(lnq): return 2 * n * lnq * log(beta / const)
-    def denom(lnq): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - \
-        2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
+    def zeta(std_e):
+        print("std_e: ", std_e, "std_s: ", std_s)
+        return max(1, np.round(std_e / std_s))
 
-    def eq(lnq): return beta - nom(lnq) / (denom(lnq) ** 2)
+    def nom(std_e, beta): return 2 * n * \
+        (lnq - log(zeta(std_e))) * log(beta / const)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        lnq_solution, info, ier, msg = fsolve(
-            eq, lnq_initial_guess, full_output=True)
-        if ier != 1:
-            print(f"Warning: numerical solver for bdd did not converge: {msg}")
-        return divide(lnq_solution[0], ln2)
+    def denom(std_e, beta): return lnq + log(sqrt(beta) / (const * std_e))
+
+    def eq11(std_e, beta): return beta - \
+        nom(std_e, beta) / (denom(std_e, beta) ** 2)
+
+    def d_optimal(beta):
+        if (beta < const):
+            print(
+                f"Error in {numerical_n_usvp.__name__}: could not find optimal d, maybe lambda is too small"
+            )
+            return 1
+        else:
+            # return sqrt(2 * n * (lnq - log(zeta(std_e))) * beta / log(beta / const))
+            return sqrt(2 * n * lnq * beta / log(beta / const))
+
+    def eq12(beta): return l - (0.292 * beta +
+                                log2(8 * d_optimal(beta)) + 16.4)
+
+    def system_usvp_l(x):  # x[0] = n, x[1] = beta
+        f1 = eq11(x[0], x[1])
+        f2 = eq12(x[1])
+        return f1, f2
+
+    # std_e_solution, beta_solution = fsolve(
+    #     system_usvp_l, [std_e_initial_guess, beta_initial_guess], full_output=False)
+    # return std_e_solution, 1
+
+    # Initial guesses for fsolve
+    initial_guess = [std_e_initial_guess, beta_initial_guess]
+
+    # Solve using fsolve
+    guess_range = 50
+    guess_range_beta = beta_initial_guess + 200
+    max_attempts = 1000
+
+    ier = 0
+    msg = ""
+    solution = 0
+
+    for i in range(max_attempts):
+        # Random guess
+
+        if i != 0:
+            initial_guess[0] = np.random.uniform(-guess_range,
+                                                 guess_range, size=1)
+            initial_guess[1] = np.random.uniform(-guess_range_beta,
+                                                 guess_range_beta, size=1)
+
+        print(f"Checking {i+1} with initial guess {initial_guess}")
+        try:
+            solution, info, ier, msg = fsolve(
+                system_usvp_l, initial_guess, full_output=True, xtol=1e-3, maxfev=1000)
+        except Exception as e:
+            continue
+
+        if ier == 1:
+            break
+
+    if ier != 1:  # Check if fsolve converged
+        print(
+            f"Warning: fsolve did not converge in {numerical_std_e_usvp.__name__}: {msg}")
+        print("Solution found (if any):", solution)
+        return std_e_initial_guess, False  # Default value if fsolve fails
+
+    std_e_solution, beta_solution = solution
+    print(
+        f"numerical_std_e_usvp Converged: std_e={std_e_solution}, beta={beta_solution}")
+
+    return std_e_solution, True
 
 
 def numerical_logq_usvp(l, n, std_s, std_e):
     """
-    Estimate the logq value for the USVP model using numerical methods.
+    Estimate the n value for the USVP model using numerical methods.
 
     :param l: Security parameter.
-    :param n: Dimension.
+    :param logq: Logarithm of the modulus.
     :param std_s: Standard deviation of the secret.
     :param std_e: Standard deviation of the error.
-    :return: logq value.
+    :return: n value.
     """
-    
-    beta = (l - 16.4) / 0.292
-    if (beta < const):
-        print("Error: will not start optimization, most likely provided lambda is too small")
-        exit(0)
+    zeta = max(1, round(float(std_e / std_s)))
 
-    zeta = std_e / std_s
+    # Initial guesses for n and beta
+    lnq_initial_guess = 20
+    beta_initial_guess = (l - 16.4) / 0.292
 
-    lnq_initial_guess = ( 2*n*log(beta/log(beta/const)) - beta/log(beta/const) + sqrt(n**2*log(beta/log(beta/const))**2 - n*log(beta/log(beta/const))*beta/log(beta/const)) )/(2*beta/log(beta/const))
-    assert(lnq_initial_guess>1)
-    
-    def nom(lnq): return 2 * n * (lnq - log(zeta)) * log(beta / const)
-    def denom(lnq): return lnq + log(sqrt(beta) / (const * std_e))
-    def eq(lnq): return beta - nom(lnq) / (denom(lnq) ** 2)
+    def nom(lnq, beta): return 2 * n * (lnq - log(zeta)) * \
+        log(beta / const)  # TODO: check if we want to keep log(zeta) here
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        lnq_solution, info, ier, msg = fsolve(
-            eq, lnq_initial_guess, full_output=True)
-        if ier != 1:
+    def denom(lnq, beta): return lnq + log(sqrt(beta) / (const * std_e))
+    def eq11(lnq, beta): return beta - nom(lnq, beta) / (denom(lnq, beta) ** 2)
+
+    def d_optimal(lnq, beta):
+        if (beta < const):
             print(
-                f"Warning: numerical solver for usvp did not converge: {msg}")
-        return divide(lnq_solution[0], ln2)
+                f"Error in {numerical_n_usvp.__name__}: could not find optimal d, maybe lambda is too small"
+            )
+            return 1
+        else:
+            return sqrt(2 * n * lnq * beta / log(beta / const))
+
+    def eq12(lnq, beta): return l - (0.292 * beta +
+                                     log2(8 * d_optimal(lnq, beta)) + 16.4)
+
+    def system_usvp_l(x):  # x[0] = n, x[1] = beta
+        f1 = eq11(x[0], x[1])
+        f2 = eq12(x[0], x[1])
+        return f1, f2
+
+    lnq_solution, beta_solution = fsolve(
+        system_usvp_l, [lnq_initial_guess, beta_initial_guess], full_output=False)
+    return lnq_solution/ln2
 
 
 def numerical_std_e_bdd(l, n, logq, std_s):
     """
-    Estimate the std_e value for the BDD model using numerical methods.
+    Estimate the std_e value for the BDD model using numerical methods, with retry logic for convergence.
 
     :param l: Security parameter.
     :param n: Dimension.
     :param logq: Logarithm of the modulus.
     :param std_s: Standard deviation of the secret.
+    :param retry_range: Tuple specifying the range for random starting points.
+    :param max_retries: Maximum number of retries.
     :return: std_e value.
     """
+    retry_range = [-20, 60]
+    std_e_initial_guess = 1
+
+    max_retries = 100
     eta_initial_guess = (l - 16.4) / 0.292
-    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+
+    def eta_eq(eta):
+        return l - (0.292 * eta + log2(8 * eta) + 16.4)
+
     eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
 
     lnq = logq * ln2
-    def d_optimal(beta): return sqrt(n * lnq / log(_delta(beta)))
-    def eq8(beta): return l - (0.292 * beta + log2(8 * d_optimal(beta)) + 16.4)
+
+    def d_optimal(beta):
+        return sqrt(n * lnq / log(_delta(beta)))
+
+    def eq8(beta):
+        return l - (0.292 * beta + log2(8 * d_optimal(beta)) + 16.4)
 
     beta_solution = fsolve(eq8, eta_solution, full_output=False)
     d = max(d_optimal(beta_solution[0]), n)
     eta = eta_solution[0]
     beta = beta_solution[0]
 
-    std_e_initial_guess = 5.502177429822036
-    def zeta(ln_std_e): return max(0, ln_std_e - log(std_s))
-    def eq_for_sigmae(ln_std_e): return eta - d + 1 / log(_delta(beta)) * \
-        (lnq - ln_std_e - 0.5 * log(const) - n / d * (lnq - zeta(ln_std_e)))
+    def zeta(ln_std_e):
+        return max(0, ln_std_e - log(std_s))
 
-    std_e_solution = fsolve(
-        eq_for_sigmae, std_e_initial_guess, full_output=True)
+    def eq_for_sigmae(ln_std_e):
+        return eta - d + 1 / log(_delta(beta)) * \
+            (lnq - ln_std_e - 0.5 * log(const) - n / d * (lnq - zeta(ln_std_e)))
 
-    if not std_e_solution[2] == 1:
-        print(std_e_solution[3])
+    # Retry logic
+    for attempt in range(max_retries):
 
-    return exp(std_e_solution[0][0])
+        # Generate a random starting point within the specified range
+        if attempt != 0:
+            std_e_initial_guess = random.uniform(*retry_range)
 
+        print(
+            f"Attempt {attempt + 1} of {max_retries}... initial guess {std_e_initial_guess}")
+        # Solve using fsolve
+        std_e_solution, info, ier, msg = fsolve(
+            eq_for_sigmae, std_e_initial_guess, full_output=True)
 
-def numerical_std_e_usvp(l, n, logq, std_s):
-    """
-    Estimate the std_e value for the USVP model using numerical methods.
+        std_e_solution = std_e_solution[0]
 
-    :param l: Security parameter.
-    :param n: Dimension.
-    :param logq: Logarithm of the modulus.
-    :param std_s: Standard deviation of the secret.
-    :return: std_e value.
-    """
-    lnq = logq * ln2
+        if ier == 1:  # Check if fsolve converged
+            print(
+                f"numerical_std_e_bdd Converged on attempt {attempt + 1} with std_e={std_e_solution, exp(std_e_solution)}")
+            print("solution: ", eq_for_sigmae(std_e_solution))
+            return exp(std_e_solution), bool(ier)
 
-    # Initial guesses
-    beta_initial_guess = (l - 16.4) / 0.292
-    std_e_initial_guess = 3.19
+        print(f"Attempt {attempt + 1} failed to converge: {msg}")
 
-    def zeta(std_e): return max(1, np.round(std_e / std_s))
-
-    def nom(std_e, beta): return 2 * n * \
-        (lnq - log(zeta(std_e))) * log(beta / const)
-
-    def denom(std_e, beta):
-        value_inside_log = sqrt(beta) / (const * std_e)
-        return lnq + log(value_inside_log)
-
-    def eq11(x):
-        std_e, beta = x
-        return beta - nom(std_e, beta) / (denom(std_e, beta) ** 2)
-
-    def d_optimal(std_e, beta):
-        if (beta < const):
-            print("Error: could not find optimal d, maybe lambda is too small")
-            exit(0)
-        else:
-            return sqrt(2 * n * (lnq - log(zeta(std_e))) * beta / log(beta / const))
-
-    def eq12(x):
-        std_e, beta = x
-        return l - (0.292 * beta + log2(8 * d_optimal(std_e, beta)) + 16.4)
-
-    def objective(x):
-        return eq11(x) ** 2 + eq12(x) ** 2
-
-    # Bounds to ensure std_e is positive
-    bounds = [(1e-3, None), (2, None)]
-
-    initial_guess = [std_e_initial_guess, beta_initial_guess]
-
-    std_e_solution = minimize(objective, initial_guess, bounds=bounds)
-
-    if not std_e_solution.success:
-        print(f"Optimization did not converge: {std_e_solution.message}")
-
-    return std_e_solution.x[0]
+    print("All attempts failed to converge.")
+    return None

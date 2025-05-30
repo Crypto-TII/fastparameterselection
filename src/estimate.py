@@ -2,7 +2,7 @@ import sys
 from aux_functions import (
     check_estimator_installed, set_functions_params, parse_options, handle_options,
     print_table, helper_headers, handle_errors,
-    print_warnings, check_ntru
+    print_warnings, check_ntru, export_to_csv, get_secret_value
 )
 from param_calls import process_parameters
 
@@ -10,10 +10,10 @@ from param_calls import process_parameters
 def main(argv):
 
     opts = parse_options(argv)
-    output_dict, l, secret, param, lwe_d, logq, verify, ntru_flag, std_s, std_e, secret_q, table, hw = handle_options(
+    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag = handle_options(
         opts)
 
-    if handle_errors(std_e, logq, lwe_d, l, param):
+    if handle_errors(error_dist.stddev, logq, lwe_d, l, param):
         return
 
     estimator_installed = check_estimator_installed()
@@ -22,7 +22,7 @@ def main(argv):
         return
 
     lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_functions_params(
-        secret)
+        get_secret_value(opts))
 
     model_values = {
         'lambda_usvp': lambda_usvp,
@@ -40,18 +40,21 @@ def main(argv):
         'logq': logq,
         'l': l,
         'lwe_d': lwe_d,
-        'std_s': std_s,
-        'std_e': std_e,
         'model_values': model_values,
         'verify': verify,
         'estimator_installed': estimator_installed,
-        'secret': secret,
-        'secret_q': secret_q,
+        'correction': correction,
+        'secret_dist': secret_dist,
+        'error_dist': error_dist,
+        'error_tag': error_dist_tag,
         'hw': hw,
-        'output_dict': output_dict
+        'output_dict': output_dict,
+        'num_only': num_only,
     }
 
     data = process_parameters(params, table)
+
+    export_to_csv(data, "output.csv")
 
     if param in ['n', 'logq', 'std_e', 'lambda']:
         headers = list(data[0].keys()) if data else []
@@ -63,7 +66,7 @@ def main(argv):
         return
 
     if ntru_flag:
-        check_ntru(output_dict)
+        check_ntru(params)
 
     print_warnings(verify, estimator_installed)
 

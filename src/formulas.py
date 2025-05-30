@@ -78,6 +78,35 @@ def delta(k):
     return (delta)
 
 
+def delta_exact(beta):
+    """
+    Borrowed from the Lattice Estimator
+    :param beta:
+    :return:
+    """
+
+    small = (
+            (2, 1.02190),
+            (5, 1.01862),
+            (10, 1.01616),
+            (15, 1.01485),
+            (20, 1.01420),
+            (25, 1.01342),
+            (28, 1.01331),
+            (40, 1.01295),
+    )
+    if beta <= 2:
+        return 1.0219
+    elif beta < 40:
+        for i in range(1, len(small)):
+            if small[i][0] > beta:
+                return RR(small[i - 1][1])
+    elif beta == 40:
+        return small[-1][1]
+    else:
+        return (beta / (2 * PI * e) * (PI * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
+
+
 def check_overstreched(params):
     """
     Check if the parameters are in the overstretched regime.
@@ -85,24 +114,28 @@ def check_overstreched(params):
     :param params: Dictionary of parameters.
     :return: Beta value if overstretched, -1 otherwise.
     """
-    n = params['n']
-    lgq = params['lgq']
-    stds = params['std_s']
-    stde = params['std_e']
+    n = params['lwe_d']
+    lgq = params['logq']
+    stds = params['secret_dist'].stddev
+    stde = params['error_dist'].stddev
 
     lnq = multiply(lgq, ln2)
 
-    dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
+    # dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
+    dense_det_log = math.log(math.sqrt(stds*n)+math.sqrt(stde*n))
 
     for beta in range(50, 1000):
-        alpha_beta = delta(beta)**2
-        alpha_beta_log = math.log(alpha_beta)
-        m = math.round(0.5+lnq/(2*alpha_beta_log))
+        for lgq_value in lgq:
+            alpha_beta = delta_exact(beta)**2
+            alpha_beta_log = math.log(alpha_beta)
+            print(0.5+lgq_value/(2*alpha_beta_log))
+            # THIS FAILs. using python in-built round
+            m = round(0.5+lgq_value/(2*alpha_beta_log))
 
-        rhs_log = 0.5*(m-1)*lnq-0.5*(m-1)**2*alpha_beta_log
+            rhs_log = 0.5*(m-1)*lgq_value-0.5*(m-1)**2*alpha_beta_log
 
-        if dense_det_log < rhs_log:
-            return beta
+            if dense_det_log < rhs_log:
+                return beta
 
     return -1
 
@@ -151,11 +184,20 @@ def predicted_beta_usvp(d, lnq, sig, chi):
     :return: Predicted beta value.
     """
     x = np.divide(d, lnq)
+
+    # print("d", d, "lnq", lnq)
+
     f1 = np.divide(np.multiply(d, np.log(x)),
                    np.multiply(const, lnq - np.log(sig)))
     f2 = np.multiply(x, np.log(np.divide(d, lnq - np.log(sig))))
 
     # Beta calculation
+
+    # print(np.multiply(d, np.log(x)))
+    # print("d", d, "x", x, "log x", np.log(x))
+
+    # print("chi", chi, "f1", f1, "f2", f2, "const * sig", const * sig)
+
     beta = np.divide(np.multiply(2 * d, np.multiply(lnq - np.log(chi), np.log(f1))),
                      np.power(lnq + 0.5 * np.log(f2) - np.log(const * sig), 2))
     return beta
@@ -176,6 +218,7 @@ def model_lambda_usvp(d, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: Lambda value.
     """
+
     sig = std_e
     chi = std_e/std_s
 
@@ -211,7 +254,7 @@ def model_lambda_usvp_s(d, logq, params):
 # Eq. (18)
 
 
-def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
+def model_lambda_bdd(d, logq, std_s, std_e, params):
     """
     Model the lambda value for the BDD model.
 
@@ -223,7 +266,6 @@ def model_lambda_bdd(d, logq, std_s, std_e, std_s_num, params):
     :param params: Model parameters.
     :return: Lambda value.
     """
-    sig = std_e
     chi = std_e/std_s
 
     lnq = np.multiply(logq, ln2)
@@ -318,11 +360,9 @@ def model_n_bdd(l, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: n value.
     """
-    sigma = std_e
     zeta = std_e / std_s
     beta_approx = (l - np.log(l))/0.292  # approximate beta from lambda
     lnq = np.multiply(logq, ln2)
-    n = l
 
     A = 2*lnq
     B = beta_approx
@@ -347,9 +387,6 @@ def model_n_bdd_s(l, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: n value.
     """
-    sigma = std_e
-
-    chi = std_e/std_s
 
     lnq = np.multiply(logq, ln2)
 
