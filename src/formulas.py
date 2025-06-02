@@ -5,13 +5,13 @@ try:
     import numpy as np
 except ImportError:
     print("Warning: Failed to import numpy.")
-    exit(0)
+    np = None
 
 try:
     from scipy.special import lambertw
 except ImportError:
     print("Warning: Failed to import scipy.")
-    exit(0)
+    lambertw = None
 
 # Define global constants
 PI = 3.14159265358979

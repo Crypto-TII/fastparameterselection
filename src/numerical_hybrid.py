@@ -247,7 +247,8 @@ def entropy(x):
     :param x:
     :return: Binary entropy function of x
     """
-    if x == 0 or x==1: return 0
+    if x == 0 or x == 1:
+        return 0
     return -x*log2(x) - (1-x)*log2(1-x)
 
 
@@ -258,7 +259,8 @@ def approx_binom(n, k):
     :param k: integer
     :return: apprixmation to binom(n,k) from Wiki
     """
-    if n<=0 or k<=0 or n<=k: return 0
+    if n <= 0 or k <= 0 or n <= k:
+        return 0
     return n*entropy(k/n)+0.5*log2(n/(8*k*(n-k)))
 
 
@@ -305,7 +307,8 @@ def probability_enum(n, h, ng, w):
     """
     prob = 0
     ng = int(ng)
-    if ng<0: return  -1
+    if ng < 0:
+        return -1
     for i in range(0, w+1):
         prob += RR(binomial(n-h, ng-i)*binomial(h, i)/binomial(n, ng))
     if prob == 0:
@@ -340,7 +343,8 @@ def babai_prob(n, logq, sigma_e, h, beta, d):
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
     log_vol = RR(logq * (d - n - 1) + log2(xi) * n)
-    r_log = [(d - 1 - 2 * i) * RR(log2_delta(beta)) + log_vol / d for i in range(d)]
+    r_log = [(d - 1 - 2 * i) * RR(log2_delta(beta)) +
+             log_vol / d for i in range(d)]
     r = [2 ** (2 * r_) for r_ in r_log]
 
     norm = sqrt(d) * sigma_e
@@ -348,8 +352,10 @@ def babai_prob(n, logq, sigma_e, h, beta, d):
     T = RealDistribution("beta", ((len(r) - 1) / 2, 1.0 / 2))
     probs = [1 - T.cum_distribution_function(1 - r_ / denom) for r_ in r]
     P = prod(probs)
-    if P <= 0: return -500 #float('-inf')
-    else: return log2(P)
+    if P <= 0:
+        return -500  # float('-inf')
+    else:
+        return log2(P)
 
 
 # d = m+n-ng
@@ -368,8 +374,8 @@ def exact_runtime(n, logq, sigma_e, h, beta, d, ng, w):
     """
     ng = int(ng)
     prob = probability_enum(n, h, ng, w)
-    t_bkz  = 0.292*beta + log2(8*d) + 16.4 - prob + 2
-    t_enum = ss_enum(ng,w)+2*log2(d) - prob + 1
+    t_bkz = 0.292*beta + log2(8*d) + 16.4 - prob + 2
+    t_enum = ss_enum(ng, w)+2*log2(d) - prob + 1
     babai = babai_prob(n-ng, logq, sigma_e, h, beta, d)
     return t_bkz, t_enum, babai
 
@@ -388,15 +394,15 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
     xi = sigma_e / sigma_s
 
     rt_min = float('inf')
-    sol_tolerance = 100 #max solution tolerance
+    sol_tolerance = 100  # max solution tolerance
 
-    #Brute-forcing for w
+    # Brute-forcing for w
     for wg in range(2, 52):
         def eq1(ng_, beta_, d_): return (approx_binom(ng_, wg) + wg) + \
-                                        log2(d_) - (0.292 * beta_ + 16.4 + 3) + 2
+            log2(d_) - (0.292 * beta_ + 16.4 + 3) + 2
 
         def eq2(ng_, beta_, d_): return d_ - \
-                                        ceil(sqrt(n * logq  / log2_delta(beta_))) + ng_ - 1
+            ceil(sqrt(n * logq / log2_delta(beta_))) + ng_ - 1
 
         def eq3(ng_, beta_, d_): return (-d_ + 1) * log2(_delta(beta_)) + ((d_ - n +
                                                                             ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - 2*log2(2*sigma_e)
@@ -410,7 +416,8 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
         # Finding initial point using bdd
         initial_bdd = approx_startpoint_bdd(n, logq, h)
         beta_start = initial_bdd[0]
-        d_start = sqrt(2 * n * logq * ln2 * beta_start / log(beta_start / const))
+        d_start = sqrt(2 * n * logq * ln2 * beta_start /
+                       log(beta_start / const))
         initial_guess = [n / 4, beta_start, d_start - n / 4]
 
         bound_trials = 250
@@ -441,7 +448,8 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
                 break
 
             beta_start = max(40, initial_guess[1] + random.randint(-1500, 30))
-            d_start = sqrt(2 * n * logq * ln2 * beta_start / log(beta_start / const))
+            d_start = sqrt(2 * n * logq * ln2 * beta_start /
+                           log(beta_start / const))
             initial_guess = [n / 4, beta_start, d_start - n / 4]
 
         prob = probability_enum(n, h, res[0], wg)
@@ -449,15 +457,16 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
         if len(res) >= 3 and prob != -1:
 
             rt = 0.292 * res[1] + log2(8 * res[2]) + \
-                 16.4 - probability_enum(n, h, res[0], wg)
+                16.4 - probability_enum(n, h, res[0], wg)
             beta = int(res[1])
             d = int(res[2])
             ng = ceil(sqrt(n * logq / log2_delta(beta))) - d + 1
-            bkz_exact, enum_exact, babai = exact_runtime(n, logq, sigma_e, h, beta, d, ng, wg)
+            bkz_exact, enum_exact, babai = exact_runtime(
+                n, logq, sigma_e, h, beta, d, ng, wg)
             rt_exact = bkz_exact - babai
-            #print(wg, rt,  rt_exact, sol_tolerance)
+            # print(wg, rt,  rt_exact, sol_tolerance)
             if rt_exact < rt_min and sol_tolerance < 7:
-                #print("min!:", res, rt, wg, sol_tolerance )
+                # print("min!:", res, rt, wg, sol_tolerance )
                 rt_min = rt
 
     return rt_min
@@ -480,17 +489,20 @@ def numerical_logq_starting_point(n, l, sigma_e, h):
     std_s = sqrt(h / n)
 
     def d_optimal(logq, beta):
-        if logq<=0 or beta<=0: return 0
-        return sqrt(n * logq/ log2_delta(beta))
+        if logq <= 0 or beta <= 0:
+            return 0
+        return sqrt(n * logq / log2_delta(beta))
 
     def d(logq, beta): return max(d_optimal(logq, beta), 2*n)
+
     def eq8(logq, beta): return l - (0.292 * beta +
-                                    log2(8 * d(logq, beta)) + 16.4)
+                                     log2(8 * d(logq, beta)) + 16.4)
 
     log_std_e = log2(sigma_e)
     zeta = max(0, log_std_e - log2(std_s))
 
-    def eq_for_lnq_and_beta(logq, beta): return eta - d(logq, beta) + 1 / log2_delta(beta) * (logq - log_std_e - 0.5 * log2(const) - n / d(logq, beta) * (logq - zeta))
+    def eq_for_lnq_and_beta(logq, beta): return eta - d(logq, beta) + 1 / log2_delta(
+        beta) * (logq - log_std_e - 0.5 * log2(const) - n / d(logq, beta) * (logq - zeta))
 
     def system_bdd_eta_n(x):  # x[0] = n, x[1] = beta
         f1 = eq_for_lnq_and_beta(x[0], x[1])
@@ -506,6 +518,7 @@ def numerical_logq_starting_point(n, l, sigma_e, h):
         return 700, 80
     return logq_solution, beta_solustion
 
+
 def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
     """
     Internal function. Brute-forces over wg-weight
@@ -519,10 +532,10 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
 
-    beta_initial_guess = initial_guess[1] #(l - log2(8*2*n) - 16.4) / 0.292
+    beta_initial_guess = initial_guess[1]  # (l - log2(8*2*n) - 16.4) / 0.292
     logq_initial_guess = initial_guess[0]
     d_initial_guess = ceil(
-        sqrt(n * logq_initial_guess / log2_delta(beta_initial_guess)))+ 1 - n/16
+        sqrt(n * logq_initial_guess / log2_delta(beta_initial_guess))) + 1 - n/16
 
     sols = []
 
@@ -537,7 +550,7 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
             ceil(sqrt(n * logq / log2_delta(beta_))) + ng_ - 1
 
         def eq3(ng_, beta_, d_, logq): return (-d_+1)*log2_delta(beta_) + ((d_-n+ng_-1)
-                                                                          * logq + (n-ng_)*log2(xi))/d_  - 2*log2(sigma_e) #- log2(2*sigma_e) - 0.5*log2(d_)
+                                                                           * logq + (n-ng_)*log2(xi))/d_ - 2*log2(sigma_e)  # - log2(2*sigma_e) - 0.5*log2(d_)
 
         def system(x):
             f1a = eq1a(x[0], x[1], x[2])
@@ -561,15 +574,17 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
         sol_tolerance = abs(eq1a(res[0], res[1], res[2]))+abs(eq1b(res[0], res[2]))+abs(
             eq2(res[0], res[1], res[2], res[3]))+abs(eq3(res[0], res[1], res[2], res[3]))
 
-        if sol_tolerance > 45: continue
-
+        if sol_tolerance > 45:
+            continue
 
         beta = int(res[1])
         d = int(res[2])
         logq = int(res[3])
         ng = ceil(sqrt(n * logq / log2_delta(beta))) - d + 1
-        if ng<=0: continue
-        bkz_exact, enum_exact, babai = exact_runtime(n, logq, sigma_e, h, beta, d, ng, wg)
+        if ng <= 0:
+            continue
+        bkz_exact, enum_exact, babai = exact_runtime(
+            n, logq, sigma_e, h, beta, d, ng, wg)
         rt = max(bkz_exact, enum_exact) - babai
 
         eq1a_tolerance_exact = abs(eq1a(ng, beta, d))
@@ -577,12 +592,12 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
         sol_tolerance_exact = abs(eq1a(ng, beta, d))+abs(eq1b(ng, d))+abs(
             eq2(ng, beta, d, logq))+abs(eq3(ng, beta, d, logq))
 
-        #print(wg, rt, logq, " : ", bkz_exact, babai, ";", sol_tolerance, sol_tolerance_exact, eq1a_tolerance_exact, abs(eq1b(ng, d)),
+        # print(wg, rt, logq, " : ", bkz_exact, babai, ";", sol_tolerance, sol_tolerance_exact, eq1a_tolerance_exact, abs(eq1b(ng, d)),
         #     abs(eq3(ng, beta, d, logq)))
 
         if (abs(sol_tolerance) < 35 and eq1a_tolerance_exact < 7 and abs(l-rt) < 15):
             sols.append([l, n, h, logq, beta, d, ng, wg])
-            #print(l, n, h, logq, beta, d, ng, wg )
+            # print(l, n, h, logq, beta, d, ng, wg )
     return sols
 
 
@@ -598,35 +613,40 @@ def numerical_logq_hybrid(n, l, h):
     :return: logq best scored by check_candidates_logq_exact()
     """
 
-    #TODO: make 3.19 as input parameter
+    # TODO: make 3.19 as input parameter
     initial_guess = numerical_logq_starting_point(n, l, 3.19, h)
     res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess)
 
     # experimentally verified bounds to shift initial points
-    if n <= 2**11: B = 100
-    elif n <= 2**13: B = 200
-    else: B = 300
+    if n <= 2**11:
+        B = 100
+    elif n <= 2**13:
+        B = 200
+    else:
+        B = 300
 
     # if no candidates found, try again with new initial guess up to bound_trials  times
     bound_trials = 200
     while len(res) == 0 and bound_trials > 0:
         bound_trials -= 1
         shift = random.randint(-B, B)
-        init_guess2 = [max(12, initial_guess[0]+shift), max(40, initial_guess[1]-shift)]
+        init_guess2 = [max(12, initial_guess[0]+shift),
+                       max(40, initial_guess[1]-shift)]
         res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, init_guess2)
-        print("re-start numerical_logq_hybrid_runoptimize #", 200-bound_trials, "...")
+        print("re-start numerical_logq_hybrid_runoptimize #",
+              200-bound_trials, "...")
         if len(res) > 0:
             break
 
     if len(res) == 0:
         print("numerical_logq_hybrid_runoptimize couldn't find a solution after",
               200-bound_trials, "trial for this parameters set")
-        return 450 #float('inf')
-
+        return 450  # float('inf')
 
     best_logq = check_candidates_logq_exact(res)
 
     return best_logq
+
 
 def check_candidates_logq_exact(candidate_list):
     """
@@ -639,9 +659,9 @@ def check_candidates_logq_exact(candidate_list):
     best_logq = float("inf")
     found = False
 
-    #sols.append([l, n, h, logq, beta, d, ng, wg])
+    # sols.append([l, n, h, logq, beta, d, ng, wg])
     for el in candidate_list:
-        l = el[0] #target sec. level
+        l = el[0]  # target sec. level
         n = el[1]
         h = el[2]
         logq = el[3]
@@ -649,22 +669,19 @@ def check_candidates_logq_exact(candidate_list):
         d = el[5]
         ng = el[6]
         w = el[7]
-        tbz, tenum, babai =  exact_runtime(n, logq, 3.19, h, beta, d, ng, w)
-        rt = max(tbz,tenum) - babai
-        if abs( rt - l) < best_diff+5 and logq<best_logq: # for some reason, it's better to output the smallest found logq. I don't know why
-            best_diff = abs( max(tbz,tenum) - babai  - l)
+        tbz, tenum, babai = exact_runtime(n, logq, 3.19, h, beta, d, ng, w)
+        rt = max(tbz, tenum) - babai
+        # for some reason, it's better to output the smallest found logq. I don't know why
+        if abs(rt - l) < best_diff+5 and logq < best_logq:
+            best_diff = abs(max(tbz, tenum) - babai - l)
             best_logq = logq
-            #print(logq, l, max(tbz,tenum)-babai, best_diff  )
+            # print(logq, l, max(tbz,tenum)-babai, best_diff  )
             found = True
             print('found logq:', logq)
 
     if not found:
-        print('No solution found setting best_diff to', best_diff, 'returning fixed value')
+        print('No solution found setting best_diff to',
+              best_diff, 'returning fixed value')
         return candidate_list[0][3]
 
     return round(best_logq)
-
-
-
-
-
