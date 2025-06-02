@@ -29,7 +29,7 @@ exclude_patterns = []
 # Add the root directory of the project to the Python path
 # Adjust the path to your project root
 # Adjust the path to point to your src directory
-sys.path.insert(0, os.path.abspath('../src'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
