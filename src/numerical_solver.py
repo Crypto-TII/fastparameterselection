@@ -329,6 +329,9 @@ def numerical_logq_usvp(l, n, std_s, std_e):
             )
             return 1
         else:
+            if lnq < 0:  # Ensure lnq is at positive
+                print(f"lnq is negative: {lnq}")
+                return 1
             return sqrt(2 * n * lnq * beta / log(beta / const))
 
     def eq12(lnq, beta): return l - (0.292 * beta +
