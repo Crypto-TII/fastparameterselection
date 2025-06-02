@@ -1,5 +1,5 @@
-Welcome to Fast Parameter Selection's Documentation!
-=====================================================
+Fast Parameter Selection's Documentation
+========================================
 
 .. toctree::
    :maxdepth: 2

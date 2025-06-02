@@ -37,8 +37,10 @@ def numerical_lambda_bdd(n, logq, std_s, std_e):
     beta_initial_guess = n / 4
 
     def nom(beta): return 2 * n * lnq * log(beta / const)
-    def denom(beta): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - \
-        2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
+
+    def denom(beta):
+        print(n * log(beta / const) / (2 * lnq * beta))
+        return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - 2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
 
     def eq6(beta): return beta - nom(beta) / (denom(beta) ** 2)
 

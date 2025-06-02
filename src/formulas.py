@@ -128,7 +128,7 @@ def check_overstreched(params):
         for lgq_value in lgq:
             alpha_beta = delta_exact(beta)**2
             alpha_beta_log = math.log(alpha_beta)
-            print(0.5+lgq_value/(2*alpha_beta_log))
+            # print(0.5+lgq_value/(2*alpha_beta_log))
             # THIS FAILs. using python in-built round
             m = round(0.5+lgq_value/(2*alpha_beta_log))
 

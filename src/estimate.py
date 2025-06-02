@@ -52,6 +52,9 @@ def main(argv):
         'num_only': num_only,
     }
 
+    if ntru_flag:
+        check_ntru(params)
+
     data = process_parameters(params, table)
 
     export_to_csv(data, "output.csv")
@@ -64,9 +67,6 @@ def main(argv):
     else:
         print("Parameter " + param + " not valid")
         return
-
-    if ntru_flag:
-        check_ntru(params)
 
     print_warnings(verify, estimator_installed)
 

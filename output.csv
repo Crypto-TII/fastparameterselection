@@ -1,2 +1,3 @@
-secret dist.,lambda,lwe dim.,logq usvp,est usvp,logq bdd,est bdd,output
-Uniform (-1 0),256,1024,13,266,13,264,13
+secret dist.,lwe dim.,log q,usvp num,est usvp,bdd num,est bdd,output
+Uniform (-1 1),1774,32,184,185,184,182,184
+Uniform (-1 1),1774,64,88,89,88,88,88
