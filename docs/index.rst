@@ -12,7 +12,12 @@ Welcome to Fast Parameter Selection's Documentation!
    tutorial_stde
    tutorial_correction
    tutorial_non_fhe
-   api
+
+.. toctree::
+   :caption: API Reference
+   :glob:
+
+   _api/*
 
 Indices and tables
 ==================

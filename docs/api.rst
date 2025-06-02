@@ -1,10 +1,8 @@
 API Reference
 =============
 
-.. toctree::
-   :maxdepth: 2
-
-   modules
+.. autosummary::
+   :toctree: _api
 
 Modules
 -------
