@@ -15,9 +15,8 @@ Welcome to Fast Parameter Selection's Documentation!
 
 .. toctree::
    :caption: API Reference
-   :glob:
 
-   _api/*
+   api
 
 Indices and tables
 ==================
