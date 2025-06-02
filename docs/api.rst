@@ -7,9 +7,9 @@ API Reference
 Modules
 -------
 
-.. automodule:: formulas
-.. automodule:: numerical_solver
-.. automodule:: numerical_hybrid
+.. automodule:: src.formulas
+.. automodule:: src.numerical_solver
+.. automodule:: src.numerical_hybrid
 
    :members:
    :undoc-members:
