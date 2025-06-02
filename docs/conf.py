@@ -22,7 +22,7 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ["sage", "sage.all", "scipy", "numpy"]
+MOCK_MODULES = ["sage", "sage.all", "scipy", "numpy", "scipy.optimize"]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath("."))
