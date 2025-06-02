@@ -61,4 +61,4 @@ autodoc_default_options = {
 # Show type hints in the description instead of the signature
 autodoc_typehints = 'description'
 
-autodoc_mock_imports = ["sage"]
+autodoc_mock_imports = ["numpy", "sage"]
