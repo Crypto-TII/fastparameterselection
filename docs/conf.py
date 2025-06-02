@@ -8,6 +8,26 @@
 
 import sys
 import os
+
+
+try:
+    from unittest.mock import MagicMock
+except ImportError:
+    from mock import Mock as MagicMock
+
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+
+MOCK_MODULES = ["sage", "sage.all", "scipy", "numpy"]
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+sys.path.insert(0, os.path.abspath("."))
+
+
 project = 'Fast Parameter Selection'
 copyright = '2025, Beatrice Biasioli, Elena Kirshanova, Chiara Marcolla, Sergi Rovira'
 author = 'Beatrice Biasioli, Elena Kirshanova, Chiara Marcolla, Sergi Rovira'
@@ -60,5 +80,3 @@ autodoc_default_options = {
 }
 # Show type hints in the description instead of the signature
 autodoc_typehints = 'description'
-
-autodoc_mock_imports = ["scipy", "numpy", "sage"]
