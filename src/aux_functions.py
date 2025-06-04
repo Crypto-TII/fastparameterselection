@@ -501,7 +501,6 @@ def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_
         lwe_parameters_bdd = LWE.Parameters(
             lwe_d, 2 ** est_bdd_numerical, secret_dist, error_dist)
     if param == 'std_e':
-        # TODO: numerics for std only works for gaussian distribution
         error_dist_usvp = set_distribution(
             error_dist_tag, {'std': 2**est_usvp_numerical}, is_error=True)
         lwe_parameters_usvp = LWE.Parameters(
