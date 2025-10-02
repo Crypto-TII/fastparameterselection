@@ -205,8 +205,6 @@ def handle_options(opts):
         'eta': 1,         # Parameter for binomial distribution (error)
         'q': 2            # Modulus for uniformmod distribution
     }
-    secret_dist = set_distribution(secret_dist_tag, params)
-    error_dist = set_distribution(error_dist_tag, params, is_error=True)
     l = 0
     table = False
     num_only = False
@@ -268,7 +266,7 @@ def handle_options(opts):
             helper()
 
     secret_dist = set_distribution(secret_dist_tag, params)
-    error_dist = set_distribution(error_dist_tag, params)
+    error_dist = set_distribution(error_dist_tag, params, is_error=True)
 
     if secret_dist_tag != 'binary' and secret_dist_tag != 'ternary':
         num_only = True
@@ -308,7 +306,7 @@ def export_to_csv(data, output_file):
                     processed_row[key] = value
             writer.writerow(processed_row)
 
-    print(f"Data exported to {output_file}")
+    # print(f"Data exported to {output_file}")
 
 
 def closest_power_of_2(n):
@@ -508,7 +506,7 @@ def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_
         error_dist_bdd = set_distribution(
             error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True)
 
-        print("Error dist bdd", error_dist_bdd.stddev)
+        # print("Error dist bdd", error_dist_bdd.stddev)
 
         lwe_parameters_bdd = LWE.Parameters(
             lwe_d, 2**lnq, secret_dist, error_dist_bdd)

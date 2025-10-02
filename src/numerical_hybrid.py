@@ -605,7 +605,7 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess):
 # caller's function: runs numerical_logq_hybrid_runoptimize with different initial guesses
 # checks obtained candidates for logq by calling check_candidates_logq()
 #
-def numerical_logq_hybrid(n, l, h):
+def numerical_logq_hybrid(n, l, h, std_e=3.19):
     """
     :param n: LWE dimension
     :param l: Target sec. level
@@ -613,9 +613,8 @@ def numerical_logq_hybrid(n, l, h):
     :return: logq best scored by check_candidates_logq_exact()
     """
 
-    # TODO: make 3.19 as input parameter
-    initial_guess = numerical_logq_starting_point(n, l, 3.19, h)
-    res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, initial_guess)
+    initial_guess = numerical_logq_starting_point(n, l, std_e, h)
+    res = numerical_logq_hybrid_runoptimize(n, l, std_e, h, initial_guess)
 
     # experimentally verified bounds to shift initial points
     if n <= 2**11:
@@ -632,7 +631,7 @@ def numerical_logq_hybrid(n, l, h):
         shift = random.randint(-B, B)
         init_guess2 = [max(12, initial_guess[0]+shift),
                        max(40, initial_guess[1]-shift)]
-        res = numerical_logq_hybrid_runoptimize(n, l, 3.19, h, init_guess2)
+        res = numerical_logq_hybrid_runoptimize(n, l, std_e, h, init_guess2)
         print("re-start numerical_logq_hybrid_runoptimize #",
               200-bound_trials, "...")
         if len(res) > 0:
@@ -643,12 +642,12 @@ def numerical_logq_hybrid(n, l, h):
               200-bound_trials, "trial for this parameters set")
         return 450  # float('inf')
 
-    best_logq = check_candidates_logq_exact(res)
+    best_logq = check_candidates_logq_exact(res, std_e)
 
     return best_logq
 
 
-def check_candidates_logq_exact(candidate_list):
+def check_candidates_logq_exact(candidate_list, std_e=3.19):
     """
     receives a list of logqs and their corresponding [ng, beta, d] found by numerical_logq_hybrid_runoptimize
     outputs logq that gives l_ closes to the target security level l according to exact_runtime()
@@ -669,7 +668,7 @@ def check_candidates_logq_exact(candidate_list):
         d = el[5]
         ng = el[6]
         w = el[7]
-        tbz, tenum, babai = exact_runtime(n, logq, 3.19, h, beta, d, ng, w)
+        tbz, tenum, babai = exact_runtime(n, logq, std_e, h, beta, d, ng, w)
         rt = max(tbz, tenum) - babai
         # for some reason, it's better to output the smallest found logq. I don't know why
         if abs(rt - l) < best_diff+5 and logq < best_logq:
@@ -677,7 +676,7 @@ def check_candidates_logq_exact(candidate_list):
             best_logq = logq
             # print(logq, l, max(tbz,tenum)-babai, best_diff  )
             found = True
-            print('found logq:', logq)
+            # print('found logq:', logq)
 
     if not found:
         print('No solution found setting best_diff to',

@@ -64,16 +64,16 @@ def process_n(logq, l, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimato
     return data
 
 
-def process_logq(l, lwe_d, std_e, verify, estimator_installed, correction, secret_dist, hw, table, output_dict):
+def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict):
 
     secret = secret_dist.tag
 
     if secret != 'SparseTernary':
         data = process_logq_param(
-            l, lwe_d, std_e, verify, estimator_installed, correction, secret_dist, table, output_dict)
+            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, table, output_dict)
     else:
         data = process_logq_param_hybrid(
-            l, lwe_d, verify, estimator_installed, secret_dist, hw, output_dict)
+            l, lwe_d, error_dist, verify, estimator_installed, secret_dist, hw, output_dict)
     return data
 
 
@@ -90,7 +90,7 @@ def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_b
                                     lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict)
     else:
         data = process_lambda_param_hybrid(
-            logq, lwe_d, h, secret_dist, verify, estimator_installed, output_dict)
+            logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict)
 
     return data
 
@@ -308,7 +308,7 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
     return data
 
 
-def process_logq_param_hybrid(l, lwe_d, verify, estimator_installed, secret_dist, h, output_dict):
+def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed, secret_dist, h, output_dict):
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
@@ -325,16 +325,18 @@ def process_logq_param_hybrid(l, lwe_d, verify, estimator_installed, secret_dist
 
     :return: List of data points with estimated values for 'logq'.
     """
+
     data = []
     secret = secret_dist.tag
-    est_hybrid = numerical_logq_hybrid(lwe_d, l, h)
+    std_e = error_dist.stddev
+    est_hybrid = numerical_logq_hybrid(lwe_d, l, h, std_e)
 
     if verify and estimator_installed:
         FHEParam = LWE.Parameters(
             n=lwe_d,
             q=2**est_hybrid,
             Xs=ND.SparseTernary(lwe_d, p=h/2, m=h/2),
-            Xe=ND.DiscreteGaussian(stddev=3.19)
+            Xe=ND.DiscreteGaussian(stddev=std_e)
         )
         primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
             FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
@@ -594,7 +596,7 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
     return data_point
 
 
-def process_lambda_param_hybrid(logq, lwe_d, h, secret_dist, verify, estimator_installed, output_dict):
+def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict):
     """
     Process the parameter 'lambda' and estimate its value using various models and numerical solvers.
 
@@ -611,19 +613,21 @@ def process_lambda_param_hybrid(logq, lwe_d, h, secret_dist, verify, estimator_i
     """
 
     secret = secret_dist.tag
+    std_e = error_dist.stddev
 
     data = []
     if len(logq) > 1:
         output_dict['lambda'] = []
     for lq in logq:
-        est_hybrid = math.floor(numerical_lambda_hybrid_v2(lwe_d, lq, 3.19, h))
+        est_hybrid = math.floor(
+            numerical_lambda_hybrid_v2(lwe_d, lq, std_e, h))
 
         if verify and estimator_installed:
             FHEParam = LWE.Parameters(
                 n=lwe_d,
                 q=2**lq,
                 Xs=ND.SparseTernary(lwe_d, h/2, h/2),
-                Xe=ND.DiscreteGaussian(stddev=3.19)
+                Xe=ND.DiscreteGaussian(stddev=std_e)
             )
             primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
                 FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
