@@ -256,9 +256,6 @@ def estimate(d, logq, attacks=None, secret="u3", error="dg3.19", force=False, ve
 
 def degree_loss(model, d):
 
-    print("model: ", model)
-    print("d: ", d)
-
     diff = d-model
     # for i, x in enumerate(diff):
     #     if x > 0:
@@ -309,12 +306,6 @@ def degree_fit(params, logq, levels, e_std, s_std, std_s_num):
         new_params.append(params[p[0]])
 
     for i, level in enumerate(levels):
-        print("level fit: ", level)
-        print("attack: ", attack)
-
-        print("degrees", degrees)
-
-        print("i: ", i, "param: ", param, "simpl: ", simpl)
 
         if param == 'n' and simpl == '0':
             if attack == 'bdd':
@@ -325,7 +316,6 @@ def degree_fit(params, logq, levels, e_std, s_std, std_s_num):
                 # , params['delta'])
                 model = model_n_usvp(
                     security_levels[i], logq, s_std, e_std, new_params)
-                print("model usvp: ", model)
 
         if param == 'n' and simpl == '1':
             if attack == 'bdd':
@@ -339,7 +329,6 @@ def degree_fit(params, logq, levels, e_std, s_std, std_s_num):
         if param == 'lambda' and simpl == '0':
             if attack == 'usvp':
                 # , params['delta'])
-                print("degrees: ", degrees)
 
                 model = model_lambda_usvp(
                     degrees[i], logq, s_std, e_std, new_params)
@@ -620,7 +609,6 @@ def plot_points_est(param, points_atk, points_est, points_secret_dist, fit_resul
                     level,  modelQ, std_s, std_e, fit_results)  # ,delta)
                 model_error = model_lambda_bdd(
                     level,  logQ, std_s, std_e, fit_results)  # ,delta)
-                print("model: ", model)
             if attack == 'bdd' and simpl == '1':
                 model = model_lambda_bdd_s(
                     level,  modelQ, fit_results)  # ,delta)
@@ -757,11 +745,8 @@ def find_constants(opts):
         elif opt == '--simpl':
             simpl = arg
         else:
-            print("Option " + opt + " not considered")
             if opt != '--fit':
                 helper_fit()
-
-    print("output_dict", output_dict)
 
     if param == 'n':
         if secret == "binary":
@@ -980,8 +965,9 @@ def find_constants(opts):
     #     exit(0)
     # model_lambda_bdd(level,  modelQ, points_secret_dist[i], fit_results)
 
-    plot_points_est(param, points_atk, points_est,
-                    points_secret_dist, results, std_s, std_e)
+    # NOTE: uncomment to plot the points and the fitted formula
+    # plot_points_est(param, points_atk, points_est,
+    #                points_secret_dist, results, std_s, std_e)
 
     # s = param + attack + str(simpl) + secret
 
