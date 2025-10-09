@@ -75,7 +75,7 @@ def parse_options(argv):
     """
     try:
         opts, args = getopt.getopt(argv, "a,b,h,v,c", [
-                                   "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only"])
+                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit"])
     except Exception as e:
         print(e)
         helper()
@@ -377,6 +377,17 @@ def parse_logq(logq_str):
         else:
             logq.append(int(part))
     return logq
+
+
+def helper_fit():
+    """
+    Print the helper message for fitting and exit.
+    """
+    print('python3 fit_formula.py --param "lambda" --attack "usvp" --dist "binary" --simpl 0')
+    print('python3 fit_formula.py --param "lambda" --attack "bdd" --dist "ternary" --simpl 1')
+    print('python3 fit_formula.py --param "n" --attack "usvp" --dist "binary" --simpl 0')
+    print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
+    sys.exit()
 
 
 def helper():
