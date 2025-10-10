@@ -13,7 +13,6 @@ def main(argv):
     opts = parse_options(argv)
 
     if any(opt == "--fit" for opt, _ in opts):
-        print("Fitting constants...")
         find_constants(opts)
         return
 

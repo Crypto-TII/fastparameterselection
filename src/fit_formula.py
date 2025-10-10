@@ -667,8 +667,6 @@ def filter_points(d_estimates):  # Todo, check for strange points?
             tup[0] != d[i-1][0] or tup[1] > d[i-1][1])]
         filtered_list2 = [tup for i, tup in enumerate(
             filtered_list) if i == 0 or tup[1] != filtered_list[i-1][1]]
-
-        print(len(filtered_list2))
         d_estimates_filtered.append(filtered_list2)
 
     return d_estimates_filtered
@@ -709,8 +707,6 @@ def find_constants(opts):
     if not estimator_installed:
         print("Lattice Estimator not installed, can't find constants")
         exit(0)
-
-    print(opts)
 
     output_dict = {}
 
