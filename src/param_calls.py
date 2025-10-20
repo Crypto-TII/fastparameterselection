@@ -8,7 +8,7 @@ from formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
     model_n_usvp, model_n_usvp_s, model_n_bdd, model_n_bdd_s,
 )
-from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_usvp
+from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_bdd_rev1, numerical_lambda_usvp
 from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
@@ -503,8 +503,10 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
     std_s = float(secret_dist.stddev)
     std_e = float(error_dist.stddev)
 
+    # est_num_bdd = math.floor(
+    #     numerical_lambda_bdd(lwe_d, lq, std_s, std_e))
     est_num_bdd = math.floor(
-        numerical_lambda_bdd(lwe_d, lq, std_s, std_e))
+        numerical_lambda_bdd_rev1(lwe_d, lq, std_s, std_e))
     est_num_usvp = math.floor(
         numerical_lambda_usvp(lwe_d, lq, std_s, std_e))
 
