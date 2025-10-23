@@ -139,7 +139,7 @@ def set_distribution(dist_type, params, is_error=False):
     elif dist_type == 'sparse':
         try:
             dist = ND.SparseTernary(
-                n=params['n'], p=params['hw']/2, m=params['hw']/2)
+                p=params['hw']/2, m=params['hw']/2, n=params['n'])
         except:
             print("Error: Hamming weight --hw is required for sparse secret")
             sys.exit()

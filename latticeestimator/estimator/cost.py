@@ -20,7 +20,6 @@ class Cost(UserDict):
         "repetitions": False,
         "tag": False,
         "problem": False,
-        "wt": False,
     }
 
     @staticmethod
@@ -52,7 +51,6 @@ class Cost(UserDict):
         "ell": "ℓ",
         "ell_": "ℓ'",
         "repetitions": "↻",
-        "wt" : "w",
     }
 
     val_map = {"beta": "%8d", "beta_": "%8d", "d": "%8d", "delta": "%8.6f"}

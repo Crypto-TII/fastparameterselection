@@ -7,10 +7,9 @@ See :ref:`LWE Primal Attacks` for an introduction what is available.
 """
 from functools import partial
 
-from sage.all import oo, ceil, sqrt, log, RR, ZZ, binomial, cached_function, exp, erfc
+from sage.all import oo, ceil, sqrt, log, RR, ZZ, binomial, cached_function
 from .reduction import delta as deltaf
 from .reduction import cost as costf
-from .reduction import RC as RC
 from .util import local_minimum
 from .cost import Cost
 from .lwe_parameters import LWEParameters
@@ -22,23 +21,6 @@ from .prob import mitm_babai_probability
 from .io import Logging
 from .conf import red_cost_model as red_cost_model_default
 from .conf import red_shape_model as red_shape_model_default
-from .conf import red_simulator as red_simulator_default
-
-pi = 3.141592653589793238462643383
-
-
-def entropy(x):
-    return -x*log(x, 2) - (1-x)*log(1-x, 2)
-
-
-def approx_binom(n, k):
-    return n*entropy(k/n)+0.5*log(n/(8*k*(n-k)), 2)
-
-
-def approx_binom_sum(n, k):
-    beta = k/n
-    rho = sqrt(1+beta*log(beta, 2)-(1-beta)*log(1-beta, 2))
-    return (n-1)+log(erfc(sqrt(n)*rho), 2)
 
 
 class PrimalUSVP:
@@ -75,7 +57,7 @@ class PrimalUSVP:
         b = log(delta) * (2 * beta - 1) + log(params.q) - C
         n = params.n
         if a * n * n + b * n + c >= 0:  # trivial case
-            return min(n, m)  # bug here
+            return n
 
         # solve for ad^2 + bd + c == 0
         disc = b * b - 4 * a * c  # the discriminant
@@ -115,16 +97,13 @@ class PrimalUSVP:
         if params._homogeneous:
             tau = False  # Tau false ==> instance is homogeneous
 
-        d = PrimalUSVP._solve_for_d(
-            params, m, beta, tau, xi) if d is None else d
+        d = PrimalUSVP._solve_for_d(params, m, beta, tau, xi) if d is None else d
         if d < beta:
             d = beta
         # if d == β we assume one SVP call, otherwise poly calls. This makes the cost curve jump, so
         # we avoid it here.
         if d == beta and d < m:
             d += 1
-        if d > m+1:
-            print(m, d, beta)
         assert d <= m + 1
 
         if not tau:
@@ -138,8 +117,7 @@ class PrimalUSVP:
             lhs = log(sqrt(params.Xe.stddev**2 * (beta - 1) + tau**2))
             rhs = RR(
                 log(delta) * (2 * beta - d - 1)
-                + (log(tau) + log(xi) * params.n +
-                   log(params.q) * (d - params.n - 1)) / d
+                + (log(tau) + log(xi) * params.n + log(params.q) * (d - params.n - 1)) / d
             )
 
         return costf(red_cost_model, beta, d, predicate=lhs <= rhs)
@@ -212,10 +190,10 @@ class PrimalUSVP:
 
             >>> params = LWE.Parameters(n=200, q=127, Xs=ND.UniformMod(3), Xe=ND.UniformMod(3))
             >>> LWE.primal_usvp(params, red_shape_model="cn11")
-            rop: ≈2^87.6, red: ≈2^87.6, δ: 1.006114, β: 209, d: 388, tag: usvp
+            rop: ≈2^87.5, red: ≈2^87.5, δ: 1.006114, β: 209, d: 388, tag: usvp
 
             >>> LWE.primal_usvp(params, red_shape_model=Simulator.CN11)
-            rop: ≈2^87.6, red: ≈2^87.6, δ: 1.006114, β: 209, d: 388, tag: usvp
+            rop: ≈2^87.5, red: ≈2^87.5, δ: 1.006114, β: 209, d: 388, tag: usvp
 
             >>> LWE.primal_usvp(params, red_shape_model=Simulator.CN11, optimize_d=False)
             rop: ≈2^87.6, red: ≈2^87.6, δ: 1.006114, β: 209, d: 400, tag: usvp
@@ -235,10 +213,15 @@ class PrimalUSVP:
 
         """
         params = LWEParameters.normalize(params)
-        # allow for a larger embedding lattice dimension: Bai and Galbraith
-        m = params.m + params.n if params.Xs <= params.Xe else params.m
+
+        if params.Xs <= params.Xe:
+            # allow for a larger embedding lattice dimension: Bai and Galbraith
+            m = params.m + params.n
+        else:
+            m = params.m
+
         if red_shape_model == "gsa":
-            with local_minimum(40, max(2 * params.n, 41), precision=5) as it:
+            with local_minimum(40, max(min(2 * params.n, m), 41), precision=5) as it:
                 for beta in it:
                     cost = self.cost_gsa(
                         beta=beta, params=params, m=m, red_cost_model=red_cost_model, **kwds
@@ -306,65 +289,115 @@ class PrimalUSVP:
 primal_usvp = PrimalUSVP()
 
 
-def probability_enum(n, h, ng, w):
-    prob = 0
-    for i in range(0, w+1):
-        prob += RR(binomial(n-h, ng-i)*binomial(h, i)/binomial(n, ng))
-    return log(prob, 2)
-
-
-def ss_enum(ng, w):
-    ss = 0
-    for i in range(0, w+1):
-        ss += RR(binomial(ng, i) * 2**i)
-    return log(ss, 2)
-
-
 class PrimalHybrid:
     @classmethod
     def babai_cost(cls, d):
         return Cost(rop=max(d, 1) ** 2)
 
     @classmethod
-    def svp_dimension(cls, r, D, xi, q, n, beta):
+    def svp_dimension(cls, r, D, is_homogeneous=False):
         """
-        Return η for a given lattice shape and distance.
+        Return required svp dimension for a given lattice shape and distance.
 
         :param r: squared Gram-Schmidt norms
 
         """
-        from math import lgamma, log, exp, pi
+        from math import lgamma, log, pi
 
         def ball_log_vol(n):
             return (n / 2.0) * log(pi) - lgamma(n / 2.0 + 1)
 
-        def gaussian_heuristic_log_input(r):
-            n = len(list(r))
-            log_vol = sum(r)
+        # If B is a basis with GSO profiles r, this returns an estimate for the shortest vector in the lattice
+        # [ B | * ]
+        # [ 0 |tau]
+        # if the tau is None, the instance is homogeneous, and we omit the final row/column.
+        def svp_gaussian_heuristic_log_input(r, tau):
+            if tau is None:
+                n = len(list(r))
+                log_vol = sum(r)
+            else:
+                n = len(list(r)) + 1
+                log_vol = sum(r) + 2 * log(tau)
             log_gh = 1.0 / n * (log_vol - 2 * ball_log_vol(n))
-            return exp(log_gh)
+            return log_gh
 
         d = len(r)
         r = [log(x) for x in r]
 
         if d > 4096:
-            for i, _ in enumerate(r):
-                # chosen since RC.ADPS16(1754, 1754).log(2.) = 512.168000000000
-                j = d - 1754 + i
-                if (j < d) and (gaussian_heuristic_log_input(r[j:]) < D.stddev**2 * (d - j)):
-                    return ZZ(d - (j - 1))
+            # chosen since RC.ADPS16(1754, 1754).log(2.) = 512.168000000000
+            min_i = d - 1754
+        else:
+            min_i = 0
+
+        if is_homogeneous:
+            tau = None
+            for i in range(min_i, d):
+                if svp_gaussian_heuristic_log_input(r[i:], tau) < log(D.stddev**2 * (d - i)):
+                    return ZZ(d - (i - 1))
             return ZZ(2)
 
         else:
-            for i, _ in enumerate(r):
-                # eta = ZZ(d - (i-1))
-                # tmp = 2./d * ( (d-n)*log(q) + n*log(xi) ) - 2*(d-eta)*log(deltaf(beta)) + log(eta/(2*pi*exp(1)))
-                # print(i, r[i]/2., (d-1-2*i)*log(deltaf(beta))+ ((d-n)*log(q)+ n*log(xi))/d)
-                # tmp <= log(D.stddev**2 * (d - i)):
-                if gaussian_heuristic_log_input(r[i:]) <= D.stddev**2 * (d - i):
-                    # print(i, gaussian_heuristic_log_input(r[i:]), D.stddev**2 * (d - i))
-                    # print(i, log(gaussian_heuristic_log_input(r[i:])),  tmp)
+            # we look for the largest i such that (pi_i(e), tau) is shortest in the embedding lattice
+            # [pi_i(B) | * ]
+            # [   0    |tau]
+            tau = D.stddev
+            for i in range(min_i, d):
+                if svp_gaussian_heuristic_log_input(r[i:], tau) < log(D.stddev**2 * (d - i) + tau ** 2):
+                    return ZZ(d - (i - 1) + 1)
+            return ZZ(2)
+
+    @classmethod
+    def svp_dimension_gsa(cls, d, log_total_vol, log_delta, D, is_homogeneous=False):
+        """
+        Return required svp dimension for a given lattice shape and distance.
+
+        :param r: squared Gram-Schmidt norms
+
+        """
+        from math import lgamma, log, pi
+
+        def log_projected_vol(i):
+            return (d - i) / d * log_total_vol - i * (d - i) * log_delta
+
+        def ball_log_vol(n):
+            return (n / 2.0) * log(pi) - lgamma(n / 2.0 + 1)
+
+        # If B is a BKZ reduced basis, this returns an estimate for the shortest vector in the lattice
+        # [ B | * ]
+        # [ 0 |tau]
+        # under the GSA assumption, where total_vol is the volume of B, and delta is the root Hermite factor.
+        # if the tau is None, the instance is homogeneous, and we omit the final row/column.
+        def svp_gaussian_heuristic_gsa(i, tau):
+            if tau is None:
+                n = d - i
+                log_vol = 2 * log_projected_vol(i)
+            else:
+                n = d - i + 1
+                log_vol = 2 * log_projected_vol(i) + 2 * log(tau)
+            log_gh = 1.0 / n * (log_vol - 2 * ball_log_vol(n))
+            return log_gh
+
+        if d > 4096:
+            # chosen since RC.ADPS16(1754, 1754).log(2.) = 512.168000000000
+            min_i = d - 1754
+        else:
+            min_i = 0
+
+        if is_homogeneous:
+            tau = None
+            for i in range(min_i, d):
+                if svp_gaussian_heuristic_gsa(i, tau) < log(D.stddev**2 * (d - i)):
                     return ZZ(d - (i - 1))
+            return ZZ(2)
+        else:
+            # we look for the largest i such that (pi_i(e), tau) is shortest in the embedding lattice
+            # [pi_i(B) | * ]
+            # [   0    |tau]
+            tau = D.stddev
+            for i in range(min_i, d):
+                if svp_gaussian_heuristic_gsa(i, tau) < log(D.stddev**2 * (d - i) + tau ** 2):
+                    return ZZ(d - (i - 1) + 1)
             return ZZ(2)
 
     @staticmethod
@@ -377,7 +410,7 @@ class PrimalHybrid:
         mitm=False,
         m: int = oo,
         d: int = None,
-        simulator=red_simulator_default,
+        red_shape_model=red_shape_model_default,
         red_cost_model=red_cost_model_default,
         log_level=5,
     ):
@@ -396,47 +429,49 @@ class PrimalHybrid:
            costs.
 
         """
+        simulator = simulator_normalize(red_shape_model)
         if d is None:
             delta = deltaf(beta)
-            d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), m) + 1
+            d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), m)
         d -= zeta
+
+        if d < beta:
+            # cannot BKZ-β on a basis of dimension < β
+            return Cost(rop=oo)
 
         xi = PrimalUSVP._xi_factor(params.Xs, params.Xe)
 
-        # d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), m) + 1
-        # print('xi:', xi, 'beta:', beta, 'd:', d, 'Xs:', params.Xs, sqrt(RR(ceil(len(params.Xs) * params.Xs.density)/(params.n))))
-        tau = 1
         # 1. Simulate BKZ-β
-        # TODO: pick τ as non default value
-
-        if params._homogeneous:
-            tau = False
-            d -= 1
-
-        # tau=False
-        # d-=1
-        r = simulator(d, params.n - zeta, params.q,
-                      beta, xi=xi, tau=tau, dual=True)
-        # print('beta:', beta)
-        # for i, _ in enumerate(r):
-        #     if i%100==0:
-        #         logvol = (d-params.n+zeta-1)*log(params.q,2)+ (params.n-zeta)*log(xi,2)
-        #         print(i, log(r[i],2)/2., ((d-1-2*i)*RR(log(deltaf(beta),2))+ (logvol)/d).n())
+        # We simulate BKZ-β on the dxd basis B_BKZ:
+        # [q I_m |  A_{n - zeta}  ]
+        # [  0   | xi I_{n - zeta}]
+        # if we need to set it, r holds the simulated squared GSO norms after BKZ-β
+        r = None
         bkz_cost = costf(red_cost_model, beta, d)
 
-        # 2. Required SVP dimension η
+        # 2. Required SVP dimension η + 1
+        # We select η such that (pi_{d - η + 1}(e | s_{n - zeta}), tau) is the shortest vector in
+        # [pi(B_BKZ) | t ]
+        # [    0     |tau]
         if babai:
             eta = 2
             svp_cost = PrimalHybrid.babai_cost(d)
         else:
             # we scaled the lattice so that χ_e is what we want
-            eta = PrimalHybrid.svp_dimension(
-                r, params.Xe, xi, params.q, params.n, beta)
+            if red_shape_model == "gsa":
+                log_vol = RR((d - (params.n - zeta)) * log(params.q) + (params.n - zeta) * log(xi))
+                log_delta = RR(log(deltaf(beta)))
+                svp_dim = PrimalHybrid.svp_dimension_gsa(d, log_vol, log_delta, params.Xe, params._homogeneous)
+            else:
+                r = simulator(d, params.n - zeta, params.q, beta, xi=xi, tau=False, dual=True)
+                svp_dim = PrimalHybrid.svp_dimension(r, params.Xe, is_homogeneous=params._homogeneous)
+            eta = svp_dim if params._homogeneous else svp_dim - 1
             if eta > d:
                 # Lattice reduction was not strong enough to "reveal" the LWE solution.
                 # A larger `beta` should perhaps be attempted.
                 return Cost(rop=oo)
-            svp_cost = costf(red_cost_model, eta, eta)
+            # we make one svp call on a lattice of rank eta + 1
+            svp_cost = costf(red_cost_model, svp_dim, svp_dim)
             # when η ≪ β, lifting may be a bigger cost
             svp_cost["rop"] += PrimalHybrid.babai_cost(d - eta)["rop"]
 
@@ -457,46 +492,32 @@ class PrimalHybrid:
 
         if zeta:
             # the number of non-zero entries
-            h = ceil(len(params.Xs) * params.Xs.density)
+            h = params.Xs.hamming_weight
             probability = RR(prob_drop(params.n, h, zeta))
-            # print("starting proba:", probability)
             hw = 1
             while hw < min(h, zeta):
                 new_search_space = binomial(zeta, hw) * base**hw
                 if svp_cost.repeat(ssf(search_space + new_search_space))["rop"] >= bkz_cost["rop"]:
                     break
                 search_space += new_search_space
-                drop = prob_drop(params.n, h, zeta, fail=hw)
-                approx_probability = approx_binom(
-                    params.n-h, zeta-hw)+approx_binom(h, hw)-approx_binom(params.n, zeta)
-
-                probability += drop
-                # print(hw, 'prob:', log(probability,2).n(), 'enum:', RR(probability_enum(params.n, h, zeta, hw)) )
+                probability += prob_drop(params.n, h, zeta, fail=hw)
                 hw += 1
 
             svp_cost = svp_cost.repeat(ssf(search_space))
-            # approx_probability = approx_binom(params.n-h, zeta-hw)+approx_binom(h, hw)-approx_binom(params.n, zeta)
-            # print(hw, 'prob enum:', probability, log(probability,2).n(), 'approx proba:', approx_probability.n(), 'svp cost:', log(svp_cost["rop"],2).n(), 'approx svp cost:', hw+approx_binom(zeta,hw).n() )
-        hw -= 1
-        # print("svp_cost:", svp_cost)
+
         if mitm and zeta > 0:
             if babai:
-                probability *= mitm_babai_probability(
-                    r, params.Xe.stddev, params.q)
+                if r is None:
+                    r = simulator(d, params.n - zeta, params.q, beta, xi=xi, tau=False, dual=True)
+                probability *= mitm_babai_probability(r, params.Xe.stddev)
             else:
                 # TODO: the probability in this case needs to be analysed
                 probability *= 1
-        # print('proba after enum:', probability)
 
-        # print(zeta, hw, " proba before babai:", log(probability,2))
-        if eta <= 10 and d >= 0:  # NOTE: η: somewhat arbitrary bound, d: we may guess it all
+        if eta <= 20 and d >= 0:  # NOTE: η: somewhat arbitrary bound, d: we may guess it all
+            if r is None:
+                r = simulator(d, params.n - zeta, params.q, beta, xi=xi, tau=False, dual=True)
             probability *= RR(prob_babai(r, sqrt(d) * params.Xe.stddev))
-        # preproc_cost = (0.292*beta+16.4+3+log(d,2)) - probability_enum(params.n, h, zeta, hw)
-        # print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), )
-        # print(bkz_cost["rop"], RR(log(svp_cost["rop"],2)), RR(log(probability,2)), RR(log(search_space,2)))
-
-        # print(zeta, hw, " proba after babai:", log(probability,2))
-        # print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), probability_enum(params.n, h, zeta, hw), RR(log(probability,2)), ";",  RR(log(bkz_cost["rop"],2)), RR(0.292*beta+16.4+3+log(d,2)).n()   ) #RR(preproc_cost), RR(log(bkz_cost["rop"],2))
 
         ret = Cost()
         ret["rop"] = bkz_cost["rop"] + svp_cost["rop"]
@@ -508,7 +529,6 @@ class PrimalHybrid:
         ret["|S|"] = search_space
         ret["d"] = d
         ret["prob"] = probability
-        ret["wt"] = hw
 
         ret.register_impermanent(
             {"|S|": False},
@@ -528,11 +548,6 @@ class PrimalHybrid:
         else:
             return Cost(rop=oo)
 
-        # preproc_cost = (0.292*beta+16.4+3+log(d,2)) - probability_enum(params.n, h, zeta, hw)
-        # enum_cost = ss_enum(zeta,hw)+2*log(d,2) - probability_enum(params.n, h, zeta, hw)
-        # print(zeta, hw, beta, ":", " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), "prob enum:", RR(probability_enum(params.n, h, zeta, hw)).n(), RR(log(ret["|S|"],2)).n(), RR(ss_enum(zeta,hw)).n(), RR(enum_cost).n(),  RR(log(ret["svp"],2)), RR(log(ret["prob"],2)))
-        # print(zeta, hw, beta, " proba babai:", RR(prob_babai(r, sqrt(d) * params.Xe.stddev)), probability_enum(params.n, h, zeta, hw), RR(log(probability,2)), RR(preproc_cost), RR(log(bkz_cost["rop"],2))   )
-
         return ret
 
     @classmethod
@@ -540,7 +555,7 @@ class PrimalHybrid:
         cls,
         zeta: int,
         params: LWEParameters,
-        red_shape_model=red_simulator_default,
+        red_shape_model=red_shape_model_default,
         red_cost_model=red_cost_model_default,
         m: int = oo,
         babai: bool = True,
@@ -556,7 +571,7 @@ class PrimalHybrid:
         # step 0. establish baseline
         baseline_cost = primal_usvp(
             params,
-            red_shape_model=red_shape_model,
+            red_shape_model=simulator_normalize(red_shape_model),
             red_cost_model=red_cost_model,
             optimize_d=False,
             log_level=log_level + 1,
@@ -570,46 +585,23 @@ class PrimalHybrid:
             zeta=zeta,
             babai=babai,
             mitm=mitm,
-            simulator=red_shape_model,
+            red_shape_model=red_shape_model,
             red_cost_model=red_cost_model,
             m=m,
             **kwds,
         )
 
         # step 1. optimize β
-
-        # print("baseline cost beta:", baseline_cost["beta"])
         with local_minimum(
-            2, baseline_cost["beta"] + 50, precision=2, log_level=log_level + 1
+            40, baseline_cost["beta"] + 1, precision=2, log_level=log_level + 1
         ) as it:
             for beta in it:
                 it.update(f(beta))
-                # print(beta, it.y)
             for beta in it.neighborhood:
                 it.update(f(beta))
-                # print('n', beta, it.y)
             cost = it.y
 
-        # print('min cost:', cost["beta"])
-        #
-        # xi = PrimalUSVP._xi_factor(params.Xs, params.Xe)
-        # print("baseline beta:", baseline_cost["beta"])
-        # for beta in range(170, 210, 1):
-        #     delta = deltaf(beta)
-        #     d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), params.m) + 1 - zeta
-        #     #print('d:', d, 'zeta:', zeta)
-        #
-        #     r = red_simulator_default(d, params.n-zeta, params.q, beta, xi=xi, tau=False, dual=True)
-        #     bkz_cost = costf(RC.BDGL16, beta, d)
-        #     eta = PrimalHybrid.svp_dimension(r, params.Xe, xi, params.q, params.n, beta)
-        #     svp_cost = costf(RC.BDGL16, eta, eta)
-        #     #print(bkz_cost, svp_cost)
-        #     print("beta:", beta, "eta:", eta, "bkz:", log(bkz_cost["rop"],2).n(), "svp:", log(svp_cost["rop"],2).n(), "d:", d)
-        #
-
         Logging.log("bdd", log_level, f"H1: {cost!r}")
-
-        optimize_d = False
 
         # step 2. optimize d
         if cost and cost.get("tag", "XXX") != "usvp" and optimize_d:
@@ -667,17 +659,18 @@ class PrimalHybrid:
         EXAMPLES::
 
             >>> from estimator import *
-            >>> LWE.primal_hybrid(schemes.Kyber512.updated(Xs=ND.SparseTernary(512, 16)), mitm = False, babai = False)
-            rop: ≈2^91.5, red: ≈2^90.7, svp: ≈2^90.2, β: 178, η: 21, ζ: 256, |S|: ≈2^56.6, d: 531, ...
+            >>> params = schemes.Kyber512.updated(Xs=ND.SparseTernary(16))
+            >>> LWE.primal_hybrid(params, mitm=False, babai=False)
+            rop: ≈2^89.3, red: ≈2^88.8, svp: ≈2^87.7, β: 106, η: 18, ζ: 321, |S|: ≈2^39.7, d: 360, prob: ≈2^-26.9, ↻...
 
-            >>> LWE.primal_hybrid(schemes.Kyber512.updated(Xs=ND.SparseTernary(512, 16)), mitm = False, babai = True)
-            rop: ≈2^88.7, red: ≈2^88.0, svp: ≈2^87.2, β: 98, η: 2, ζ: 323, |S|: ≈2^39.7, d: 346, ...
+            >>> LWE.primal_hybrid(params, mitm=False, babai=True)
+            rop: ≈2^88.4, red: ≈2^87.8, svp: ≈2^86.9, β: 98, η: 2, ζ: 321, |S|: ≈2^39.7, d: 347, prob: ≈2^-28.1, ↻...
 
-            >>> LWE.primal_hybrid(schemes.Kyber512.updated(Xs=ND.SparseTernary(512, 16)), mitm = True, babai = False)
-            rop: ≈2^74.1, red: ≈2^73.7, svp: ≈2^71.9, β: 104, η: 16, ζ: 320, |S|: ≈2^77.1, d: 359, ...
+            >>> LWE.primal_hybrid(params, mitm=True, babai=False)
+            rop: ≈2^73.4, red: ≈2^72.5, svp: ≈2^72.3, β: 109, η: 15, ζ: 320, |S|: ≈2^82.8, d: 366, prob: 0.001, ↻...
 
-            >>> LWE.primal_hybrid(schemes.Kyber512.updated(Xs=ND.SparseTernary(512, 16)), mitm = True, babai = True)
-            rop: ≈2^85.8, red: ≈2^84.8, svp: ≈2^84.8, β: 105, η: 2, ζ: 366, |S|: ≈2^85.1, d: 315, ...
+            >>> LWE.primal_hybrid(params, mitm=True, babai=True)
+            rop: ≈2^85.5, red: ≈2^84.5, svp: ≈2^84.5, β: 105, η: 2, ζ: 364, |S|: ≈2^85.0, d: 316, prob: ≈2^-23.2, ↻...
 
         TESTS:
 
@@ -685,15 +678,15 @@ class PrimalHybrid:
 
             >>> params = LWE.Parameters(2**10, 2**100, ND.DiscreteGaussian(3.19), ND.DiscreteGaussian(3.19))
             >>> LWE.primal_bdd(params)
-            rop: ≈2^43.7, red: ≈2^43.7, svp: ≈2^22.1, β: 40, η: 2, d: 1516, tag: bdd
+            rop: ≈2^43.6, red: ≈2^43.6, svp: ≈2^21.9, β: 40, η: 2, d: 1514, tag: bdd
 
         We also test a LWE instance with a large error (coming from issue #106)::
 
             >>> LWE.primal_bdd(LWE.Parameters(n=256, q=12289, Xs=ND.UniformMod(2), Xe=ND.UniformMod(1024)))
-            rop: ≈2^116.3, red: ≈2^41.4, svp: ≈2^116.3, β: 40, η: 340, d: 340, tag: bdd
+            rop: ≈2^115.4, red: ≈2^41.3, svp: ≈2^115.4, β: 40, η: 336, d: 336, tag: bdd
 
             >>> LWE.primal_bdd(LWE.Parameters(n=700, q=2**64, Xs=ND.UniformMod(2), Xe=ND.UniformMod(2**59)))
-            rop: ≈2^263.2, red: ≈2^42.8, svp: ≈2^263.2, β: 40, η: 867, d: 867, tag: bdd
+            rop: ≈2^259.8, red: ≈2^42.8, svp: ≈2^259.8, β: 40, η: 854, d: 854, tag: bdd
 
 
         """
@@ -708,8 +701,6 @@ class PrimalHybrid:
         # allow for a larger embedding lattice dimension: Bai and Galbraith
         m = params.m + params.n if params.Xs <= params.Xe else params.m
 
-        red_shape_model = simulator_normalize(red_shape_model)
-
         f = partial(
             self.cost_zeta,
             params=params,
@@ -721,34 +712,20 @@ class PrimalHybrid:
             log_level=log_level + 1,
         )
 
-        def find_zeta_max(params, red_cost_model):
-            usvp_cost = primal_usvp(
-                params, red_cost_model=red_cost_model)["rop"]
-            zeta_max = 1
-            while zeta_max < params.n:
-                # TODO: once support_size() is supported for NTRU, remove the below try/except
-                try:
-                    if params.Xs.support_size(zeta_max) > usvp_cost:
-                        # double it for mitm
-                        return 2 * zeta_max
-                    zeta_max += 1
-                except NotImplementedError:
-                    return params.n
-            return params.n
-
         if zeta is None:
-            zeta_max = find_zeta_max(params, red_cost_model)
+            # Find the smallest value for zeta such that the square root of the search space for
+            # zeta is larger than the number of operations to solve uSVP on the whole LWE instance
+            # (without guessing).
+            usvp_cost = primal_usvp(params, red_cost_model=red_cost_model)["rop"]
+            zeta_max = params.n
+            while (
+                zeta_max < params.n and sqrt(params.Xs.resize(zeta_max).support_size()) < usvp_cost
+            ):
+                zeta_max += 1
+
             with local_minimum(0, min(zeta_max, params.n), log_level=log_level) as it:
                 for zeta in it:
-                    it.update(
-                        f(
-                            zeta=zeta,
-                            optimize_d=False,
-                            **kwds,
-                        )
-                    )
-                    # print('zeta:', zeta)
-                    # print(it.y['beta'])
+                    it.update(f(zeta=zeta, optimize_d=False, **kwds))
             # TODO: this should not be required
             cost = min(it.y, f(0, optimize_d=False, **kwds))
         else:

@@ -1,0 +1,7 @@
+secret dist.,lwe dim.,log q,usvp num,est usvp,bdd num,est bdd,output
+Uniform (-1 0),1024,13,268,266,272,264,268
+Uniform (-1 0),1024,18,195,194,196,191,195
+Uniform (-1 0),1024,27,126,127,127,125,126
+Uniform (-1 0),1024,32,105,106,105,105,105
+Uniform (-1 0),1024,42,78,80,79,79,78
+Uniform (-1 0),1024,64,49,56,49,58,49

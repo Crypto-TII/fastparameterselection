@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from sage.all import binomial, ZZ, log, ceil, RealField, oo, exp, pi
+from sage.all import binomial, ZZ, log, ceil, RealField, oo, exp, RDF
 from sage.all import RealDistribution, RR, sqrt, prod, erf
-from .nd import sigmaf
 from .conf import max_n_cache
 
 
@@ -32,7 +31,7 @@ def conditional_chi_squared(d1, d2, lt, l2):
         0.5351747076352109
 
         >>> prob.conditional_chi_squared(100, 5, 50, 10)
-        1.1707597206287592e-06
+        1.170759720628...e-06
 
         >>> prob.conditional_chi_squared(100, 5, 50, .7)
         5.4021875103989546e-06
@@ -78,46 +77,38 @@ def gaussian_cdf(mu, sigma, t):
     return RR((1/2)*(1 + erf((t - mu)/(sqrt(2)*sigma))))
 
 
-def mitm_babai_probability(r, stddev, q, fast=False):
+def mitm_babai_probability(r, stddev, fast=False):
     """
     Compute the "e-admissibility" probability associated to the mitm step, according to
-    [EPRINT:SonChe19]_
+    [WAHC:SonChe19]_
 
     :params r: the squared GSO lengths
     :params stddev: the std.dev of the error distribution
-    :params q: the LWE modulus
     :param fast: toggle for setting p = 1 (faster, but underestimates security)
     :return: probability for the mitm process
-
-    # NOTE: the model sometimes outputs negative probabilities, we set p = 0 in this case
     """
-
     if fast:
         # overestimate the probability -> underestimate security
         return 1
 
-    # get non-squared norms
-    alphaq = sigmaf(stddev)
-    probs = (
-        RR(
-            erf(s * sqrt(RR(pi)) / alphaq)
-            + (alphaq / s) * ((exp(-s * sqrt(RR(pi)) / alphaq) - 1) / RR(pi))
-        )
-        for s in map(sqrt, r)
-    )
-    p = RR(prod(probs))
-    return p if 0 <= p <= 1 else 0.0
+    # Note: `r` contains *square norms*, so convert to non-square norms.
+    # Follow the proof of Lemma 4.2 [WAHC:SonChe19]_, because that one uses standard deviation.
+    xs = [sqrt(.5 * ri) / stddev for ri in r]
+    # Using RDF.pi() to prevent memory leakage:
+    # see https://ask.sagemath.org/question/45863/memory-usage-strictly-increasing-on-sage-interactive-shell/
+    p = prod(RR(erf(x) - (1 - exp(-x**2)) / (x * sqrt(RDF.pi()))) for x in xs)
+    assert 0.0 <= p <= 1.0
+    return p
 
 
 def babai(r, norm):
     """
-    Babai probability following [EPRINT:Wun16]_.
+    Babai probability following [JMC:Wunderer19]_.
 
     """
     denom = float(2 * norm) ** 2
     T = RealDistribution("beta", ((len(r) - 1) / 2, 1.0 / 2))
     probs = [1 - T.cum_distribution_function(1 - r_ / denom) for r_ in r]
-    #print(denom, r[-1], r[-2], r[0], probs[-1], probs[-2], probs[0])
     return prod(probs)
 
 
@@ -202,5 +193,7 @@ def amplify_sigma(target_advantage, sigma, q):
     if sigma > 16 * q:
         return oo
 
-    advantage = float(exp(-float(pi) * (float(sigma / q) ** 2)))
+    # Using RDF.pi() to prevent memory leakage:
+    # see https://ask.sagemath.org/question/45863/memory-usage-strictly-increasing-on-sage-interactive-shell/
+    advantage = float(exp(-float(RDF.pi()) * (float(sigma / q) ** 2)))
     return amplify(target_advantage, advantage, majority=True)

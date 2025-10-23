@@ -335,7 +335,7 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
         FHEParam = LWE.Parameters(
             n=lwe_d,
             q=2**est_hybrid,
-            Xs=ND.SparseTernary(lwe_d, p=h/2, m=h/2),
+            Xs=ND.SparseTernary(h/2, h/2, lwe_d),
             Xe=ND.DiscreteGaussian(stddev=std_e)
         )
         primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
@@ -626,7 +626,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
             FHEParam = LWE.Parameters(
                 n=lwe_d,
                 q=2**lq,
-                Xs=ND.SparseTernary(lwe_d, h/2, h/2),
+                Xs=ND.SparseTernary(h/2, h/2, lwe_d),
                 Xe=ND.DiscreteGaussian(stddev=std_e)
             )
             primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
