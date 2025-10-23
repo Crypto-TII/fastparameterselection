@@ -10,6 +10,7 @@ filenames = [
     "lambda_bin_2_10_num.csv", "lambda_bin_2_11_num.csv", "lambda_ter_2_10_num.csv",
     "lambda_ter_2_15_num.csv"
 ]
+
 # filenames = sys.argv[1:]  # You can use command line arguments too.
 
 if not filenames:
@@ -30,8 +31,10 @@ for group_name, cols in groups.items():
     results[group_name] = {
         "col_diffs": {col: [] for col in cols},
         "all_diffs": [],
-        "col_worst": {col: (0, None, None, None, None) for col in cols},  # (diff, row, file, value, est)
-        "overall_worst": (0, None, None, None, None),  # (diff, row, col, file, est)
+        # (diff, row, file, value, est)
+        "col_worst": {col: (0, None, None, None, None) for col in cols},
+        # (diff, row, col, file, est)
+        "overall_worst": (0, None, None, None, None),
     }
 
 # --- Process all files ---
@@ -49,9 +52,11 @@ for filename in filenames:
     available_groups = [
         g for g in groups.keys()
         if (
-            g == "usvp" and ("est usvp" in headers or "est usvp_s" in headers or "usvp num" in headers)
+            g == "usvp" and (
+                "est usvp" in headers or "est usvp_s" in headers or "usvp num" in headers)
         ) or (
-            g == "bdd" and ("est bdd" in headers or "est bdd_s" in headers or "bdd num" in headers)
+            g == "bdd" and (
+                "est bdd" in headers or "est bdd_s" in headers or "bdd num" in headers)
         ) or (
             g == "hybrid" and ("hybrid" in headers or "est hybrid" in headers)
         )
@@ -110,7 +115,8 @@ for group_name, data in results.items():
         col_stats[col] = (mean_, std_, worst_)
 
     overall_mean = statistics.mean(data["all_diffs"])
-    overall_std = statistics.stdev(data["all_diffs"]) if len(data["all_diffs"]) > 1 else 0.0
+    overall_std = statistics.stdev(data["all_diffs"]) if len(
+        data["all_diffs"]) > 1 else 0.0
 
     data["col_stats"] = col_stats
     data["overall_mean"] = overall_mean
@@ -129,7 +135,8 @@ for group_name, res in results.items():
               f"worst diff: {worst_[0]:.3f} "
               f"(row {worst_[1]}, file '{worst_[2]}', value={worst_[3]}, est={worst_[4]})")
 
-    print(f"  OVERALL     -> mean: {res['overall_mean']:.3f}, std: {res['overall_std']:.3f}")
+    print(
+        f"  OVERALL     -> mean: {res['overall_mean']:.3f}, std: {res['overall_std']:.3f}")
     w = res["overall_worst"]
     print(f"  OVERALL worst diff: {w[0]:.3f} "
           f"(row {w[1]}, column '{w[2]}', file '{w[3]}', est={w[4]})")
@@ -140,10 +147,10 @@ for group_name, res in results.items():
 # --- Global statistics across all groups ---
 if all_diffs_combined:
     global_mean = statistics.mean(all_diffs_combined)
-    global_std = statistics.stdev(all_diffs_combined) if len(all_diffs_combined) > 1 else 0.0
+    global_std = statistics.stdev(all_diffs_combined) if len(
+        all_diffs_combined) > 1 else 0.0
     print("\n=== OVERALL STATS (USVP + BDD + HYBRID combined) ===")
     print(f"Global mean difference: {global_mean:.3f}")
     print(f"Global std deviation:   {global_std:.3f}")
 else:
     print("\nNo data available for global statistics.")
-

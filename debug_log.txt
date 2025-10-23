@@ -1,15 +1,48 @@
-Running command: 
+Running command: python3 src/estimate.py --param "lambda" --n "1024" --logq "20;30;40;50" --hw "10" --secret "sparse" -v --table
 Content of output.csv:
-secret dist.,lwe dim.,log q,usvp,usvp_s,usvp num,est usvp,bdd,bdd_s,bdd num,est bdd,output
-Uniform (-1 1),131072,3576,128,128,126,128,129,127,126,127,128
-Uniform (-1 1),131072,2469,193,192,190,192,193,190,190,192,193
-Uniform (-1 1),131072,1918,259,255,254,256,256,254,254,256,256
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,1024,20,10,55,59
+SparseTernary,1024,30,10,48,56
+SparseTernary,1024,40,10,45,52
+SparseTernary,1024,50,10,43,49
 ----------------------------------------
-Running command: python3 src/estimate.py --param "lambda" --n "131072" --logq "3576;2469;1918" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+Running command: python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "10" --secret "sparse" -v --table
 Content of output.csv:
-secret dist.,lwe dim.,log q,usvp,usvp_s,usvp num,est usvp,bdd,bdd_s,bdd num,est bdd,output
-Uniform (-1 1),131072,3576,128,128,126,128,129,127,126,127,128
-Uniform (-1 1),131072,2469,193,192,190,192,193,190,190,192,193
-Uniform (-1 1),131072,1918,259,255,254,256,256,254,254,256,256
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,32768,200,10,150,143
+SparseTernary,32768,300,10,104,106
+SparseTernary,32768,400,10,91,92
+SparseTernary,32768,500,10,73,113
 ----------------------------------------
-Running command: python3 src/estimate.py --param "lambda" --n "1024" --logq "16;18;19;25;27;28;30;32;43;48" --secret "ternary" --error "gaussian" --std "3.19" --table -v
+Running command: python3 src/estimate.py --param "lambda" --n "1024" --logq "20;30;40;50" --hw "15" --secret "sparse" -v --table
+Content of output.csv:
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,1024,20,15,68,67
+SparseTernary,1024,30,15,56,63
+SparseTernary,1024,40,15,50,55
+SparseTernary,1024,50,15,46,51
+----------------------------------------
+Running command: python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "15" --secret "sparse" -v --table
+Content of output.csv:
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,32768,200,15,155,152
+SparseTernary,32768,300,15,113,120
+SparseTernary,32768,400,15,94,98
+SparseTernary,32768,500,15,85,115
+----------------------------------------
+Running command: python3 src/estimate.py --param "lambda" --n "1024" --logq "20;30;40;50" --hw "20" --secret "sparse" -v --table
+Content of output.csv:
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,32768,200,15,155,152
+SparseTernary,32768,300,15,113,120
+SparseTernary,32768,400,15,94,98
+SparseTernary,32768,500,15,85,115
+----------------------------------------
+Running command: python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "20" --secret "sparse" -v --table
+Content of output.csv:
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,32768,200,15,155,152
+SparseTernary,32768,300,15,113,120
+SparseTernary,32768,400,15,94,98
+SparseTernary,32768,500,15,85,115
+----------------------------------------

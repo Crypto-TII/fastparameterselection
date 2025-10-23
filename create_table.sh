@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default values for input and output files
-COMMANDS_FILE="tests_commands/lambda_tables.txt"
+COMMANDS_FILE="tests_commands/lambda_tables_small_hw.txt"
 COMPILED_OUTPUT="compiled_output.csv"
 DEBUG_LOG="debug_log.txt"
 

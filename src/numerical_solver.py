@@ -54,9 +54,10 @@ def numerical_lambda_bdd(n, logq, std_s, std_e):
 
     return l_solution
 
+
 def numerical_lambda_bdd_rev1(n, logq, std_s, std_e):
 
-    #print("in numerical_lambda_bdd_rev1!")
+    # print("in numerical_lambda_bdd_rev1!")
     lnq = logq * ln2
     zeta = max(1, round(std_e / std_s))
 
@@ -69,34 +70,37 @@ def numerical_lambda_bdd_rev1(n, logq, std_s, std_e):
     # Initial guess for beta
     beta_initial_guess = beta_approx
 
-    def d_opt(beta): 
-        if beta<2: return 10*5
-        return sqrt(n*(lnq - log(zeta))*2*beta/log(beta/const) )
+    def d_opt(beta):
+        if beta < 2:
+            return 10*5
+        return sqrt(n*(lnq - log(zeta))*2*beta/log(beta/const))
 
-    def eta(beta): 
-        if beta<2: return 10*5
-        return beta + (log2(d_opt(beta))-log(beta))/0.292 
+    def eta(beta):
+        if beta < 2:
+            return 10*5
+        return beta + (log2(d_opt(beta))-log(beta))/0.292
 
-    #print(lnq - log(zeta), sqrt(n*(lnq - log(zeta))*2*beta_initial_guess/log(beta_initial_guess/const)),  d_opt(beta_initial_guess))
+    # print(lnq - log(zeta), sqrt(n*(lnq - log(zeta))*2*beta_initial_guess/log(beta_initial_guess/const)),  d_opt(beta_initial_guess))
 
-    #def nom(beta): return (sqrt(2 * n * (lnq-log(zeta))) - log(8*d_opt(beta))/0.292 - 16.4/0.292 ) * log(beta / const)
-    #def nom(beta): return (d_opt(beta) - (log(8*d_opt(beta)))/0.292 )* log(beta / const)
-    
-    #print(nom(beta_initial_guess))
+    # def nom(beta): return (sqrt(2 * n * (lnq-log(zeta))) - log(8*d_opt(beta))/0.292 - 16.4/0.292 ) * log(beta / const)
+    # def nom(beta): return (d_opt(beta) - (log(8*d_opt(beta)))/0.292 )* log(beta / const)
 
-    #def denom(beta): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - sqrt(2*n*(lnq-log(zeta)) * log(beta/const)/beta)
+    # print(nom(beta_initial_guess))
 
-    #def eq6(beta): return beta - nom(beta)/denom(beta)
+    # def denom(beta): return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - sqrt(2*n*(lnq-log(zeta)) * log(beta/const)/beta)
 
-    def eq6(beta): 
-        #if beta<2: return 10*5
-        return eta(beta) - d_opt(beta) + 2*beta/(log(beta/const))*(lnq - log(std_e) - 0.5*log(const) - n/d_opt(beta)*(lnq-log(zeta))) 
-    
+    # def eq6(beta): return beta - nom(beta)/denom(beta)
+
+    def eq6(beta):
+        # if beta<2: return 10*5
+        return eta(beta) - d_opt(beta) + 2*beta/(log(beta/const))*(lnq - log(std_e) - 0.5*log(const) - n/d_opt(beta)*(lnq-log(zeta)))
+
     beta_solution = fsolve(eq6, beta_initial_guess, full_output=False)
 
-    print("beta:", beta_solution)
+    # print("beta:", beta_solution)
 
-    l_solution = 0.292 * beta_solution[0] + log2(8 * d_opt(beta_solution[0])) + 16.4
+    l_solution = 0.292 * beta_solution[0] + \
+        log2(8 * d_opt(beta_solution[0])) + 16.4
 
     return l_solution
 
