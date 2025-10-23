@@ -28,7 +28,7 @@ import getopt
 import sys
 
 from formulas import (
-    model_n_bdd, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
+    model_n_bdd, model_n_bdd_rev1, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
 )
 
 from aux_functions import (
@@ -310,7 +310,7 @@ def degree_fit(params, logq, levels, e_std, s_std, std_s_num):
         if param == 'n' and simpl == '0':
             if attack == 'bdd':
                 # , params['delta'])
-                model = model_n_bdd(
+                model = model_n_bdd_rev1(
                     security_levels[i], logq, s_std, e_std, new_params)
             if attack == 'usvp':
                 # , params['delta'])
@@ -560,9 +560,13 @@ def plot_points_est(param, points_atk, points_est, points_secret_dist, fit_resul
     if param == 'n':
         for i, level in enumerate(security_levels):
             if attack == 'bdd' and simpl == '0':
-                model = model_n_bdd(level,  modelQ, std_s,
+                # model = model_n_bdd(level,  modelQ, std_s,
+                #                     std_e, fit_results)  # ,delta)
+                # model_error = model_n_bdd(
+                #     level,  logQ, std_s, std_e, fit_results)  # ,delta)
+                model = model_n_bdd_rev1(level,  modelQ, std_s,
                                     std_e, fit_results)  # ,delta)
-                model_error = model_n_bdd(
+                model_error = model_n_bdd_rev1(
                     level,  logQ, std_s, std_e, fit_results)  # ,delta)
             if attack == 'bdd' and simpl == '1':
                 model = model_n_bdd_s(level,  modelQ, fit_results)  # ,delta)

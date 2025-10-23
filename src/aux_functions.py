@@ -9,10 +9,10 @@ from const import (
     LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
     N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
 )
-
+sys.path.append('./latticeestimator')
 from nd import NoiseDistribution as ND
 
-sys.path.append('./latticeestimator')
+
 
 
 def check_estimator_installed():

@@ -176,6 +176,35 @@ def predicted_beta_bdd(n, q, sigma, zeta):
     res = num/denom**2
     return res
 
+def predicted_beta_bdd_rev1(n, q, sigma, zeta):
+    lnq = math.log(q)
+
+    beta_approx1 = const+1
+
+    if n/(lnq) >= 1:
+        beta_approx1 = max(const+1, 2*n/lnq*(math.log(n/(lnq))))  # very rough approximation
+
+
+    A = 2*n*(lnq-math.log(zeta))
+    #A = 2*n*(lnq)
+    B =  (math.log(beta_approx1)+math.log(math.log(beta_approx1/const)))/(0.292*2*math.log(2))
+    C =  math.log(beta_approx1/const) + 2*math.log(q) - 2*math.log(sigma) - math.log(const)
+
+    # approximates beta/(ln(beta/const))
+    Z = ((math.sqrt(A)+math.sqrt(A-C*(math.log(A)/(0.292*2*math.log(2)) - B  )))/C)**2
+
+    ln_beta_const = -lambertw(-const/Z, -1)  # approximates ln(beta/const)
+
+    d_opt = math.sqrt(2*n*(lnq-math.log(zeta))*Z)
+    #d_opt = math.sqrt(2*n*(lnq)*Z)
+
+    num = (d_opt - (math.log2(d_opt)-math.log2(beta_approx1))/0.292)*ln_beta_const
+    denom = ln_beta_const+2*(lnq-math.log(sigma*math.sqrt(const))) - \
+        2*n/d_opt*(lnq-math.log(zeta))
+
+    res = num/denom
+    return res
+
 
 def predicted_beta_usvp(d, lnq, sig, chi):
     """
@@ -278,11 +307,11 @@ def model_lambda_bdd(d, logq, std_s, std_e, params):
 
     if isinstance(logq, list):
         for lq in logq:
-            beta.append(predicted_beta_bdd(d, 2 ** lq, std_e, std_e/std_s))
-            # beta.append(predicted_beta_bdd(d, 2 ** lq, std_e, std_e/std_s))
+            beta.append(predicted_beta_bdd_rev1(d, 2 ** lq, std_e, std_e/std_s))
+            #beta.append(predicted_beta_bdd(d, 2 ** lq, std_e, std_e/std_s))
     else:
-        beta.append(predicted_beta_bdd(d, 2 ** logq, std_e, std_e/std_s))
-        # beta.append(predicted_beta_bdd(d, 2 ** logq, std_e, std_e/std_s))
+        beta.append(predicted_beta_bdd_rev1(d, 2 ** logq, std_e, std_e/std_s))
+        #beta.append(predicted_beta_bdd(d, 2 ** logq, std_e, std_e/std_s))
 
     # Intermediate calculations
     log_delta = np.log(beta) / (np.multiply(2, beta))
@@ -377,9 +406,33 @@ def model_n_bdd(l, logq, std_s, std_e, params):
     nom = (params[0] * B + params[1])*(A + C + params[2])**2
     return A*nom/denom
 
+def model_n_bdd_rev1(l, logq, std_s, std_e, params):
+    zeta = std_e / std_s
+    beta_approx = (l - np.log(8*l)-16.4)/0.292+params[0]  # approximate beta from lambda
+    lnq = np.multiply(logq, ln2)
+
+    logn_approx = np.log2(0.5*beta_approx*(lnq)/np.log(beta_approx/const))
+
+    A = 2*(lnq-np.log(zeta))*beta_approx/(np.log(beta_approx/const))
+    #A = (lnq)*beta_approx/(math.log(beta_approx/const))
+
+    B = np.log(beta_approx/const)
+    C = np.log(beta_approx/const)+2*lnq - 2*np.log(std_e)-np.log(const)
+    D = (lnq-np.log(zeta))*(np.log(beta_approx/const))/(2*beta_approx)
+    #D = (lnq)*(math.log(beta_approx/const))/beta_approx
+    E = 0.5*logn_approx+0.5*np.log2(A)-np.log2(beta_approx)
+
+    nom   = E*B + beta_approx*C
+    denom = 2*beta_approx*np.sqrt(D)+B*np.sqrt(A)
+    # nom   = E*B+beta_approx*C
+    # denom = 2*beta_approx*math.sqrt(D)+B*math.sqrt(A)
+
+    return (params[2]*nom/denom+params[1])**2
+
+
+
+
 # Eq. (25)
-
-
 def model_n_bdd_s(l, logq, params):
     """
     Model the n value for the simplified BDD model.
