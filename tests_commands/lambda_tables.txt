@@ -9,7 +9,7 @@ python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42
 python3 src/estimate.py --param "lambda" --n "2048" --logq "37;46;50;53;54;57;62;67;74;84" --secret "binary" --error "gaussian" --std "3.19" --table -v 
 
 
-python3 src/estimate.py --param "lambda" --n "1024" --logq "13;18;27;32;42;64" --secret "binary" --error "gaussian" --std "3.19" --table -v --num-only
+python3 src/estimate.py --param "lambda" --n "1024" --logq "13;18;27;32;42;54" --secret "binary" --error "gaussian" --std "3.19" --table -v --num-only
 python3 src/estimate.py --param "lambda" --n "2048" --logq "28;32;37;53;64;84" --secret "binary" --error "gaussian" --std "3.19" --table -v --num-only
 python3 src/estimate.py --param "lambda" --n "1024" --logq "14;19;27;34;43" --secret "ternary" --error "gaussian" --std "3.19" --table -v --num-only
 python3 src/estimate.py --param "lambda" --n "32768" --logq "475;611;880;1050;1400" --secret "ternary" --error "gaussian" --std "3.19" --table -v --num-only
