@@ -1,47 +1,16 @@
-# Remark: we allow the user the input any standard deviation for the error. By default, we set it to 3.19 as it is
-# the standard in most FHE schemes today. We also provide a database of points obtained from the lattice estimator
-# setting the standard deviation to 3.19. This means that if the user inputs another standard deviation different than
-# 3.19 he/she should also provide the points with the new standard deviation.
-
-from estimator import LWE, ND, RC
+from nd import NoiseDistribution as ND
 import lmfit
-import math
 import numpy as np
 from aux_functions import helper_fit
-import sqlite3
-import csv
-from os.path import exists
-import ast
-import time
 import pickle
-import json
-import matplotlib.lines as mlines
-import os
-from pathlib import Path
-import matplotlib.pyplot as plt
-from matplotlib import colors as mcolors
-from multiprocessing import Pool, Manager
-import itertools
-import matplotlib.colors as mcolors
-import random
-import getopt
+
 import sys
 
 from formulas import (
-    model_n_bdd, model_n_bdd_rev1, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
+    model_n_bdd, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
 )
-
-from aux_functions import (
-    check_estimator_installed
-)
-
-sys.path.append('../latticeestimator')
 
 #!/usr/bin/env python3
-
-
-# from aux import *
-# from formulas import *
 
 
 secret = "binary"
@@ -65,9 +34,9 @@ attack = 'usvp'
 
 headers = []
 data = []
+
 params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-               ('P3', 1, '-inf'), ('P4', 1, '-inf')]  # , ('P5', 1,0)]
-# 'xvar', value=0.50, min=0, max=1
+               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
 
 security_levels = [145, 140, 135, 128, 125,
                    120, 115, 110, 105, 100, 95, 90, 85, 80]
@@ -76,349 +45,45 @@ degrees = [1024, 2048]
 
 verbose = 0
 
-
-def write_tuples_to_txt(tuples_list, filename):
-    with open(filename, 'w') as file:
-        for tup in tuples_list:
-            file.write(','.join(map(str, tup)) + '\n')
-
-
-def merge_txt_files(input_files, output_file):
-    with open(output_file, 'w') as out_file:
-        for file_name in input_files:
-            with open(file_name, 'r') as in_file:
-                out_file.write(in_file.read())
-
-# In the function 'model_n_bdd' these are called by their position.
-# E.g, alpha = params[0], beta = params[1], gamma = params[2], delta = params[3].
-# If you add a new parameter and don't use it in 'model_n_bdd', a math domain error will triger.
-
-
-def random_color_generator():
-    color = random.choice(list(mcolors.XKCD_COLORS.keys()))
-    return color
-
-# following eq 6 of the paper
-
-
-def compute_lambda(d, logq, secret="u3", error="dg3.19"):
-    sigma = 3.19
-    eta = 2*sigma
-
-    if (secret == "u3"):
-        eta = math.sqrt(float(3)/2)*sigma
-
-    if (logq >= d):
-        return {}
-
-    numerator = 1.75 * d * math.log(float(d) / logq)
-    A = logq + math.sqrt(numerator / logq) - \
-        math.log(2 * math.pi * math.e * sigma)
-    # print("Numerator: ", numerator)
-    # print("A: ", A)
-    lowerbound = (2 * d * (logq - math.log(eta)) * math.log(numerator / (2 *
-                                                                         math.pi * math.e * logq))) / A**2  # This is the right-hand side of eq. 6
-    # print("lowerbound: ", numerator / (2 * math.pi * math.e * logq))
-    lmbda = 0.292 * lowerbound  # this should give an approximation of lambda
-    dic = {}
-    dic['bdd'] = lmbda
-    return dic
-
-# "binary" "u3"
-
-
-def estimate(d, logq, attacks=None, secret="u3", error="dg3.19", force=False, verbose=True):
-    '''
-    Database-caching wrapper for the Lattice Estimator
-
-    Parameters:
-      d:       polynomial degree
-      logq:    bit size of the ciphertext modulus
-      attacks: list of attacks to estimate, supported values are:
-               "arora-gb", "coded-bkw", "usvp", "bdd", "bdd_hybrid", "dual", "dual_hybrid"
-      secret:  the secret distribution, supported values are:
-               "cbd1", "cbd21", "dg3.19", "u3"
-
-    Return Value:
-      A dictonary with estimates for each attack.
-    '''
-    db = sqlite3.connect(database, timeout=30.0)
-
-    # input casting (for sage)
-    # convert sage.rings.integer.Integer to int
-    d = int(d)
-    # d = math.log(2,int(d))
-    logq = int(logq)
-
-    # input validation
-    allAttacks = ['arora-gb', 'coded-bkw', 'usvp',
-                  'bdd', 'bdd_hybrid', 'dual', 'dual_hybrid']
-    skipAttacks = ['arora-gb', 'coded-bkw', 'dual_hybrid']
-
-    versionID = db.execute(
-        "SELECT versionID FROM Versions WHERE hash = ?", (version,)).fetchone()[0]
-    if versionID == None:
-        raise Exception("unsupported version", version)
-    versionID = 3
-
-    attackIDs = []
-    if attacks == None:
-        attacks = allAttacks
-    for attack in attacks:
-        if attack not in skipAttacks:
-            attackID = db.execute(
-                "SELECT attackID FROM attacks WHERE name = ?", (attack,)).fetchone()
-            if attackID == None:
-                raise Exception("unsupported attack", attack)
-            attackIDs.append(attackID[0])
-
-    secretID = db.execute(
-        "SELECT distributionID FROM distributions WHERE name = ?", (secret,)).fetchone()
-    if secret == "umod" or secretID == None:
-        raise Exception("unsupported secret distribution", secret)
-    secretID = 4
-
-    errorID = db.execute(
-        "SELECT distributionID FROM distributions WHERE name = ?", (error,)).fetchone()
-    if error == "umod" or errorID == None:
-        raise Exception("unsupported error distribution", error)
-    errorID = errorID[0]
-
-    # setup estimator
-    dists = [
-        ND.CenteredBinomial(1),
-        ND.CenteredBinomial(21),
-        ND.DiscreteGaussian(3.19),
-        ND.UniformMod(3),
-        ND.UniformMod(2),
-    ]
-    params = LWE.Parameters(d, 2**logq, ND.UniformMod(3),
-                            ND.DiscreteGaussian(3.19))
-
-    estimates = {}
-    estimates_list = []
-
-    for attackID in attackIDs:
-        # check for cached result
-        # print("versionID {}, attackID {}, secretID {}, errorID {}, d {}, logq {}".format(versionID, attackID, secretID, errorID, d, logq))
-        estimate = db.execute("SELECT estimate FROM Estimates WHERE (versionID, attackID, secretID, errorID, d, logq) = (?,?,?,?,?,?)",
-                              (versionID, attackID, secretID, errorID, d, logq)).fetchone()
-        # print("estimate", estimate)
-        if estimate != None:
-            estimates[allAttacks[attackID - 1]] = estimate[0]
-        continue
-        # run the lattice estimator
-        if verbose:
-            print(
-                f"Running lattice estimator for {allAttacks[attackID - 1]} with degree {d} and modulus size {logq}")
-
-        # insert null for the parameter crashing
-        # db.execute("INSERT INTO Estimates (versionID, attackID, secretID, errorID, d, logq, estimate) VALUES (?,?,?,?,?,?,?)", (versionID, attackID, secretID, errorID, d, logq, None))
-        # db.commit()
-
-        # red_cost_model=RC.BDGL16
-        rop = 0
-
-        r_error = 0
-
-        try:
-            if attackID == 1:
-                rop = LWE.arora_gb(params).rop
-            elif attackID == 2:
-                rop = LWE.coded_bkw(params).rop
-            elif attackID == 3:
-                rop = LWE.primal_usvp(params, red_cost_model=RC.BDGL16).rop
-            elif attackID == 4:
-                rop = LWE.primal_bdd(params, red_cost_model=RC.BDGL16).rop
-            elif attackID == 5:
-                rop = LWE.primal_hybrid(params, red_cost_model=RC.BDGL16).rop
-            elif attackID == 6:
-                rop = LWE.dual(params, red_cost_model=RC.BDGL16).rop
-            elif attackID == 7:
-                rop = LWE.dual_hybrid(params).rop
-            estimate = math.log(rop, 2)
-            estimates[allAttacks[attackID - 1]] = estimate
-            r_error = 0
-        except:
-            print("runtime error")
-            r_error = 1
-            pass
-
-        # print("estimate, versionID, attackID, secretID, errorID, d, logq", estimate, versionID, attackID, secretID, errorID, d, logq)
-        if (r_error == 0):
-            estimates_list.append(
-                (estimate, versionID, attackID, secretID, errorID, d, logq))
-
-    db.close()
-
-    return estimates, estimates_list
-
-
-def degree_loss(model, d):
-
-    diff = d-model
-    # for i, x in enumerate(diff):
-    #     if x > 0:
-    #         diff[i] = 0
-
-    return diff
-
-
-def error(model, d):
-    mape = np.nanmean(np.abs((d - model)/d))*100
-    return mape
-
-
-def merge(list1, list2):
-
-    merged_list = []
-    for i in range(0, len(list1)):
-        # if not math.isnan(list1[i]): merged_list.append((list1[i],list2[i]))
-        merged_list.append((list1[i], list2[i]))
-    return merged_list
-
-    residues = ()
-    if d60 != None:
-        residues = np.concatenate((residues, degree_loss(model60, d60)))
-    if d70 != None:
-        residues = np.concatenate((residues, degree_loss(model70, d70)))
-    if d80 != None:
-        residues = np.concatenate((residues, degree_loss(model80, d80)))
-    if d100 != None:
-        residues = np.concatenate((residues, degree_loss(model100, d100)))
-    if d128 != None:
-        residues = np.concatenate((residues, degree_loss(model128, d128)))
-    if d150 != None:
-        residues = np.concatenate((residues, degree_loss(model150, d150)))
-    if d192 != None:
-        residues = np.concatenate((residues, degree_loss(model192, d192)))
-
-    return residues
+# AUX FUNCTIONS FOR FITTING
 
 
 def degree_fit(params, logq, levels, e_std, s_std, std_s_num):
+    new_params = [params[p[0]] for p in params_list]
 
-    residues = ()
-    model = None
-    new_params = []
+    func_map = {
+        ('n', '0', 'bdd'): model_n_bdd,
+        ('n', '0', 'usvp'): model_n_usvp,
+        ('n', '1', 'bdd'): model_n_bdd_s,
+        ('n', '1', 'usvp'): model_n_usvp_s,
+        ('lambda', '0', 'usvp'): model_lambda_usvp,
+        ('lambda', '0', 'bdd'): model_lambda_bdd,
+        ('lambda', '1', 'usvp'): model_lambda_usvp_s,
+        ('lambda', '1', 'bdd'): model_lambda_bdd_s,
+    }
 
-    for p in params_list:
-        new_params.append(params[p[0]])
+    residues = np.array([])
+
+    simpl_key = str(simpl)
 
     for i, level in enumerate(levels):
+        key = (param, simpl_key, attack)
+        func = func_map.get(key)
 
-        if param == 'n' and simpl == '0':
-            if attack == 'bdd':
-                # , params['delta'])
-                model = model_n_bdd_rev1(
-                    security_levels[i], logq, s_std, e_std, new_params)
-            if attack == 'usvp':
-                # , params['delta'])
-                model = model_n_usvp(
-                    security_levels[i], logq, s_std, e_std, new_params)
+        if func is None:
+            model = None
+        else:
+            x = security_levels[i] if param == 'n' else degrees[i]
 
-        if param == 'n' and simpl == '1':
-            if attack == 'bdd':
-                # , params['delta'])
-                model = model_n_bdd_s(
-                    security_levels[i], logq, new_params)
-            if attack == 'usvp':
-                # , params['delta'])
-                model = model_n_usvp_s(security_levels[i], logq, new_params)
+            if simpl_key == '1':
+                model = func(x, logq, new_params)
+            else:
+                model = func(x, logq, s_std, e_std, new_params)
 
-        if param == 'lambda' and simpl == '0':
-            if attack == 'usvp':
-                # , params['delta'])
-
-                model = model_lambda_usvp(
-                    degrees[i], logq, s_std, e_std, new_params)
-
-            if attack == 'bdd':
-                model = model_lambda_bdd(
-                    degrees[i],  logq,  s_std, e_std, new_params)  # ,delta)
-        if param == 'lambda' and simpl == '1':
-            if attack == 'usvp':
-                # , params['delta'])
-                model = model_lambda_usvp_s(degrees[i], logq, new_params)
-            if attack == 'bdd':
-                # , params['delta'])
-                model = model_lambda_bdd_s(degrees[i], logq, new_params)
-
-        if level != None:
-            residues = np.concatenate((residues, degree_loss(model, level)))
+        if level is not None and model is not None:
+            residues = np.concatenate((residues, level - model))
 
     return residues
-
-    # return model
-
-
-def convert(array):
-    li = [float(m) if m != 'nan' else np.nan for m in array]
-    return li
-
-
-def convert_int(array):
-    li = [int(m) if m != 'nan' else np.nan for m in array]
-    return li
-
-
-def get_position_in_bound(degree):
-    if (degree >= 2**10 and degree < 2**11):
-        return 0
-    if (degree >= 2**11 and degree < 2**12):
-        return 1
-    if (degree >= 2**12 and degree < 2**13):
-        return 2
-    if (degree >= 2**13 and degree < 2**(13.5)):
-        return 3
-    if (degree >= 2**(13.5) and degree < 2**14):
-        return 4
-    if (degree >= 2**14 and degree < 2**(14.5)):
-        return 5
-    if (degree >= 2**(14.5) and degree <= 2**15):
-        return 6
-    return -1
-
-
-def check_bound(degree, q, bounds):
-    pos = get_position_in_bound(degree)
-
-    if (pos == -1):
-        print("No bound given for d >= ", degree)
-        exit(0)
-
-    min_q = bounds[pos][0]
-    max_q = bounds[pos][1]
-
-    if (q > min_q and q <= max_q):
-        return 1
-    else:
-        return 0
-
-
-def plot_values(data):
-
-    for v in data:
-        x_value = v[1]
-        y_value = v[0]
-        plt.scatter(x_value, y_value, label=f"{v[2]}")
-
-    plt.xlabel('a')
-    plt.ylabel('t1')
-    plt.title('Scatter Plot')
-    plt.legend()
-    plt.show()
-
-
-def save_dict_to_file(dictionary, filename):
-    with open(filename, 'wb') as file:
-        pickle.dump(dictionary, file)
-
-
-def read_dict_from_file(filename):
-    with open(filename, 'rb') as file:
-        data = pickle.load(file)
-        return data
 
 
 def fit_formula(points_est, e_std, s_std, std_s_num, params):
@@ -436,7 +101,6 @@ def fit_formula(points_est, e_std, s_std, std_s_num, params):
     fit = []
 
     fit = lmfit.minimize(degree_fit, params, nan_policy='omit', kws=args)
-    # print(lmfit.fit_report(fit))
 
     fit_results = []
 
@@ -447,216 +111,7 @@ def fit_formula(points_est, e_std, s_std, std_s_num, params):
     return fit_results
 
 
-def plot_points_est(param, points_atk, points_est, points_secret_dist, fit_results, std_s, std_e):
-    fig, ax = plt.subplots(figsize=(11, 8))
-
-    fig.gca().set_ylabel(r'$d$')
-    fig.gca().set_xlabel(r'$\log q$')
-
-    print("ymin", ymin, "ymax", ymax, "xmin", xmin, "xmax", xmax)
-
-    plt.ylim(ymin, ymax)
-    plt.xlim(xmin, xmax)
-
-    j = 0
-    offsetx = 3
-    offsety = 0.5
-    parity = 0
-
-    colours = []
-
-    markers = ['x', 'o', '^', 'v', '1', 'P', '*']
-
-    if (attack == 'bdd'):
-        markers = ['x', 'o']
-    if (attack == 'usvp'):
-        markers = ['o', 'x']
-
-    plotted_points = [[] for _ in range(len(points_atk))]
-
-    num_points = 0
-
-    for j, d_attack_level in enumerate(points_atk):
-
-        color = random_color_generator()
-        colours.append(color)
-
-        for i, a in enumerate(d_attack_level):
-
-            estimate = points_est[j][i]
-
-            if not np.isnan(estimate):
-                if (verbose):
-                    print("point: ", "logq", logQ[i], "estimate",
-                          estimate, "color", color, "n: ", degrees[j])
-                num_points += 1
-
-            if a == 0:
-                ax.plot(logQ[i], estimate, marker='x',
-                        linestyle='', color=color)
-                plotted_points[j].append((logQ[i], estimate, color))
-            elif a == 1:
-                ax.plot(logQ[i], estimate, marker='o',
-                        linestyle='', color=color)
-                plotted_points[j].append((logQ[i], estimate, color))
-            elif a == 2:
-                ax.plot(logQ[i], estimate, marker='^',
-                        linestyle='', color=color)
-            elif a == 3:
-                ax.plot(logQ[i], estimate, marker='v',
-                        linestyle='', color=color)
-            elif a == 4:
-                ax.plot(logQ[i], estimate, marker='1',
-                        linestyle='', color=color)
-            elif a == 5:
-                ax.plot(logQ[i], estimate, marker='P',
-                        linestyle='', color=color)
-            elif a == 6:
-                ax.plot(logQ[i], estimate, marker='*',
-                        linestyle='', color=color)
-
-    # for j, d_attack_level in enumerate(points_atk):
-
-    #     color = random_color_generator()
-    #     colours.append(color)
-
-    #     for i, a in enumerate(d_attack_level):
-
-    #         estimate = points_est[j][i]
-    #         sigma_e = points_secret_dist[j][i]
-
-    #         if not np.isnan(estimate):
-    #             print("point: ", "sigma_e", sigma_e, "estimate", estimate, "color", color, "n: ", degrees[j])
-    #             num_points += 1
-
-    #         if a == 0:
-    #             ax.plot(sigma_e, estimate, marker='x', linestyle='', color=color)
-    #             plotted_points[j].append((sigma_e,estimate,color))
-    #         elif a == 1:
-    #             ax.plot(sigma_e, estimate, marker='o', linestyle='', color=color)
-    #             plotted_points[j].append((sigma_e,estimate,color))
-    #         elif a == 2:
-    #             ax.plot(logQ[i], estimate, marker='^', linestyle='', color=color)
-    #         elif a == 3:
-    #             ax.plot(logQ[i], estimate, marker='v', linestyle='', color=color)
-    #         elif a == 4:
-    #             ax.plot(logQ[i], estimate, marker='1', linestyle='', color=color)
-    #         elif a == 5:
-    #             ax.plot(logQ[i], estimate, marker='P', linestyle='', color=color)
-    #         elif a == 6:
-    #             ax.plot(logQ[i], estimate, marker='*', linestyle='', color=color)
-
-    if (verbose):
-        print("plotted points: ", plotted_points)
-
-    modelQ = list(range(xmin, logQ[0])) + logQ + \
-        list(range(logQ[-1] + 1, xmax))
-
-    error_file = {}
-
-    if os.path.isfile('dict_errors.pkl'):
-        os.remove('dict_errors.pkl')
-
-    if param == 'n':
-        for i, level in enumerate(security_levels):
-            if attack == 'bdd' and simpl == '0':
-                # model = model_n_bdd(level,  modelQ, std_s,
-                #                     std_e, fit_results)  # ,delta)
-                # model_error = model_n_bdd(
-                #     level,  logQ, std_s, std_e, fit_results)  # ,delta)
-                model = model_n_bdd_rev1(level,  modelQ, std_s,
-                                    std_e, fit_results)  # ,delta)
-                model_error = model_n_bdd_rev1(
-                    level,  logQ, std_s, std_e, fit_results)  # ,delta)
-            if attack == 'bdd' and simpl == '1':
-                model = model_n_bdd_s(level,  modelQ, fit_results)  # ,delta)
-                model_error = model_n_bdd_s(
-                    level,  logQ, fit_results)  # ,delta)
-            if attack == 'usvp' and simpl == '0':
-                model = model_n_usvp(level,  modelQ, std_s,
-                                     std_e, fit_results)  # ,delta)
-                model_error = model_n_usvp(
-                    level,  logQ, std_s, std_e, fit_results)  # ,delta)
-            if attack == 'usvp' and simpl == '1':
-                model = model_n_usvp_s(level,  modelQ, fit_results)  # ,delta)
-                model_error = model_n_usvp_s(
-                    level,  logQ, fit_results)  # ,delta)
-
-            # error_file[level] = {}
-
-            # for j, q in enumerate(logQ):
-            #     if not math.isnan(points_est[i][j]):
-            #         error_file[level][q] = (points_est[i][j], model_error[j])
-
-            # print(error_file)
-            ax.plot(modelQ, model,  linewidth=2,
-                    color=colours[i], linestyle="dotted", label='$lambda=' + str(level) + '$')
-
-    if param == 'lambda':
-        for i, level in enumerate(degrees):
-            if attack == 'usvp' and simpl == '0':
-                model = model_lambda_usvp(
-                    level,  modelQ, std_s, std_e, fit_results)  # ,delta)
-                model_error = model_lambda_usvp(
-                    level,  logQ, std_s, std_e, fit_results)  # ,delta)
-            if attack == 'usvp' and simpl == '1':
-                model = model_lambda_usvp_s(
-                    level,  modelQ, fit_results)  # ,delta)
-                model_error = model_lambda_usvp_s(
-                    level,  logQ, fit_results)  # ,delta)
-            if attack == 'bdd' and simpl == '0':
-                # model = model_lambda_bdd(
-                #    level,  modelQ, std_s, points_secret_dist[i], fit_results)  # ,delta)
-                # model_error = model_lambda_bdd(
-                #   level,  logQ, std_s, points_secret_dist[i], fit_results)  # ,delta)
-                model = model_lambda_bdd(
-                    level,  modelQ, std_s, std_e, fit_results)  # ,delta)
-                model_error = model_lambda_bdd(
-                    level,  logQ, std_s, std_e, fit_results)  # ,delta)
-            if attack == 'bdd' and simpl == '1':
-                model = model_lambda_bdd_s(
-                    level,  modelQ, fit_results)  # ,delta)
-                model_error = model_lambda_bdd_s(
-                    level,  logQ, fit_results)  # ,delta)
-
-            error_file[level] = {}
-
-            for j, q in enumerate(logQ):
-                if not math.isnan(points_est[i][j]):
-                    error_file[level][q] = (points_est[i][j], model_error[j])
-
-            # print(error_file)
-            ax.plot(modelQ, model,  linewidth=2,
-                    color=colours[i], linestyle="dotted", label='$lambda=' + str(level) + '$')
-
-    with open('dict_errors.pkl', 'wb') as fp:
-        pickle.dump(error_file, fp)
-
-    if (attack == 'bdd'):
-        markers = ['o']
-    if (attack == 'usvp'):
-        markers = ['x']
-
-    handles = []
-
-    handles.append(mlines.Line2D([], [], color='purple', marker=markers[0], linestyle='None',
-                                 markersize=10, label=attack))
-
-    legend1 = plt.legend(handles=handles, loc=1)
-
-    plt.gca().add_artist(legend1)
-
-    ax.legend(loc=2)
-
-    ax.grid(color="grey", linestyle='dashed', linewidth=1)
-    # plt.axhline(y = 2296, color = 'r', linestyle = '-')
-    # plt.axvline(x = 95, color = 'r', linestyle = '-')
-    plt.savefig('degree_ter_bdd.png', dpi=1000)
-
-    plt.show()
-
-
-def filter_points(d_estimates):  # Todo, check for strange points?
+def filter_points(d_estimates):
 
     d_estimates_filtered = []
 
@@ -675,304 +130,267 @@ def filter_points(d_estimates):  # Todo, check for strange points?
 
     return d_estimates_filtered
 
-# Function to load dictionary from file
 
-
-def load_dictionary(filename):
-    with open(filename, 'rb') as file:
-        dictionary = pickle.load(file)
-        return dictionary
-
-# Function to save dictionary to file
-
-
-def save_dict(dictionary, filename):
-    try:
-        with open(filename, 'wb') as file:
-            pickle.dump(dictionary, file)
-            print("Dictionary saved successfully to", filename)
-    except Exception as e:
-        print("Error saving dictionary:", e)
-
-
-def find_constants(opts):
-
-    global simpl
-    global param
-    global attack
-    global logQ
-    global degrees
-    global xmin
-    global xmax
-    global ymin
-    global ymax
-
-    estimator_installed = check_estimator_installed()
-    if not estimator_installed:
-        print("Lattice Estimator not installed, can't find constants")
-        exit(0)
-
-    output_dict = {}
-
+def _parse_options(options):
     std_e = 3.19
     std_s = 0.5
+    secret = "binary"
+    secret_q = 2
+    name_file = None
+    param_val = None
+    simpl_val = 0
+    attack_val = None
 
-    for opt, arg in opts:
+    def _handle_secret(arg):
+        nonlocal secret, std_s, secret_q
+        secret = arg
+        if secret == 'binary':
+            std_s = float(ND.UniformMod(2).stddev)
+            secret_q = 2
+        elif secret == 'ternary':
+            std_s = float(ND.UniformMod(3).stddev)
+            secret_q = 3
+        else:
+            print("Secret distribution not supported")
+            sys.exit()
+
+    handlers = {
+        '--attack': ('attack_val', lambda a: a),
+        '--error': ('std_e', lambda a: float(a)),
+        '--param': ('param_val', lambda a: a),
+        '--file': ('name_file', lambda a: a),
+        '--simpl': ('simpl_val', lambda a: a),
+    }
+    results = {}
+
+    for opt, arg in options:
         if opt == '-h':
             helper_fit()
-        elif opt == '--attack':
-            attack = arg
-        elif opt == '--secret':
-            secret = arg
-            if secret == 'binary':
-                std_s = float(ND.UniformMod(2).stddev)
-                secret_q = 2
-                output_dict['std_s'] = 0.5
-            elif secret == 'ternary':
-                std_s = float(ND.UniformMod(3).stddev)
-                secret_q = 3
-                output_dict['std_s'] = math.sqrt(2./3)
-            else:
-                print("Secret distribution not supported")
-                sys.exit()
-        elif opt == '--error':
-            std_e = float(arg)
-            output_dict['std_e'] = std_e
-        elif opt == "--param":
-            param = arg
-        elif opt == '--file':
-            name_file = arg
-        elif opt == '--simpl':
-            simpl = arg
-        else:
-            if opt != '--fit':
-                helper_fit()
+            continue
+        if opt == '--secret':
+            _handle_secret(arg)
+            continue
+        if opt == '--fit':
+            continue
+        if opt in handlers:
+            key, fn = handlers[opt]
+            results[key] = fn(arg)
+            continue
+        helper_fit()
 
-    if param == 'n':
-        if secret == "binary":
-            degrees = list(range(2**10, 2**12, 32))
-            logQ = list(range(20, 65))
-            ymin = 1000
-            ymax = 2050
-            xmin = 20
-            xmax = 65
-            if attack == 'bdd':
-                name_file = 'dataset/data_binary_bdd.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            elif attack == 'usvp':
-                name_file = 'dataset/data_binary_usvp.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, 0), ('P2', 1, 0),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            else:
-                print("Attack " + attack + " not considered")
-                exit(1)
-        else:
-            degrees = list(range(2**10, 2**15, 2**2))
-            logQ = list(range(10, 200)) + list(range(200, 500, 10)) + \
-                list(range(500, 1000, 10)) + list(range(1000, 1600, 50))
-            # degrees = range(2**10, 2**12, 2**2)
-            # logQ = list(range(10,100))
-            # ymin = 15000
-            # ymax = 32390
-            ymin = 1024
-            ymax = 2048
-            # xmin = 400
-            # xmax = 1400
-            xmin = 10
-            xmax = 90
-            if attack == 'bdd':
-                name_file = 'dataset/data_ternary_bdd.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            elif attack == 'usvp':
-                name_file = 'dataset/data_ternary_usvp.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, 0), ('P2', 1, 0.931202),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            else:
-                print("Attack " + attack + " not considered")
-                exit(1)
+    attack_val = results.get('attack_val', attack_val)
+    std_e = results.get('std_e', std_e)
+    param_val = results.get('param_val', param_val)
+    name_file = results.get('name_file', name_file)
+    simpl_val = results.get('simpl_val', simpl_val)
 
-    if param == "lambda":
-        if secret == "binary":
-            degrees = [2**10, 2**11]
-            logQ = list(range(20, 65))
-            ymin = 80
-            ymax = 256
-            xmin = 10
-            xmax = 90
-            if attack == 'bdd':
-                name_file = 'dataset/data_binary_bdd.pkl'
-                params_list = [('P0', 0.07, 0), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            elif attack == 'usvp':
-                name_file = 'dataset/data_binary_usvp.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            else:
-                print("Attack " + attack + " not considered")
-                exit(1)
-        if secret == "ternary":
-            degrees = [2**10, 2**11, 2032, 2**13, 9216, 10240, 11264, 12609, 13633,
-                       14657, 15681, 16384, 17408, 19456, 22528, 24194, 25218, 28290, 32386, 32768]
-            # degrees = [9216, 10240, 11264, 12609, 13633,
-            #           14657, 15681, 16384, 17408, 19456, 22528, 24194, 25218, 28290, 32386, 32768]
-            # degrees = [10240,11264, 12609, 13633, 14657, 1568]
-            logQ = list(range(10, 200)) + list(range(200, 500, 10)) + \
-                list(range(500, 1000, 10)) + list(range(1000, 1600, 50))
-            # logQ = list(range(200, 500, 10)) + \
-            #     list(range(500, 1000, 10)) + list(range(1000, 1600, 50))
-            ymin = 80
-            ymax = 256
-            xmin = 20
-            xmax = 1400
-            if attack == 'bdd':
-                name_file = 'dataset/data_ternary.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            elif attack == 'usvp':
-                name_file = 'dataset/data_ternary.pkl'
-                params_list = [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'),
-                               ('P3', 1, '-inf'), ('P4', 1, '-inf')]
-            else:
-                print("Attack " + attack + " not considered")
-                exit(1)
-        if secret == "tfhe":
-            # degrees = [1517, 1567, 1493, 1476, 1542, 1443, 1418, 1369, 1394, 1336, 1319, 1262, 1287, 1237, 1212, 1163, 1517, 1567, 1493, 1476, 1542, 1443, 1418, 1369, 1394, 1336, 1319, 1262, 1287, 1237, 1212, 1163, 1188, 1138, 1113, 1089, 1015, 1064, 990, 1039, 965, 916, 940, 891, 866, 841, 767, 817, 742, 792, 718, 668, 643, 693, 619, 594, 520, 569, 495, 545, 429, 470, 404, 446, 379, 355, 313, 330, 288, 264, 239, 190, 214]
-            degrees = [1517, 1567, 1493, 1476,
-                       1542, 2087, 2163, 2061, 2121, 2020]
-            logQ = [64]
-            ymin = 75
-            ymax = 195
-            xmin = 1
-            xmax = 64
-            name_file = 'combined.pkl'
+    return std_e, std_s, secret, secret_q, name_file, param_val, simpl_val, attack_val
 
-    points_est = []
-    points_atk = []
-    points_secret_dist = []
-    number_of_levels = len(security_levels)
 
-    max_length = 0
+def _configure_ranges(secret, attack, param_value):
+    def _logq_large():
+        return list(range(10, 200)) + list(range(200, 500, 10)) + list(range(500, 1000, 10)) + list(range(1000, 1600, 50))
 
-    estimates_list = []
+    dispatch = {
+        ('n', 'binary'): {
+            'degrees': list(range(2**10, 2**12, 32)),
+            'logQ': list(range(20, 65)),
+            'ymin': 1000, 'ymax': 2050, 'xmin': 20, 'xmax': 65,
+            'bdd': ('dataset/data_binary_bdd.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+            'usvp': ('dataset/data_binary_usvp.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, 0), ('P2', 1, 0), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+        },
+        ('n', 'ternary'): {
+            'degrees': list(range(2**10, 2**15, 2**2)),
+            'logQ': _logq_large(),
+            'ymin': 1024, 'ymax': 2048, 'xmin': 10, 'xmax': 90,
+            'bdd': ('dataset/data_ternary_bdd.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+            'usvp': ('dataset/data_ternary_usvp.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, 0), ('P2', 1, 0.931202), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+        },
+        ('lambda', 'binary'): {
+            'degrees': [2**10, 2**11],
+            'logQ': list(range(20, 65)),
+            'ymin': 80, 'ymax': 256, 'xmin': 10, 'xmax': 90,
+            'bdd': ('dataset/data_binary_bdd.pkl', [('P0', 0.07, 0), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+            'usvp': ('dataset/data_binary_usvp.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+        },
+        ('lambda', 'ternary'): {
+            'degrees': [2**10, 2**11, 2032, 2**13, 9216, 10240, 11264, 12609, 13633,
+                        14657, 15681, 16384, 17408, 19456, 22528, 24194, 25218, 28290, 32386, 32768],
+            'logQ': _logq_large(),
+            'ymin': 80, 'ymax': 256, 'xmin': 20, 'xmax': 1400,
+            'bdd': ('dataset/data_ternary.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+            'usvp': ('dataset/data_ternary.pkl', [('P0', 0.07, '-inf'), ('P1', 0.34, '-inf'), ('P2', 1, '-inf'), ('P3', 1, '-inf'), ('P4', 1, '-inf')]),
+        },
+    }
+    if param_value is None:
+        cfg = None
+    else:
+        key = (param_value, 'binary' if secret == 'binary' else 'ternary')
+        cfg = dispatch.get(key)
 
-    items = []
+    if cfg is None:
+        degrees_local = globals().get('degrees', degrees)
+        logQ_local = globals().get('logQ', logQ)
+        ymin_local = globals().get('ymin', ymin)
+        ymax_local = globals().get('ymax', ymax)
+        xmin_local = globals().get('xmin', xmin)
+        xmax_local = globals().get('xmax', xmax)
+        name_file = None
+        params_list_local = None
+        return name_file, params_list_local, degrees_local, logQ_local, ymin_local, ymax_local, xmin_local, xmax_local
 
-    degrees_dict = {}
+    attack_entry = cfg.get(attack)
+    if attack_entry is None:
+        print("Attack " + str(attack) + " not considered")
+        exit(1)
 
-    d_estimates = []
+    name_file, params_list_local = attack_entry
+    degrees_local = cfg['degrees']
+    logQ_local = cfg['logQ']
+    ymin_local = cfg['ymin']
+    ymax_local = cfg['ymax']
+    xmin_local = cfg['xmin']
+    xmax_local = cfg['xmax']
 
-# Read the data back using pickle
+    return name_file, params_list_local, degrees_local, logQ_local, ymin_local, ymax_local, xmin_local, xmax_local
+
+
+def _load_and_filter(name_file, secret, verbose):
     with open(name_file, 'rb') as file:
         d_estimates = pickle.load(file)
-
-    if (verbose):
+    if verbose:
         print("file name", name_file)
         print("d_estimates", d_estimates)
-
     if secret == 'tfhe':
         d_estimates_filtered = [d_estimates]
-        degrees = []
+        degrees_local = []
         for d in d_estimates:
-            degrees.append(d[0])
+            degrees_local.append(d[0])
+        return d_estimates_filtered, degrees_local
     else:
         d_estimates_filtered = filter_points(d_estimates)
+        return d_estimates_filtered, None
 
-    # d_estimates_filtered.pop()
 
+def _build_params(params_list_src):
     params = lmfit.Parameters()
-
-    for p in params_list:
+    for p in params_list_src:
         if p[2] != '-inf':
             params.add(p[0], value=p[1], min=p[2])
         else:
             params.add(p[0], value=p[1])
+    return params
 
-    est_dict = {}
 
-    if (param == 'n'):
+def _build_point_grids(d_estimates_filtered, param_value, attack_value, degrees_val, logQ_val, verbose_flag):
+    def _init_grids(rows, cols):
+        row_template = [np.nan] * cols
+        return [row_template.copy() for _ in range(rows)], [row_template.copy() for _ in range(rows)], [row_template.copy() for _ in range(rows)]
 
-        for level in security_levels:
-            points_est.append([np.nan] * len(logQ))
-            points_atk.append([np.nan] * len(logQ))
-            points_secret_dist.append([np.nan] * len(logQ))
-
-        for i, d in enumerate(security_levels):
-            for tup in d_estimates_filtered[i]:
-                if (verbose):
+    def _populate_grid_n():
+        rows = len(security_levels)
+        pe, pa, ps = _init_grids(rows, len(logQ_val))
+        for i in range(rows):
+            tuples = d_estimates_filtered[i]
+            for tup in tuples:
+                if verbose_flag:
                     print(tup)
-                if (attack == 'bdd' and tup[3] == 1):
-                    points_est[i][logQ.index(tup[1])] = tup[0]
-                    points_atk[i][logQ.index(tup[1])] = tup[3]
-                    # if secret == 'tfhe':
-                    #     points_secret_dist[i][logQ.index(tup[1])] = 2**tup[4]
-                    # else:
-                    #     points_secret_dist[i][logQ.index(tup[1])] = 3.19
-                if (attack == 'usvp' and tup[3] == 0):
-                    points_est[i][logQ.index(tup[1])] = tup[0]
-                    points_atk[i][logQ.index(tup[1])] = tup[3]
-                    # if secret == 'tfhe':
-                    #     points_secret_dist[i][logQ.index(tup[1])] = 2**tup[4]
-                    # else:
-                    #     points_secret_dist[i][logQ.index(tup[1])] = 3.19
+                atk = tup[3]
+                match_attack = (attack_value == 'bdd' and atk == 1) or (
+                    attack_value == 'usvp' and atk == 0)
+                if not match_attack:
+                    continue
+                try:
+                    col = logQ_val.index(tup[1])
+                except ValueError:
+                    continue
+                pe[i][col] = tup[0]
+                pa[i][col] = atk
+        return pe, pa, ps
 
-    if (param == 'lambda'):
-
-        for level in degrees:
-            points_est.append([np.nan] * len(logQ))
-            points_atk.append([np.nan] * len(logQ))
-            points_secret_dist.append([np.nan] * len(logQ))
-
+    def _populate_grid_lambda():
+        rows = len(degrees_val)
+        pe, pa, ps = _init_grids(rows, len(logQ_val))
+        deg_index = {d: i for i, d in enumerate(degrees_val)}
         for filtered in d_estimates_filtered:
             for tup in filtered:
-                if (verbose):
+                if verbose_flag:
                     print("tup: ", tup)
+                d = tup[0]
+                i = deg_index.get(d)
+                if i is None:
+                    continue
+                atk = tup[3]
+                match_attack = (attack_value == 'usvp' and atk == 0) or (
+                    attack_value == 'bdd' and atk == 1)
+                if not match_attack:
+                    continue
+                try:
+                    col = logQ_val.index(tup[1])
+                except ValueError:
+                    continue
+                pe[i][col] = tup[2]
+                pa[i][col] = atk
+        return pe, pa, ps
 
-                for i, d in enumerate(degrees):
-                    if tup[0] == d and attack == 'usvp' and tup[3] == 0:
-                        points_est[i][logQ.index(tup[1])] = tup[2]
-                        points_atk[i][logQ.index(tup[1])] = tup[3]
-                        # if secret == 'tfhe':
-                        #     points_secret_dist[i][logQ.index(tup[1])] = 2**tup[4]
-                        # else:
-                        #     points_secret_dist[i][logQ.index(tup[1])] = 3.19
-                    if tup[0] == d and attack == 'bdd' and tup[3] == 1:
-                        points_est[i][logQ.index(tup[1])] = tup[2]
-                        points_atk[i][logQ.index(tup[1])] = tup[3]
-                        # if secret == 'tfhe':
-                        #     points_secret_dist[i][logQ.index(tup[1])] = 2**tup[4]
-                        # else:
-                        #     points_secret_dist[i][logQ.index(tup[1])] = 3.19
+    if param_value == 'n':
+        points_est, points_atk, points_secret_dist = _populate_grid_n()
+    elif param_value == 'lambda':
+        points_est, points_atk, points_secret_dist = _populate_grid_lambda()
+    else:
+        points_est, points_atk, points_secret_dist = [], [], []
 
-    if (verbose):
+    if verbose_flag:
         print("points_est", points_est)
 
-    results = fit_formula(points_est, std_e, std_s, secret_q, params)
+    return points_est, points_atk, points_secret_dist
 
-    # results = [0.28891458, 0.878668965, 19.1069565,1,1]
-    # results = [0.26497, 3.25511,-13.69437,1,1]
+# MAIN FUNCTION TO FIND CONSTANTS
 
-    # if (secret == 'tfhe'):
-    #     for p in d_estimates:
-    #         print(p)
-    #         print("res: ", model_lambda_bdd(
-    #             p[0],  [p[1]], [2**p[4]], results))
-    #         params_est = LWE.Parameters(
-    #             p[0], 2 ** 64, ND.UniformMod(2), ND.DiscreteGaussian(2**p[4]))
-    #         print("lattice estimator: ")
-    #         print(LWE.estimate(params_est))
+
+def find_constants(opts):
+
+    # estimator_installed = check_estimator_installed()
+    # if not estimator_installed:
+    #     print("Lattice Estimator not installed, can't find constants")
     #     exit(0)
-    # model_lambda_bdd(level,  modelQ, points_secret_dist[i], fit_results)
 
-    # NOTE: uncomment to plot the points and the fitted formula
-    # plot_points_est(param, points_atk, points_est,
-    #                points_secret_dist, results, std_s, std_e)
+    std_e, std_s, secret, secret_q, name_file, param_val, simpl_val, attack_val = _parse_options(
+        opts)
 
-    # s = param + attack + str(simpl) + secret
+    if attack_val is not None:
+        globals()['attack'] = attack_val
+    if param_val is not None:
+        globals()['param'] = param_val
+    if simpl_val is not None:
+        globals()['simpl'] = simpl_val
 
-    # name = "params_" + s + ".txt"
-    # np.savetxt(name, np.array(results))
+    param_in_use = globals().get('param', param)
+    attack_in_use = globals().get('attack', attack)
+
+    name_file_conf, params_list_local, degrees_local, logQ_local, ymin_local, ymax_local, xmin_local, xmax_local = _configure_ranges(
+        secret, attack_in_use, param_in_use)
+
+    globals().update({'degrees': degrees_local, 'logQ': logQ_local,
+                      'ymin': ymin_local, 'ymax': ymax_local, 'xmin': xmin_local, 'xmax': xmax_local})
+
+    if name_file is not None:
+        name_file_conf = name_file
+
+    d_estimates_filtered, tfhe_degrees = _load_and_filter(
+        name_file_conf, secret, verbose)
+    if tfhe_degrees:
+        globals()['degrees'] = tfhe_degrees
+        degrees_local = tfhe_degrees
+
+    params_src = params_list_local if params_list_local is not None else params_list
+    params = _build_params(params_src)
+
+    points_est, points_atk, points_secret_dist = _build_point_grids(
+        d_estimates_filtered, param_in_use, attack_in_use, degrees_local, logQ_local, verbose)
+
+    # perform fitting
+    results = fit_formula(points_est, std_e, std_s, secret_q, params)
 
     print("\nFormula: ", opts)
     print("Params: ", results, "\n")

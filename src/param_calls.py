@@ -1,5 +1,11 @@
 import warnings
-from estimator import LWE, RC, ND
+
+try:
+    from estimator import LWE, RC, ND
+except ImportError:
+    estimator = None
+
+
 import math
 from numpy import log2
 import traceback
@@ -141,8 +147,9 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
             est_usvp = int(
                 math.ceil(model_n_usvp(l, lq, std_s, std_e, n_usvp)))
             est_usvp_s = int(math.ceil(model_n_usvp_s(l, lq, n_usvp_s)))
-            #est_bdd = int(math.ceil(model_n_bdd(l, lq, std_s, std_e, n_bdd)))
-            est_bdd = int(math.ceil(model_n_bdd_rev1(l, lq, std_s, std_e, n_bdd)))
+            # est_bdd = int(math.ceil(model_n_bdd(l, lq, std_s, std_e, n_bdd)))
+            est_bdd = int(
+                math.ceil(model_n_bdd_rev1(l, lq, std_s, std_e, n_bdd)))
             est_bdd_s = int(
                 math.ceil(model_n_bdd_s(l, lq, n_bdd_s)))
             # Store the minimum value of n provided from all the formulas

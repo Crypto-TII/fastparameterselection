@@ -24,8 +24,8 @@ def main(argv):
 
     estimator_installed = check_estimator_installed()
     if not estimator_installed and verify:
-        print("Lattice Estimator not installed, can't run verification")
-        return
+        print("Lattice Estimator not installed, running without verification.")
+        verify = False
 
     lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_functions_params(
         get_secret_value(opts))

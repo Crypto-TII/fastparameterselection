@@ -1,3 +1,4 @@
+from nd import NoiseDistribution as ND
 import math
 import csv
 import sys
@@ -10,9 +11,6 @@ from const import (
     N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
 )
 sys.path.append('./latticeestimator')
-from nd import NoiseDistribution as ND
-
-
 
 
 def check_estimator_installed():
@@ -629,5 +627,4 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
 
     # print("Number of calls to the estimator: ", num_calls)
 
-    # TODO: verify that returning max makes sense in all cases
     return max(corrected_bdd, corrected_usvp), corrected_bdd, corrected_usvp, corrected_lwe_bdd, corrected_lwe_usvp, num_calls_usvp, num_calls_bdd
