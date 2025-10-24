@@ -186,9 +186,8 @@ def predicted_beta_bdd_rev1(n, q, sigma, zeta):
 
 
     A = 2*n*(lnq-math.log(zeta))
-    #A = 2*n*(lnq)
-    B =  (math.log(beta_approx1)+math.log(math.log(beta_approx1/const)))/(0.292*2*math.log(2))
-    C =  math.log(beta_approx1/const) + 2*math.log(q) - 2*math.log(sigma) - math.log(const)
+    B = (math.log(beta_approx1)+math.log(math.log(beta_approx1/const)))/(0.292*2*math.log(2))
+    C = math.log(beta_approx1/const) + 2*math.log(q) - 2*math.log(sigma) - math.log(const)
 
     # approximates beta/(ln(beta/const))
     Z = ((math.sqrt(A)+math.sqrt(A-C*(math.log(A)/(0.292*2*math.log(2)) - B  )))/C)**2
@@ -196,7 +195,6 @@ def predicted_beta_bdd_rev1(n, q, sigma, zeta):
     ln_beta_const = -lambertw(-const/Z, -1)  # approximates ln(beta/const)
 
     d_opt = math.sqrt(2*n*(lnq-math.log(zeta))*Z)
-    #d_opt = math.sqrt(2*n*(lnq)*Z)
 
     num = (d_opt - (math.log2(d_opt)-math.log2(beta_approx1))/0.292)*ln_beta_const
     denom = ln_beta_const+2*(lnq-math.log(sigma*math.sqrt(const))) - \
