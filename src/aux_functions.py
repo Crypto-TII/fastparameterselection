@@ -411,21 +411,7 @@ def helper():
     print("  --num-only              Output only numerical results")
     print("  -c                      Apply correction logic")
     print("  -h, --help              Show this help message and exit")
-    print("\nExamples:")
-    print('  # Example 1: Estimate lambda with binary secret')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19"')
-    print('\n  # Example 2: Estimate n with sparse secret')
-    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "sparse" --hw "64"')
-    print('\n  # Example 3: Estimate logq with ternary secret')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "ternary" --error "gaussian" --std "3.19"')
-    print('\n  # Example 4: Estimate std_e')
-    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary" --error "gaussian"')
-    print('\n  # Example 5: Check NTRU parameters')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse" --ntru')
-    print('\n  # Example 6: Output results in table format with verification using the Lattice Estimator')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --secret "binary" --error "gaussian" --std "3.19" -v --table')
-    print('\n  # Example 7: Apply correction logic for logq')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -c')
+    print("\nExamples can be found in tests_commands folder.")
     sys.exit()
 
 
@@ -442,10 +428,10 @@ def create_explanation_dict(headers):
         "lambda": "The security level",
         "log q": "The size of the modulus q in bits",
         "lwe est": "The output of running the Lattice Estimator using the output of our formulas and the rest of the LWE parameters",
-        "usvp": "Output of the formula which estimates the cost of the (unique) SVP attack",
-        "usvp_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) SVP attack",
-        "bdd": "Output of the formula which estimates the cost of the BDD attack",
-        "bdd_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the BDD attack",
+        "usvp": "Output of the formula for the (unique) SVP attack",
+        "usvp_s": "Output of the simplified formula (removing dependency on beta) for the (unique) SVP attack",
+        "bdd": "Output of the formula for the BDD attack",
+        "bdd_s": "Output of the simplified formula (removing dependency on beta) for the BDD attack",
         "logq usvp": "Output of the numerical approximation of log q for the (unique) SVP attack",
         "logq bdd": "Output of the numerical approximation of log q for the BDD attack",
         "usvp num": "Output of the numerical approximation of the (unique) SVP attack",
