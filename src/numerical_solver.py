@@ -39,6 +39,7 @@ def numerical_lambda_bdd(n, logq, std_s, std_e):
     def nom(beta): return 2 * n * lnq * log(beta / const)
 
     def denom(beta):
+        print(n * log(beta / const) / (2 * lnq * beta))
         return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - 2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
 
     def eq6(beta): return beta - nom(beta) / (denom(beta) ** 2)
@@ -140,7 +141,6 @@ def numerical_n_usvp(l, logq, std_s, std_e):
     :return: n value.
     """
     lnq = logq * ln2
-
     zeta = max(1, round(std_e / std_s))
 
     # Initial guesses for n and beta
@@ -225,6 +225,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     beta_initial_guess = (l - 16.4) / 0.292
 
     def zeta(std_e):
+        print("std_e: ", std_e, "std_s: ", std_s)
         return max(1, np.round(std_e / std_s))
 
     def nom(std_e, beta): return 2 * n * \
@@ -278,7 +279,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
             initial_guess[1] = np.random.uniform(-guess_range_beta,
                                                  guess_range_beta, size=1)
 
-        # print(f"Checking {i+1} with initial guess {initial_guess}")
+        print(f"Checking {i+1} with initial guess {initial_guess}")
         try:
             solution, info, ier, msg = fsolve(
                 system_usvp_l, initial_guess, full_output=True, xtol=1e-3, maxfev=1000)
@@ -331,7 +332,7 @@ def numerical_logq_usvp(l, n, std_s, std_e):
             return 1
         else:
             if lnq < 0:  # Ensure lnq is at positive
-                # print(f"lnq is negative: {lnq}")
+                print(f"lnq is negative: {lnq}")
                 return 1
             return sqrt(2 * n * lnq * beta / log(beta / const))
 
