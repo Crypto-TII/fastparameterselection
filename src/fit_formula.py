@@ -7,7 +7,7 @@ import pickle
 import sys
 
 from formulas import (
-    model_n_bdd, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
+    model_n_bdd_rev1, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
 )
 
 #!/usr/bin/env python3
@@ -52,7 +52,7 @@ def degree_fit(params, logq, levels, e_std, s_std, std_s_num):
     new_params = [params[p[0]] for p in params_list]
 
     func_map = {
-        ('n', '0', 'bdd'): model_n_bdd,
+        ('n', '0', 'bdd'): model_n_bdd_rev1,
         ('n', '0', 'usvp'): model_n_usvp,
         ('n', '1', 'bdd'): model_n_bdd_s,
         ('n', '1', 'usvp'): model_n_usvp_s,

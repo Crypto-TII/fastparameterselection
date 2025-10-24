@@ -12,7 +12,7 @@ import traceback
 
 from formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
-    model_n_usvp, model_n_usvp_s, model_n_bdd, model_n_bdd_rev1, model_n_bdd_s,
+    model_n_usvp, model_n_usvp_s, model_n_bdd_rev1, model_n_bdd_s,
 )
 from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_bdd_rev1, numerical_lambda_usvp
 from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid

@@ -380,7 +380,7 @@ def model_n_usvp_s(l, logq, params):
 # Eq. (24)
 
 
-def model_n_bdd(l, logq, std_s, std_e, params):
+def model_n_bdd_rev1(l, logq, std_s, std_e, params):
     """
     Model the n value for the BDD model.
 
@@ -391,20 +391,20 @@ def model_n_bdd(l, logq, std_s, std_e, params):
     :param params: Model parameters.
     :return: n value.
     """
+    sigma = std_e
     zeta = std_e / std_s
     beta_approx = (l - np.log(l))/0.292  # approximate beta from lambda
     lnq = np.multiply(logq, ln2)
-
+    n = l
     A = 2*lnq
     B = beta_approx
     C = np.log(beta_approx/const)
     D = lnq - np.log(zeta)
-
-    denom = (C + params[3])*(A+2*D)**2
+    denom = 9*(C + params[3])*D
     nom = (params[0] * B + params[1])*(A + C + params[2])**2
-    return A*nom/denom
+    return nom/denom
 
-def model_n_bdd_rev1(l, logq, std_s, std_e, params):
+def model_n_bdd_rev1_exact(l, logq, std_s, std_e, params):
     zeta = std_e / std_s
     beta_approx = (l - np.log(8*l)-16.4)/0.292+params[0]  # approximate beta from lambda
     lnq = np.multiply(logq, ln2)
