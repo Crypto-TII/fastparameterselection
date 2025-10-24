@@ -1,3 +1,1 @@
-python3 src/estimate.py --param "logq" --lambda "128" --n "512" --secret "binomial" --error "binomial" --std "1.22" -v
-python3 src/estimate.py --param "logq" --lambda "128" --n "512" --secret "binomial" --error "binomial" --std "4.05" -v
-python3 src/estimate.py --param "logq" --lambda "256" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -v --table
+python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "20" --secret "sparse" -v --table
