@@ -312,7 +312,7 @@ def model_lambda_bdd(d, logq, std_s, std_e, params):
         #beta.append(predicted_beta_bdd(d, 2 ** logq, std_e, std_e/std_s))
 
     # Intermediate calculations
-    log_delta = np.log(beta/const) / (np.multiply(2, beta))
+    log_delta = np.log(np.divide(beta,const)) / (np.multiply(2, beta))
 
     m2 = d * np.divide((lnq - np.log(chi)), log_delta)
 
