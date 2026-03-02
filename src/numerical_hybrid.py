@@ -380,7 +380,7 @@ def exact_runtime(n, logq, sigma_e, h, beta, d, ng, w):
     return t_bkz, t_enum, babai
 
 
-def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
+def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, mitm=False):
     """
     Caller's function for sec. level of hybrid attack
     :param n: LWE dimension
@@ -398,7 +398,12 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h):
 
     # Brute-forcing for w
     for wg in range(2, 52):
-        def eq1(ng_, beta_, d_): return (approx_binom(ng_, wg) + wg) + \
+        def eq1(ng_, beta_, d_): 
+            if mitm:
+                return 0.5*(approx_binom(ng_, wg) + wg) + \
+            log2(d_) - (0.292 * beta_ + 16.4 + 3) + 2
+            else:    
+                return (approx_binom(ng_, wg) + wg) + \
             log2(d_) - (0.292 * beta_ + 16.4 + 3) + 2
 
         def eq2(ng_, beta_, d_): return d_ - \

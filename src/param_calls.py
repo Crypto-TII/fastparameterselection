@@ -43,6 +43,7 @@ def process_parameters(params, table):
     num_only = params['num_only']
     correction = params['correction']
     error_dist_tag = params['error_tag']
+    mitm = params['mitm']
 
     if param == 'n':
         data = process_n(logq, l, error_dist, model_values['n_usvp'], model_values['n_usvp_s'],
@@ -55,7 +56,7 @@ def process_parameters(params, table):
             logq, l, lwe_d, verify, estimator_installed, secret_dist, error_dist, correction, error_dist_tag, table, output_dict)
     elif param == 'lambda':
         data = process_lambda(logq, lwe_d, error_dist, model_values['lambda_usvp'], model_values['lambda_usvp_s'], model_values[
-            'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret_dist, hw, table, num_only, output_dict)
+            'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret_dist, hw, table, num_only, output_dict, mitm)
     elif param == "est":
         data = process_est(logq, lwe_d, error_dist, secret_dist)
     else:
@@ -89,14 +90,14 @@ def process_std_e(logq, l, lwe_d, verify, estimator_installed, secret_dist, erro
     return data
 
 
-def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict):
+def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict, mitm):
     secret = secret_dist.tag
     if secret != 'SparseTernary':
         data = process_lambda_param(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s,
                                     lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict)
     else:
         data = process_lambda_param_hybrid(
-            logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict)
+            logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict, mitm)
 
     return data
 
@@ -606,7 +607,7 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
     return data_point
 
 
-def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict):
+def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict, mitm):
     """
     Process the parameter 'lambda' and estimate its value using various models and numerical solvers.
 
@@ -618,6 +619,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
     :param verify: Boolean flag to indicate if verification is needed.
     :param estimator_installed: Boolean flag to indicate if the estimator is installed.
     :param output_dict: Dictionary to store the output values.
+    :param mitm: Boolean flag to indicated if we use meet in the middle technique for guessing s
 
     :return: List of data points with estimated values for 'lambda'.
     """
@@ -630,7 +632,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
         output_dict['lambda'] = []
     for lq in logq:
         est_hybrid = math.floor(
-            numerical_lambda_hybrid_v2(lwe_d, lq, std_e, h))
+            numerical_lambda_hybrid_v2(lwe_d, lq, std_e, h, mitm))
 
         if verify and estimator_installed:
             FHEParam = LWE.Parameters(
@@ -640,7 +642,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
                 Xe=ND.DiscreteGaussian(stddev=std_e)
             )
             primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-                FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
+                FHEParam, red_cost_model=RC.BDGL16, mitm=mitm, babai=False)["rop"]))
             data_point = {
                 SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
             }

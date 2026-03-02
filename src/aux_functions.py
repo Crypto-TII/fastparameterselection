@@ -73,7 +73,7 @@ def parse_options(argv):
     """
     try:
         opts, args = getopt.getopt(argv, "a,b,h,v,c", [
-                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit"])
+                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm"])
     except Exception as e:
         print(e)
         helper()
@@ -201,12 +201,14 @@ def handle_options(opts):
         'b': 1,           # Upper bound for uniform distribution (error)
         's_eta': 1,       # Parameter for binomial distribution (secret)
         'eta': 1,         # Parameter for binomial distribution (error)
-        'q': 2            # Modulus for uniformmod distribution
+        'q': 2,           # Modulus for uniformmod distribution
+        'mitm': False
     }
     l = 0
     table = False
     num_only = False
     correction = False
+    mitm = False
 
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
@@ -260,6 +262,8 @@ def handle_options(opts):
             secret_dist_tag = str(arg)
         elif opt == '--error':
             error_dist_tag = str(arg)
+        elif opt=='--mitm':
+            mitm = True
         else:
             helper()
 
@@ -271,7 +275,11 @@ def handle_options(opts):
     if error_dist_tag != 'gaussian':
         num_only = True
 
-    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag
+    if secret_dist_tag!='sparse' and params['mitm']==True:
+        print(
+                f"Warning: Mitm makes sense only for sparse secrets, will be ignored")
+
+    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm
 
 
 def export_to_csv(data, output_file):

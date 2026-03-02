@@ -16,7 +16,7 @@ def main(argv):
         find_constants(opts)
         return
 
-    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag = handle_options(
+    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm = handle_options(
         opts)
 
     if handle_errors(error_dist.stddev, logq, lwe_d, l, param):
@@ -56,6 +56,7 @@ def main(argv):
         'hw': hw,
         'output_dict': output_dict,
         'num_only': num_only,
+        'mitm': mitm,
     }
 
     if ntru_flag:
