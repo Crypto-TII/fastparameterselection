@@ -530,6 +530,7 @@ class PrimalHybrid:
         ret["d"] = d
         ret["prob"] = probability
 
+
         ret.register_impermanent(
             {"|S|": False},
             rop=True,
@@ -545,6 +546,8 @@ class PrimalHybrid:
             ret = ret.repeat(
                 prob_amplify(0.99, probability),
             )
+            #print(zeta, hw, log(ret["rop"],2), log(bkz_cost["rop"], 2),log(svp_cost["rop"], 2), log(probability,2))
+
         else:
             return Cost(rop=oo)
 

@@ -50,7 +50,7 @@ def process_parameters(params, table):
                          model_values['n_bdd'], model_values['n_bdd_s'], verify, estimator_installed, secret_dist, table, num_only, output_dict)
     elif param == 'logq':
         data = process_logq(
-            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict)
+            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict, mitm)
     elif param == 'std_e':
         data = process_std_e(
             logq, l, lwe_d, verify, estimator_installed, secret_dist, error_dist, correction, error_dist_tag, table, output_dict)
@@ -71,7 +71,7 @@ def process_n(logq, l, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimato
     return data
 
 
-def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict):
+def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict, mitm):
 
     secret = secret_dist.tag
 
@@ -80,7 +80,7 @@ def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, 
             l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, table, output_dict)
     else:
         data = process_logq_param_hybrid(
-            l, lwe_d, error_dist, verify, estimator_installed, secret_dist, hw, output_dict)
+            l, lwe_d, error_dist, verify, estimator_installed, secret_dist, hw, output_dict, mitm)
     return data
 
 
@@ -317,7 +317,7 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
     return data
 
 
-def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed, secret_dist, h, output_dict):
+def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed, secret_dist, h, output_dict,mitm):
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
@@ -338,7 +338,7 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
     data = []
     secret = secret_dist.tag
     std_e = error_dist.stddev
-    est_hybrid = numerical_logq_hybrid(lwe_d, l, h, std_e)
+    est_hybrid = numerical_logq_hybrid(lwe_d, l, h, mitm, std_e)
 
     if verify and estimator_installed:
         FHEParam = LWE.Parameters(
@@ -348,7 +348,7 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
             Xe=ND.DiscreteGaussian(stddev=std_e)
         )
         primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-            FHEParam, red_cost_model=RC.BDGL16, mitm=False)["rop"]))
+            FHEParam, red_cost_model=RC.BDGL16, mitm=mitm)["rop"]))
         data_point = {
             SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
         }
@@ -642,7 +642,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
                 Xe=ND.DiscreteGaussian(stddev=std_e)
             )
             primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-                FHEParam, red_cost_model=RC.BDGL16, mitm=mitm, babai=False)["rop"]))
+                FHEParam, red_cost_model=RC.BDGL16, mitm=mitm)["rop"]))
             data_point = {
                 SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
             }
