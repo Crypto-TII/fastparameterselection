@@ -5,12 +5,19 @@ from aux_functions import (
     print_warnings, check_ntru, export_to_csv, get_secret_value
 )
 from param_calls import process_parameters
+from fit_formula import find_constants
+
 
 
 def main(argv):
 
     opts = parse_options(argv)
-    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag = handle_options(
+
+    if any(opt == "--fit" for opt, _ in opts):
+        find_constants(opts)
+        return
+
+    output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm, coreSVP = handle_options(
         opts)
 
     if handle_errors(error_dist.stddev, logq, lwe_d, l, param):
@@ -18,8 +25,8 @@ def main(argv):
 
     estimator_installed = check_estimator_installed()
     if not estimator_installed and verify:
-        print("Lattice Estimator not installed, can't run verification")
-        return
+        print("Lattice Estimator not installed, running without verification.")
+        verify = False
 
     lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, n_usvp, n_usvp_s, n_bdd, n_bdd_s = set_functions_params(
         get_secret_value(opts))
@@ -50,6 +57,8 @@ def main(argv):
         'hw': hw,
         'output_dict': output_dict,
         'num_only': num_only,
+        'mitm': mitm,
+        'coreSVP': coreSVP
     }
 
     if ntru_flag:

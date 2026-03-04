@@ -39,7 +39,7 @@ def numerical_lambda_bdd(n, logq, std_s, std_e):
     def nom(beta): return 2 * n * lnq * log(beta / const)
 
     def denom(beta):
-        print(n * log(beta / const) / (2 * lnq * beta))
+        # print(n * log(beta / const) / (2 * lnq * beta))
         return log(beta / const) + 2 * lnq - 2 * log(std_e) - log(const) - 2 * (lnq - log(zeta)) * sqrt(n * log(beta / const) / (2 * lnq * beta))
 
     def eq6(beta): return beta - nom(beta) / (denom(beta) ** 2)
@@ -51,6 +51,47 @@ def numerical_lambda_bdd(n, logq, std_s, std_e):
 
     # Compute lambda
     l_solution = 0.292 * beta_solution[0] + log2(8 * d_optimal) + 16.4
+
+    return l_solution
+
+
+def numerical_lambda_bdd_rev1(n, logq, std_s, std_e):
+
+    # print("in numerical_lambda_bdd_rev1!")
+    lnq = logq * ln2
+    zeta = max(1, round(std_e / std_s))
+
+    # Computing approximate beta for the initial guess
+    if n/(lnq) >= 1:
+        beta_approx = 2*n/lnq*(log(n/(lnq)))
+    else:
+        beta_approx = n / 6
+
+    # Initial guess for beta
+    beta_initial_guess = beta_approx
+
+    def d_opt(beta):
+        if beta < 2:
+            return 10*5
+        return sqrt(n*(lnq - log(zeta))*2*beta/log(beta/const))
+
+    def eta(beta):
+        if beta < 2:
+            return 10*5
+        return beta + (log2(d_opt(beta))-log(beta))/0.292
+
+
+    def main_eq(beta):
+        """
+        eta = d - 1/(ln(delta_beta))( ln(q/(sigma_1 * sqrt(const))) - n*ln(q/zeta)/d )
+        """
+        return eta(beta) - d_opt(beta) + 2*beta/(log(beta/const))*(lnq - log(std_e) - 0.5*log(const) - n/d_opt(beta)*(lnq-log(zeta)))
+
+    beta_solution = fsolve(main_eq, beta_initial_guess, full_output=False)
+
+
+    l_solution = 0.292 * beta_solution[0] + \
+        log2(8 * d_opt(beta_solution[0])) + 16.4
 
     return l_solution
 
@@ -225,7 +266,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     beta_initial_guess = (l - 16.4) / 0.292
 
     def zeta(std_e):
-        print("std_e: ", std_e, "std_s: ", std_s)
+        # print("std_e: ", std_e, "std_s: ", std_s)
         return max(1, np.round(std_e / std_s))
 
     def nom(std_e, beta): return 2 * n * \

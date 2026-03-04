@@ -1,0 +1,6 @@
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20;30;40;50" --hw "10" --secret "sparse" -v --table
+python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "10" --secret "sparse" -v --table
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20;30;40;50" --hw "15" --secret "sparse" -v --table
+python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "15" --secret "sparse" -v --table
+python3 src/estimate.py --param "lambda" --n "1024" --logq "20;30;40;50" --hw "20" --secret "sparse" -v --table
+python3 src/estimate.py --param "lambda" --n "32768" --logq "200;300;400;500" --hw "20" --secret "sparse" -v --table

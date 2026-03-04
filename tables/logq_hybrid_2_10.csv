@@ -1,0 +1,9 @@
+secret dist.,lwe dim.,lambda,hw,logq hybrid,est hybrid
+SparseTernary,1024,100,128,34,102
+SparseTernary,1024,100,192,36,100
+SparseTernary,1024,128,128,26,132
+SparseTernary,1024,128,192,28,131
+SparseTernary,1024,192,128,17,194
+SparseTernary,1024,192,192,19,197
+SparseTernary,1024,256,128,14,238
+SparseTernary,1024,256,192,15,249

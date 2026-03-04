@@ -1,0 +1,7 @@
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,8192,200,128,127,128
+SparseTernary,8192,119,128,196,195
+SparseTernary,8192,87,128,239,243
+SparseTernary,8192,210,192,127,128
+SparseTernary,8192,128,192,205,203
+SparseTernary,8192,91,192,274,280

@@ -6,9 +6,9 @@ From the base of the repository, run the following to build an image and run the
 tests within the container.
 
 ```bash
-docker build -t latticeestimator -f docker/Dockerfile.dev .
-docker run -dit --name latticeestimator-tests latticeestimator
-docker exec latticeestimator-tests sage -sh -c pytest
+docker build -t lattice-estimator -f docker/Dockerfile.dev .
+docker run -dit --name lattice-estimator-tests lattice-estimator
+docker exec lattice-estimator-tests sage -sh -c pytest
 ```
 
 Note that due to [this open

@@ -75,9 +75,8 @@ Some MacOS users may encounter an error when running the tool using `python3 src
 Dependencies
 ------------
 
-We have added the functionality to compare the output of our formulas against the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_. Please download the Estimator if you want to use such functionality.
+We have added the functionality to compare the output of our formulas against the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_. We also use it for some of the more advanced features of our tool. Please use the custom version of the Estimator provided in this repository to avoid unexpected errors. Our code also depends on SageMath, you can follow this `link for an installation guide <https://doc.sagemath.org/html/en/installation/index.html>`_. 
 
-**Note**: At present, the Estimator is also needed to run one of the formulas. This will be fixed shortly.
 
 The following Python libraries are required:
 - `Numpy <https://numpy.org/>`_

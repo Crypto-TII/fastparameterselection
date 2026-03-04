@@ -1,3 +1,4 @@
+from nd import NoiseDistribution as ND
 import math
 import csv
 import sys
@@ -9,10 +10,13 @@ from const import (
     LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
     N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
 )
-
-from nd import NoiseDistribution as ND
-
 sys.path.append('./latticeestimator')
+
+from numpy import log2, log
+coreSVP_models = {
+    "BDGL": lambda beta, d: 0.292*beta+log2(8*d)+16.4, #default
+    "MATZOV": lambda beta, d: 0.296*(beta - beta*0.28768/log(beta/17.1))+20.387+log2(5.4**2)+log2(d)    
+}
 
 
 def check_estimator_installed():
@@ -75,7 +79,7 @@ def parse_options(argv):
     """
     try:
         opts, args = getopt.getopt(argv, "a,b,h,v,c", [
-                                   "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only"])
+                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm", "coreSVP="])
     except Exception as e:
         print(e)
         helper()
@@ -139,7 +143,7 @@ def set_distribution(dist_type, params, is_error=False):
     elif dist_type == 'sparse':
         try:
             dist = ND.SparseTernary(
-                n=params['n'], p=params['hw']/2, m=params['hw']/2)
+                p=params['hw']/2, m=params['hw']/2, n=params['n'])
         except:
             print("Error: Hamming weight --hw is required for sparse secret")
             sys.exit()
@@ -203,14 +207,16 @@ def handle_options(opts):
         'b': 1,           # Upper bound for uniform distribution (error)
         's_eta': 1,       # Parameter for binomial distribution (secret)
         'eta': 1,         # Parameter for binomial distribution (error)
-        'q': 2            # Modulus for uniformmod distribution
+        'q': 2,           # Modulus for uniformmod distribution
+        'mitm': False,
+        'coreSVP': ["BDGL", coreSVP_models["BDGL"]]
     }
-    secret_dist = set_distribution(secret_dist_tag, params)
-    error_dist = set_distribution(error_dist_tag, params, is_error=True)
     l = 0
     table = False
     num_only = False
     correction = False
+    mitm = False
+    coreSVP = ["BDGL", coreSVP_models.get("BDGL")]
 
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
@@ -264,18 +270,29 @@ def handle_options(opts):
             secret_dist_tag = str(arg)
         elif opt == '--error':
             error_dist_tag = str(arg)
+        elif opt=='--mitm':
+            mitm = True
+        elif opt=='--coreSVP':
+            user_model = str(arg)
+            if not coreSVP_models.get(user_model) == None:
+                coreSVP = [user_model, coreSVP_models.get(user_model)]
+            else:
+                print(f"Warning: Requested coreSVP model is not found in the dictionary, resort to BDGL")
         else:
             helper()
 
     secret_dist = set_distribution(secret_dist_tag, params)
-    error_dist = set_distribution(error_dist_tag, params)
+    error_dist = set_distribution(error_dist_tag, params, is_error=True)
 
     if secret_dist_tag != 'binary' and secret_dist_tag != 'ternary':
         num_only = True
     if error_dist_tag != 'gaussian':
         num_only = True
 
-    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag
+    if secret_dist_tag!='sparse' and params['mitm']==True:
+        print(f"Warning: Mitm makes sense only for sparse secrets, will be ignored")
+
+    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm, coreSVP
 
 
 def export_to_csv(data, output_file):
@@ -308,7 +325,7 @@ def export_to_csv(data, output_file):
                     processed_row[key] = value
             writer.writerow(processed_row)
 
-    print(f"Data exported to {output_file}")
+    # print(f"Data exported to {output_file}")
 
 
 def closest_power_of_2(n):
@@ -381,6 +398,17 @@ def parse_logq(logq_str):
     return logq
 
 
+def helper_fit():
+    """
+    Print the helper message for fitting and exit.
+    """
+    print('python3 fit_formula.py --param "lambda" --attack "usvp" --dist "binary" --simpl 0')
+    print('python3 fit_formula.py --param "lambda" --attack "bdd" --dist "ternary" --simpl 1')
+    print('python3 fit_formula.py --param "n" --attack "usvp" --dist "binary" --simpl 0')
+    print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
+    sys.exit()
+
+
 def helper():
     """
     Print the helper message and exit.
@@ -403,22 +431,10 @@ def helper():
     print("  --ntru                  Check NTRU parameters")
     print("  --num-only              Output only numerical results")
     print("  -c                      Apply correction logic")
+    print("  --mitm                  Estimate hybrid with meet-in-the-middle technique; for sparse secrets")
+    print("  --coreSVP               CoreSVP model (BDGL, MATZOV)")
     print("  -h, --help              Show this help message and exit")
-    print("\nExamples:")
-    print('  # Example 1: Estimate lambda with binary secret')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19"')
-    print('\n  # Example 2: Estimate n with sparse secret')
-    print('  python3 src/estimate.py --param "n" --lambda "80" --logq "20-30" --secret "sparse" --hw "64"')
-    print('\n  # Example 3: Estimate logq with ternary secret')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "ternary" --error "gaussian" --std "3.19"')
-    print('\n  # Example 4: Estimate std_e')
-    print('  python3 src/estimate.py --param "std_e" --lambda "80" --n "1024" --logq "20" --secret "binary" --error "gaussian"')
-    print('\n  # Example 5: Check NTRU parameters')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "40" --hw "64" --secret "sparse" --ntru')
-    print('\n  # Example 6: Output results in table format with verification using the Lattice Estimator')
-    print('  python3 src/estimate.py --param "lambda" --n "1024" --logq "20" --secret "binary" --error "gaussian" --std "3.19" -v --table')
-    print('\n  # Example 7: Apply correction logic for logq')
-    print('  python3 src/estimate.py --param "logq" --lambda "80" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -c')
+    print("\nExamples can be found in tests_commands folder.")
     sys.exit()
 
 
@@ -435,10 +451,10 @@ def create_explanation_dict(headers):
         "lambda": "The security level",
         "log q": "The size of the modulus q in bits",
         "lwe est": "The output of running the Lattice Estimator using the output of our formulas and the rest of the LWE parameters",
-        "usvp": "Output of the formula which estimates the cost of the (unique) SVP attack",
-        "usvp_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) SVP attack",
-        "bdd": "Output of the formula which estimates the cost of the BDD attack",
-        "bdd_s": "Output of the simplified formula (removing dependency on beta) which estimates the cost of the BDD attack",
+        "usvp": "Output of the formula for the (unique) SVP attack",
+        "usvp_s": "Output of the simplified formula (removing dependency on beta) for the (unique) SVP attack",
+        "bdd": "Output of the formula for the BDD attack",
+        "bdd_s": "Output of the simplified formula (removing dependency on beta) for the BDD attack",
         "logq usvp": "Output of the numerical approximation of log q for the (unique) SVP attack",
         "logq bdd": "Output of the numerical approximation of log q for the BDD attack",
         "usvp num": "Output of the numerical approximation of the (unique) SVP attack",
@@ -508,7 +524,7 @@ def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_
         error_dist_bdd = set_distribution(
             error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True)
 
-        print("Error dist bdd", error_dist_bdd.stddev)
+        # print("Error dist bdd", error_dist_bdd.stddev)
 
         lwe_parameters_bdd = LWE.Parameters(
             lwe_d, 2**lnq, secret_dist, error_dist_bdd)
@@ -620,5 +636,4 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
 
     # print("Number of calls to the estimator: ", num_calls)
 
-    # TODO: verify that returning max makes sense in all cases
     return max(corrected_bdd, corrected_usvp), corrected_bdd, corrected_usvp, corrected_lwe_bdd, corrected_lwe_usvp, num_calls_usvp, num_calls_bdd

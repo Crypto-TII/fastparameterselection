@@ -1,0 +1,25 @@
+secret dist.,lwe dim.,log q,hw,hybrid,est hybrid
+SparseTernary,1024,20,10,55,59
+SparseTernary,1024,30,10,48,56
+SparseTernary,1024,40,10,45,52
+SparseTernary,1024,50,10,43,49
+SparseTernary,32768,200,10,150,143
+SparseTernary,32768,300,10,104,106
+SparseTernary,32768,400,10,91,92
+SparseTernary,32768,500,10,73,113
+SparseTernary,1024,20,15,68,67
+SparseTernary,1024,30,15,56,63
+SparseTernary,1024,40,15,50,55
+SparseTernary,1024,50,15,46,51
+SparseTernary,32768,200,15,155,152
+SparseTernary,32768,300,15,113,120
+SparseTernary,32768,400,15,94,98
+SparseTernary,32768,500,15,85,115
+SparseTernary,32768,200,15,155,152
+SparseTernary,32768,300,15,113,120
+SparseTernary,32768,400,15,94,98
+SparseTernary,32768,500,15,85,115
+SparseTernary,32768,200,15,155,152
+SparseTernary,32768,300,15,113,120
+SparseTernary,32768,400,15,94,98
+SparseTernary,32768,500,15,85,115
