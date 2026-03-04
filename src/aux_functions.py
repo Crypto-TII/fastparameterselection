@@ -12,6 +12,12 @@ from const import (
 )
 sys.path.append('./latticeestimator')
 
+from numpy import log2, log
+coreSVP_models = {
+    "BDGL": lambda beta, d: 0.292*beta+log2(8*d)+16.4, #default
+    "MATZOV": lambda beta, d: 0.296*(beta - beta*0.28768/log(beta/17.1))+20.387+log2(5.4**2)+log2(d)    
+}
+
 
 def check_estimator_installed():
     try:
@@ -73,7 +79,7 @@ def parse_options(argv):
     """
     try:
         opts, args = getopt.getopt(argv, "a,b,h,v,c", [
-                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm"])
+                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm", "coreSVP="])
     except Exception as e:
         print(e)
         helper()
@@ -202,13 +208,15 @@ def handle_options(opts):
         's_eta': 1,       # Parameter for binomial distribution (secret)
         'eta': 1,         # Parameter for binomial distribution (error)
         'q': 2,           # Modulus for uniformmod distribution
-        'mitm': False
+        'mitm': False,
+        'coreSVP': ["BDGL", coreSVP_models["BDGL"]]
     }
     l = 0
     table = False
     num_only = False
     correction = False
     mitm = False
+    coreSVP = ["BDGL", coreSVP_models.get("BDGL")]
 
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
@@ -264,6 +272,12 @@ def handle_options(opts):
             error_dist_tag = str(arg)
         elif opt=='--mitm':
             mitm = True
+        elif opt=='--coreSVP':
+            user_model = str(arg)
+            if not coreSVP_models.get(user_model) == None:
+                coreSVP = [user_model, coreSVP_models.get(user_model)]
+            else:
+                print(f"Warning: Requested coreSVP model is not found in the dictionary, resort to BDGL")
         else:
             helper()
 
@@ -276,10 +290,9 @@ def handle_options(opts):
         num_only = True
 
     if secret_dist_tag!='sparse' and params['mitm']==True:
-        print(
-                f"Warning: Mitm makes sense only for sparse secrets, will be ignored")
+        print(f"Warning: Mitm makes sense only for sparse secrets, will be ignored")
 
-    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm
+    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm, coreSVP
 
 
 def export_to_csv(data, output_file):
@@ -418,6 +431,8 @@ def helper():
     print("  --ntru                  Check NTRU parameters")
     print("  --num-only              Output only numerical results")
     print("  -c                      Apply correction logic")
+    print("  --mitm                  Estimate hybrid with meet-in-the-middle technique; for sparse secrets")
+    print("  --coreSVP               CoreSVP model (BDGL, MATZOV)")
     print("  -h, --help              Show this help message and exit")
     print("\nExamples can be found in tests_commands folder.")
     sys.exit()
