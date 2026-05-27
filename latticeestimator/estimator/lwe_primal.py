@@ -435,6 +435,7 @@ class PrimalHybrid:
             d = min(ceil(sqrt(params.n * log(params.q) / log(delta))), m)
         d -= zeta
 
+
         if d < beta:
             # cannot BKZ-β on a basis of dimension < β
             return Cost(rop=oo)
@@ -505,6 +506,7 @@ class PrimalHybrid:
 
             svp_cost = svp_cost.repeat(ssf(search_space))
 
+
         if mitm and zeta > 0:
             if babai:
                 if r is None:
@@ -529,6 +531,9 @@ class PrimalHybrid:
         ret["|S|"] = search_space
         ret["d"] = d
         ret["prob"] = probability
+        ret["h"] = hw
+        #if d == 1409:
+        #   print("From Estimator d:", d, 'zeta:', zeta, 'beta:', beta, " red:",  log(ret["red"],2), " svp:", log(ret["svp"],2).n(), "prob babai: ", log( RR(prob_babai(r, sqrt(d) * params.Xe.stddev)),2 ), "prob:", ret["prob"] )
 
 
         ret.register_impermanent(
@@ -541,16 +546,20 @@ class PrimalHybrid:
             prob=False,
         )
 
+        ret.register_impermanent(
+            {"h": False},
+        )
+
         # 4. Repeat whole experiment ~1/prob times
         if probability and not RR(probability).is_NaN():
             ret = ret.repeat(
                 prob_amplify(0.99, probability),
             )
-            #print(zeta, hw, log(ret["rop"],2), log(bkz_cost["rop"], 2),log(svp_cost["rop"], 2), log(probability,2))
+            #print("Estimator:", log(ret["rop"],2), zeta, hw, log(bkz_cost["rop"], 2), log(svp_cost["rop"], 2).n(), log(probability,2))
 
         else:
             return Cost(rop=oo)
-
+        
         return ret
 
     @classmethod
@@ -596,7 +605,7 @@ class PrimalHybrid:
 
         # step 1. optimize β
         with local_minimum(
-            40, baseline_cost["beta"] + 1, precision=2, log_level=log_level + 1
+           40, baseline_cost["beta"] + 1, precision=2, log_level=log_level + 1
         ) as it:
             for beta in it:
                 it.update(f(beta))
@@ -725,8 +734,7 @@ class PrimalHybrid:
                 zeta_max < params.n and sqrt(params.Xs.resize(zeta_max).support_size()) < usvp_cost
             ):
                 zeta_max += 1
-
-            with local_minimum(0, min(zeta_max, params.n), log_level=log_level) as it:
+            with local_minimum(0, min(zeta_max, params.n), precision=5, log_level=log_level) as it:
                 for zeta in it:
                     it.update(f(zeta=zeta, optimize_d=False, **kwds))
             # TODO: this should not be required

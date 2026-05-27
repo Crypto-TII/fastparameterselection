@@ -15,7 +15,7 @@ from formulas import (
     model_n_usvp, model_n_usvp_s, model_n_bdd_rev1, model_n_bdd_s,
 )
 from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_bdd_rev1, numerical_lambda_usvp
-from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
+from numerical_hybrid import numerical_lambda_hybrid, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
 from const import (
@@ -347,12 +347,14 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
     est_hybrid = numerical_logq_hybrid(lwe_d, l, h, mitm, std_e, coreSVP[1])
 
     if verify and estimator_installed:
+        print(f"Calling the LatticeEstimator to verify the result. May take some time...")
         FHEParam = LWE.Parameters(
             n=lwe_d,
             q=2**est_hybrid,
             Xs=ND.SparseTernary(h/2, h/2, lwe_d),
             Xe=ND.DiscreteGaussian(stddev=std_e)
         )
+        #TODO: add more coreSVP models
         match coreSVP[0]:
                 case "BDGL":
                     redcostmodel=RC.BDGL16
@@ -361,10 +363,11 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
                 case _:
                     print(f"unrecognized coreSVP")
                     return
-        primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-            FHEParam, red_cost_model=redcostmodel, mitm=mitm)["rop"]))
+        primal_hybrid_cost = LWE.primal_hybrid(
+            FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
+        print("LatticeEstimator returns:", primal_hybrid_cost)
         data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: math.floor(math.log2(primal_hybrid_cost["rop"]))
         }
     else:
         data_point = {
@@ -646,9 +649,10 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
         output_dict['lambda'] = []
     for lq in logq:
         est_hybrid = math.floor(
-            numerical_lambda_hybrid_v2(lwe_d, lq, std_e, h, mitm, coreSVP[1]))
+            numerical_lambda_hybrid(lwe_d, lq, std_e, h, mitm, coreSVP[1]))
 
         if verify and estimator_installed:
+            print(f"Calling the LatticeEstimator to verify the result. May take some time...")
             FHEParam = LWE.Parameters(
                 n=lwe_d,
                 q=2**lq,
@@ -663,8 +667,10 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
                 case _:
                     print(f"unrecognized coreSVP")
                     return
-            primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-                FHEParam, red_cost_model=redcostmodel, mitm=mitm)["rop"]))
+            primal_hybrid = LWE.primal_hybrid(
+                FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
+            primal_hybrid_cost = math.floor(math.log2(primal_hybrid["rop"]))
+            print("LatticeEstimator returns:", primal_hybrid)
             data_point = {
                 SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
             }

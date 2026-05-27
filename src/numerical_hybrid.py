@@ -1,9 +1,11 @@
 import random
 from sage.all import RR, binomial, RealDistribution, prod, erf
-from numpy import pi, exp, log, log2, sqrt, ceil
+from numpy import pi, exp, log, log2, sqrt, ceil, floor
 from scipy.optimize import fsolve
+from scipy import optimize
 
 import warnings
+import sys
 
 
 # EXACT EQUATIONS:
@@ -306,7 +308,6 @@ def probability_enum(n, h, ng, w):
     :return: Probability that the secret has weight w on ng coordinates
     """
     prob = 0
-    ng = int(ng)
     if ng < 0:
         return -1
     for i in range(0, w+1):
@@ -329,11 +330,11 @@ def ss_enum(ng, w):
     try:
         res = log2(ss)
     except:
-        print('Error on ', ng, w, ss)
+        print('Log2 error in ss_enum on ', ng, w, ss)
     return log2(ss)
 
 
-def babai_prob(n, logq, sigma_e, h, beta, d):
+def babai_prob(n, logq, sigma_e, beta, d, xi):
     """
     The function is taken from the LatticeEstimator (GSA + Babai probability)
     :param n: LWE dimension
@@ -344,9 +345,8 @@ def babai_prob(n, logq, sigma_e, h, beta, d):
     :param d: optimal lattice dimension
     :return: probability of Babai algorithm
     """
-    sigma_s = sqrt(h/n)
-    xi = sigma_e / sigma_s
-    log_vol = RR(logq * (d - n - 1) + log2(xi) * n)
+
+    log_vol = RR(logq * (d - n) + log2(xi) * n)
     r_log = [(d - 1 - 2 * i) * RR(log2_delta(beta)) +
              log_vol / d for i in range(d)]
     r = [2 ** (2 * r_) for r_ in r_log]
@@ -374,7 +374,7 @@ def mitm_babai_probability(n, logq, sigma_e, h, beta, d, fast=False):
     """
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
-    log_vol = RR(logq * (d - n - 1) + log2(xi) * n)
+    log_vol = RR(logq * (d - n) + log2(xi) * n)
     r_log = [(d - 1 - 2 * i) * RR(log2_delta(beta)) +
              log_vol / d for i in range(d)]
     r = [2 ** (2 * r_) for r_ in r_log]
@@ -406,7 +406,9 @@ def exact_runtime(n, logq, sigma_e, h, beta, d, ng, w, mitm, coreSVP = lambda be
     ng = int(ng)
     prob =  probability_enum(n, h, ng, w)
     t_bkz = coreSVP(beta, d) - prob#0.292*beta + log2(8*d) + 16.4 - prob
-    babai = babai_prob(n-ng, logq, sigma_e, h, beta, d)
+    sigma_s = sqrt(h/n)
+    xi = sigma_e / sigma_s 
+    babai = babai_prob(n-ng, logq, sigma_e, beta, d, xi)
     if mitm:
         t_enum = 0.5*ss_enum(ng, w)+2*log2(d) - prob
         babai += mitm_babai_probability(n-ng, logq, sigma_e, h, beta, d, fast=True) #admissibility probability
@@ -415,7 +417,7 @@ def exact_runtime(n, logq, sigma_e, h, beta, d, ng, w, mitm, coreSVP = lambda be
     return t_bkz, t_enum, babai
 
 
-def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, mitm, coreSVP):
+def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, initial_guess = False, bound_trials_max=350, verbose=True):
     """
     Caller's function for sec. level of hybrid attack
     :param n: LWE dimension
@@ -429,95 +431,154 @@ def numerical_lambda_hybrid_v2(n, logq, sigma_e, h, mitm, coreSVP):
     xi = sigma_e / sigma_s
 
     rt_min = float('inf')
-    sol_tolerance = 100  # max solution tolerance
+    sol_tolerance_bound = 2  # max solution tolerance
+    #bound_trials_max = 350
+    shift_bound = 10
 
-    # Brute-forcing for w
-    for wg in range(2, max(52, h)):
-        def eq1(ng_, beta_, d_): 
-            if mitm:
-                return 0.5*(approx_binom(ng_, wg) + wg) + 2*log2(d_) - coreSVP(beta_,d_) + 2
-                #return 0.5*(approx_binom(ng_, wg) + wg)+1*log2(d_) - (0.296*(beta_ - beta_*0.28768/log(beta_/17.1))+20.387+log2(5.4**2))
-            else:    
-                return (approx_binom(ng_, wg) + wg) + \
-            2*log2(d_) - coreSVP(beta_,d_) + 2
+    if n>=2**15:
+        shift_bound = 250
 
-        def eq2(ng_, beta_, d_): return d_ - \
-            ceil(sqrt(n * logq / log2_delta(beta_))) + ng_ - 1
+    # Finding initial point using bdd
 
-        def eq3(ng_, beta_, d_): return (-d_ + 1) * log2(_delta(beta_)) + ((d_ - n +
-                                                                            ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - 2*log2(2*sigma_e)
-
-        def system(x):
-            f1 = eq1(x[0], x[1], x[2])
-            f2 = eq2(x[0], x[1], x[2])
-            f3 = eq3(x[0], x[1], x[2])
-            return f1, f2, f3
-
-        # Finding initial point using bdd
+    if not initial_guess:
         initial_bdd = approx_startpoint_bdd(n, logq, h)
         beta_start = initial_bdd[0]
         d_start = sqrt(2 * n * logq * ln2 * beta_start /
-                       log(beta_start / const))
+                            log(beta_start / const))
         initial_guess = [n / 4, beta_start, d_start - n / 4]
 
-        bound_trials = 250
-        while bound_trials > 0:
-            bound_trials -= 1
-            # print("Initial guess test:", initial_guess)
+        def eq2_init(ng_, d_): return d_ - ceil(sqrt(n * logq / log2_delta(beta_start))) + ng_
+        #def eq3_init(ng_, d_): return (-d_ + 1) * log2_delta(beta_start) + ((d_ - n +
+        #                                                                        ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - 2*log2(2*sigma_e)
+        def eq4_init(ng_): return log2((ng_- h//4)/(n-h-ng_+h//4))/(n-h) - log2(n/(n-ng_))/n
+        
+        def system_init(x):
+            f1 = eq2_init(x[0], x[1])
+            f2 = eq4_init(x[0])
+            return f1, f2
+        
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                res = fsolve(system_init, [n/5, d_start - n/5], maxfev=2**21, full_output=False)
+                initial_guess = [res[0], beta_start, res[1]]
+        except Exception as e:
+            if verbose:
+                print(f"Error in fsolve for initial point: {e}")
+
+    bound_trials = bound_trials_max
+    while bound_trials > 0:
+        bound_trials -= 1
+
+        # Brute-forcing for w
+        for wg in range(2, min(52, h//2)):
+            def eq1(ng_, beta_, d_): 
+                if mitm:
+                    return 0.5*(approx_binom(ng_, wg) + wg) + 2*log2(d_) - coreSVP(beta_,d_) + 2
+                    #return 0.5*(approx_binom(ng_, wg) + wg)+1*log2(d_) - (0.296*(beta_ - beta_*0.28768/log(beta_/17.1))+20.387+log2(5.4**2))
+                else:    
+                    return (approx_binom(ng_, wg) + wg) + \
+                2*log2(d_) - coreSVP(beta_,d_) + 1
+
+            def eq2(ng_, beta_, d_): return d_ - \
+                ceil(sqrt(n * logq / log2_delta(beta_))) + ng_
+            
+
+            def eq3(ng_, beta_, d_): return (-d_ + 1) * log2_delta(beta_) + ((d_ - n +
+                                                                            ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - 2*log2(2*sigma_e)
+            
+            def eq4(ng_): return log2((ng_- wg)/(n-h-ng_+wg))/(n-h) - log2(n/(n-ng_))/n
+
+            def system(x):
+                f1 = eq1(x[0], x[1], x[2])
+                f2 = eq2(x[0], x[1], x[2])
+                f3 = eq3(x[0], x[1], x[2])
+                f4 = eq4(x[0])
+                return f1, f2, f3, f4
+            
+            #improve the initial point for this wg:
+            # try:
+            #     init_ng = fsolve(eq4, initial_guess[0], full_output = False )
+                
+            #     def eq2_for_d( d_): return d_ - ceil(sqrt(n * logq / log2_delta(beta_start))) + init_ng
+            #     init_d = fsolve(eq2_for_d, initial_guess[1], full_output = False)
+            #     if init_ng > 10 and init_ng < init_d:
+            #         initial_guess = [init_ng[0], beta_start, init_d[0]]
+            # except Exception as e:
+            #     print(f"Error in fsolve for init_ng: {e}")
+            #     pass
+            
+            #print("initial_guess:", initial_guess)
+            
             try:
                 with warnings.catch_warnings(record=True) as w:
                     warnings.simplefilter("always")
-                    res = fsolve(system, initial_guess,
-                                 maxfev=2**21, full_output=False)
+                    #res = fsolve(system, initial_guess,
+                    #             maxfev=2**21, full_output=False)
+                    res_ = optimize.root(system, initial_guess, method="lm")
                     # if len(w) > 0 and issubclass(w[-1].category, RuntimeWarning):
                     # print(f"Warning in fsolve: {w[-1].message}")
                 # print("Result from fsolve:", res)
             except Exception as e:
-                print(f"Error in fsolve: {e}")
+                print(f"Error in optimize.root: {e}")
                 continue
+
+            res = res_.x
+            #print(res)
 
             if len(res) < 3:
-                print("Error: Result from fsolve has fewer than 3 elements")
+                if verbose:
+                    print("Error: Result from fsolve has fewer than 3 elements")
                 continue
 
-            if res[0]<=1 or res[1]<=1 or res[2]<=1 or res[0]>=n:
+            if res[0]<=wg or floor(res[0])>n or ceil(res[0])>n-h+wg or res[1]<=45 or res[1]>res[2] or res[2]<=1 :
                 #print("Error: Result from fsolve is outside boundaries")
                 continue
 
-
-            # TODO: compute sol_tolerance only if a solution is found
             sol_tolerance = abs(eq1(res[0], res[1], res[2])) + abs(
-                eq2(res[0], res[1], res[2])) + abs(eq3(res[0], res[1], res[2]))
+                eq2(res[0], res[1], res[2])) + abs(eq3(res[0], res[1], res[2])) + abs(eq4(res[0]))
+            #print(res[0], res[1], res[2], sol_tolerance)
 
-            if sol_tolerance < 2:
-                break
+            #if sol_tolerance< 100:
+            #   initial_guess = res
 
-            if sol_tolerance<10:
-                initial_guess = [int(res[0]), int(res[1]), int(res[2])]
+            #shift = random.randint(-10, 10) 
+            initial_guess = [max(2,initial_guess[0]+random.randint(-shift_bound, shift_bound)), 
+                             max(45, initial_guess[1]-random.randint(-shift_bound, shift_bound)), 
+                             initial_guess[2]-random.randint(-shift_bound, shift_bound)]
+            #print("initial_guess:", initial_guess)
+            if sol_tolerance < sol_tolerance_bound:
+                beta = int(res[1])
+                d = int(res[2])
+                ng = int(ceil(sqrt(n * logq / log2_delta(beta))) - d)
+                if ng<=0 or ng>n:
+                    continue
 
-            #beta_start = max(40, initial_guess[1] + random.randint(-1500, 30))
-            #d_start = sqrt(2 * n * logq * ln2 * beta_start /
-            #               log(beta_start / const))
-            #initial_guess = [n / 4, beta_start, d_start - n / 4]
+                #print(n, h, ng, wg)
+                prob = probability_enum(n, h, ng, wg)
+                if prob == -1:
+                    continue
 
-        prob = probability_enum(n, h, res[0], wg)
+                babai = babai_prob(n-ng, logq, sigma_e, beta, d, xi)
+                rt = coreSVP(res[1], res[2]) + 1 - prob - babai
 
-        if len(res) >= 3 and prob != -1 and sol_tolerance < 4:
+                #bkz_exact = coreSVP(beta, d) - prob
+                #enum_exact = ss_enum(ng, wg)+2*log2(d) - prob
+                #babai = babai_prob(n-ng, logq, sigma_e, beta, d, xi)
+                #bkz_exact, enum_exact, babai = exact_runtime(
+                #    n, logq, sigma_e, h, beta, d, ng, wg, mitm)
+                #rt_exact = max(bkz_exact, enum_exact) - babai
+                #print(wg, rt,  rt_exact, sol_tolerance)
+                if rt < rt_min: # and abs(rt_exact-rt)<4:
+                    if verbose:
+                        print("solution found for lambda:", "rt:", rt, "d:", d, "ng:", ng, "beta:", beta, "wg:", wg, "prob:", prob, "babai:", babai, " after ", bound_trials_max - bound_trials, "attempts")
+                    rt_min = rt
 
-            rt = coreSVP(res[1], res[2]) - prob # 0.292 * res[1] + log2(8 * res[2]) + 16.4 - prob #probability_enum(n, h, res[0], wg)
-            beta = int(res[1])
-            d = int(res[2])
-            ng = ceil(sqrt(n * logq / log2_delta(beta))) - d + 1
-            if ng<=0:
-                continue
-            bkz_exact, enum_exact, babai = exact_runtime(
-                n, logq, sigma_e, h, beta, d, ng, wg, mitm)
-            rt_exact = max(bkz_exact, enum_exact) - babai
-            #print(wg, rt,  rt_exact, sol_tolerance)
-            if rt_exact < rt_min and abs(rt_exact-rt)<4:
-                #print("min!:", res, rt, wg, sol_tolerance )
-                rt_min = rt
-
+            #if solution_for_wg_found: 
+            #    break
+    if rt_min == float('inf'):
+        print(f"Warning: Could not find any solution after {bound_trials_max} attempts, restarting usually helps. Returning a fixed value")
+        rt_min = 1e7 #do not return float('inf') because it cannot be properly processed for the final output
     return rt_min
 
 
@@ -531,10 +592,10 @@ def numerical_logq_starting_point(n, l, sigma_e, h):
     :param h: Ternary secret weight
     :return: tuple (logq, beta).
     """
-    eta_initial_guess = (l - 16.4) / 0.292
-    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
-    eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
-    eta = eta_solution[0]
+    beta_initial_guess = (l - 16.4) / 0.292
+    # def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+    # eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
+    # eta = eta_solution[0]
 
     std_s = sqrt(h / n)
 
@@ -551,7 +612,7 @@ def numerical_logq_starting_point(n, l, sigma_e, h):
     log_std_e = log2(sigma_e)
     zeta = max(0, log_std_e - log2(std_s))
 
-    def eq_for_lnq_and_beta(logq, beta): return eta - d(logq, beta) + 1 / log2_delta(
+    def eq_for_lnq_and_beta(logq, beta): return beta - d(logq, beta) + 1 / log2_delta(
         beta) * (logq - log_std_e - 0.5 * log2(const) - n / d(logq, beta) * (logq - zeta))
 
     def system_bdd_eta_n(x):  # x[0] = n, x[1] = beta
@@ -561,15 +622,17 @@ def numerical_logq_starting_point(n, l, sigma_e, h):
 
     logq_initial_guess = 450
     solutions_lnq_and_beta = fsolve(
-        system_bdd_eta_n, [logq_initial_guess, eta_initial_guess], full_output=True)
+        system_bdd_eta_n, [logq_initial_guess, beta_initial_guess], full_output=True)
     logq_solution = solutions_lnq_and_beta[0][0]
     beta_solustion = solutions_lnq_and_beta[0][1]
+    #print("initial point from BDD:", logq_solution, beta_solustion)
     if not solutions_lnq_and_beta[2] == 1:
+        print("WARNING: Could not find initial solution for logq. Returning fixed values. Result is not guaranteed")
         return 700, 80
     return logq_solution, beta_solustion
 
 
-def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, mitm, coreSVP):
+def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, tolerance_bound, mitm, coreSVP, smallest_logq_found = float("inf")):
     """
     Internal function. Brute-forces over wg-weight
     :param n: LWE dimension
@@ -582,78 +645,104 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, mitm, cor
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
 
-    beta_initial_guess = initial_guess[1]  # (l - log2(8*2*n) - 16.4) / 0.292
-    logq_initial_guess = initial_guess[0]
-    d_initial_guess = ceil(
-        sqrt(n * logq_initial_guess / log2_delta(beta_initial_guess))) + 1 - n/16
+    shift_bound = 20
 
+    if n>=2**15:
+        shift_bound = 100
+    elif n>=2**17:
+        shift_bound = 200
+    
     sols = []
-
-    for wg in range(2, max(52, h)):
-        def eq1a(ng_, beta_, d_): return l - (coreSVP(beta_, d_)) + approx_binom(n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 2
+    for wg in range(0, min(52, h//2)):
+        def eq1a(ng_, beta_, d_): 
+            return l - (coreSVP(beta_, d_)) + approx_binom(n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 1 #TODO: explain the constant
 
         def eq1b(ng_, d_): 
             if mitm:
-                return l - 0.5*(approx_binom(ng_, wg) + wg) - 2*log2(d_) + approx_binom(
-            n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 1
+                return l - 0.5*(approx_binom(ng_, wg) + wg) - 2*log2(d_) + approx_binom(n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 1
             else:
-                return l - approx_binom(ng_, wg) - wg - 2*log2(d_) + approx_binom(
-            n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_) - 1
+                return l - approx_binom(ng_, wg) - wg - 2*log2(d_) + approx_binom(n-h, ng_-wg)+approx_binom(h, wg) - approx_binom(n, ng_)  - 1
 
-        def eq2(ng_, beta_, d_, logq): return d_ - \
-            ceil(sqrt(n * logq / log2_delta(beta_))) + ng_ - 1
+        def eq2(ng_, beta_, d_, logq): return d_ - ceil(sqrt(n * logq / log2_delta(beta_))) + ng_
 
-        def eq3(ng_, beta_, d_, logq): return (-d_+1)*log2_delta(beta_) + ((d_-n+ng_-1)
-                                                                           * logq + (n-ng_)*log2(xi))/d_ - 2*log2(sigma_e)  # - log2(2*sigma_e) - 0.5*log2(d_)
+        def eq3(ng_, beta_, d_, logq): return (-d_ + 1) * log2_delta(beta_) + ((d_ - n +
+                                                                            ng_ - 1) * logq + (n - ng_) * log2(xi)) / d_ - 2*log2(2*sigma_e)
+        
+        def eq4(ng_): return log2((ng_- wg)/(n-h-ng_+wg))/(n-h) - log2(n/(n-ng_))/n
 
         def system(x):
             f1a = eq1a(x[0], x[1], x[2])
-            f1b = eq1b(x[0],  x[2])
+            f1b = eq1b(x[0], x[2])
             f2 = eq2(x[0], x[1], x[2], x[3])
             f3 = eq3(x[0], x[1], x[2], x[3])
-            return f1a, f1b, f2, f3
+            f4 = eq4(x[0])
+            return f1a, f1b, f2, f3, f4
+        
 
         try:
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                res = fsolve(system, [n/16, beta_initial_guess, d_initial_guess,
-                             logq_initial_guess], maxfev=2**21, full_output=False)
-                # if len(w) > 0 and issubclass(w[-1].category, RuntimeWarning):
-                # print(f"Warning in fsolve: {w[-1].message}")
-            # print("Result from fsolve:", res)
+
+                #randomize the guess with wg
+                init_guess_rand = [max(wg+1,initial_guess[0]-random.randint(-shift_bound, shift_bound)), 
+                                   max(45,initial_guess[1]-random.randint(-shift_bound, shift_bound)), 
+                                   max(120, initial_guess[2]-random.randint(-shift_bound, shift_bound)), 
+                                   max(5, initial_guess[3]-random.randint(-shift_bound, shift_bound))]
+                #res = fsolve(system, init_guess_rand, maxfev=2**21, full_output=False)
+                #print("init_guess_rand:", init_guess_rand)
+                res_ = optimize.root(system, init_guess_rand, method='lm')
+                #print(res_.x)
         except Exception as e:
             print(f"Error in fsolve: {e}")
             continue
 
-        sol_tolerance = abs(eq1a(res[0], res[1], res[2]))+abs(eq1b(res[0], res[2]))+abs(
-            eq2(res[0], res[1], res[2], res[3]))+abs(eq3(res[0], res[1], res[2], res[3]))
+        res = res_.x
 
-        if sol_tolerance > 17:
+        sol_tolerance = abs(eq1a(res[0], res[1], res[2]))+abs(eq1b(res[0], res[2]))+abs(
+            eq2(res[0], res[1], res[2], res[3]))+abs(eq3(res[0], res[1], res[2], res[3])) + abs(eq4(res[0]))
+        
+        #print(res[0], res[1], res[2], res[3], sol_tolerance)
+
+        if res[0]<=wg or floor(res[0])>n or ceil(res[0])>n-h+wg or res[1]<=45 or res[1]>res[2] or res[2]<=5 or res[3]<=5:
+            #print("Error: Result from fsolve is outside boundaries")
             continue
+        
+        if sol_tolerance<60:
+            initial_guess = res
+
+        if sol_tolerance > tolerance_bound:
+            continue
+
+        #print(f"found solution with solution tolerance {sol_tolerance}")
 
         beta = int(res[1])
         d = int(res[2])
         logq = int(res[3])
-        ng = ceil(sqrt(n * logq / log2_delta(beta))) - d + 1
-        if ng <= 0:
-            continue
-        bkz_exact, enum_exact, babai = exact_runtime(
-            n, logq, sigma_e, h, beta, d, ng, wg, mitm, coreSVP)
-        rt = max(bkz_exact, enum_exact) - babai
+        ng = int(ceil(sqrt(n * logq / log2_delta(beta))) - d)
 
-        eq1a_tolerance_exact = abs(eq1a(ng, beta, d))
-
-        sol_tolerance_exact = abs(eq1a(ng, beta, d))+abs(eq1b(ng, d))+abs(
-            eq2(ng, beta, d, logq))+abs(eq3(ng, beta, d, logq))
-
-        #print(wg, rt, logq, " : ", bkz_exact, enum_exact, babai, ";", sol_tolerance, sol_tolerance_exact, eq1a_tolerance_exact, abs(eq1b(ng, d)),
-        #     abs(eq3(ng, beta, d, logq)))
-
-        # the upper bounds are purely experimental numbers; may need adjustment
-        if (abs(sol_tolerance) < 15 and eq1a_tolerance_exact < 10 and abs(l-rt) < 4):
+        if logq < smallest_logq_found:
             sols.append([l, n, h, logq, beta, d, ng, wg])
-            # print(l, n, h, logq, beta, d, ng, wg )
-    return sols
+            smallest_logq_found = logq
+            initial_guess = res
+        #print("Adding a candidate solution:", "logq:", logq, "beta:", beta, "d:", d, "ng:", ng, "wg:", wg )
+        
+        # bkz_exact, enum_exact, babai = exact_runtime(
+        #     n, logq, sigma_e, h, beta, d, ng, wg, mitm, coreSVP)
+        # rt = max(bkz_exact, enum_exact) - babai
+
+        # eq1a_tolerance_exact = abs(eq1a(ng, beta, d))
+
+        # sol_tolerance_exact = abs(eq1a(ng, beta, d))+abs(eq1b(ng, d))+abs(
+        #     eq2(ng, beta, d, logq))+abs(eq3(ng, beta, d, logq))
+
+        # print("Somewhat a solution for wg:", wg, rt, logq, " : ", bkz_exact, enum_exact, babai, ";", sol_tolerance, sol_tolerance_exact, eq1a_tolerance_exact, abs(eq1b(ng, d)),
+        #      abs(eq3(ng, beta, d, logq)))
+
+        # # the upper bounds are purely experimental numbers; may need adjustment
+        # if (abs(sol_tolerance) < 15 and eq1a_tolerance_exact < 10 and abs(l-rt) < tolerance_bound):
+        #     sols.append([l, n, h, logq, beta, d, ng, wg])
+        #     print("Adding a candidate solution:", "logq:", logq, "beta:", beta, "d:", d, "ng:", ng, "wg:", wg )
+    return sols, initial_guess
 
 
 #
@@ -668,36 +757,97 @@ def numerical_logq_hybrid(n, l, h, mitm, std_e, coreSVP):
     :return: logq best scored by check_candidates_logq_exact()
     """
 
-    initial_guess = numerical_logq_starting_point(n, l, std_e, h)
-    res = numerical_logq_hybrid_runoptimize(n, l, std_e, h, initial_guess, mitm, coreSVP)
+    tolerance_bound = 12
+    bound_trials_max = 50
+    tolerable_diff = 3
+    best_logq = float("inf")
+    some_logq_found = False
 
-    # experimentally verified bounds to shift initial points
-    if n <= 2**11:
-        B = 100
-    elif n <= 2**13:
-        B = 200
-    else:
-        B = 400
+    sigma_s = sqrt(h/n)
+    xi = std_e / sigma_s
+
+
+    initial_stpoint = numerical_logq_starting_point(n, l, std_e, h) #[logq, beta]
+    
+    logq_st_point = initial_stpoint[0]
+    beta_st_point = initial_stpoint[1]
+    ng_st_point = ceil(sqrt(0.45*beta_st_point))
+    d_st_point = ceil(sqrt(n * logq_st_point / log2_delta(beta_st_point))) - ng_st_point
+
+    #print([ng_st_point,beta_st_point,d_st_point,logq_st_point])
+
+    #find a good initial point from two equations
+    def eq2_init(ng_, d_): return d_ - ceil(sqrt(n * logq_st_point / log2_delta(beta_st_point))) + ng_
+    def eq3_init(ng_, d_): return (-d_+1)*log2_delta(beta_st_point) + ((d_-n+ng_-1)
+                                                                * logq_st_point + (n-ng_)*log2(xi))/d_ - 2*log2(std_e)
+
+    def system(x):
+        f2 = eq2_init(x[0], x[1])
+        f3 = eq3_init(x[0], x[1])
+        
+        return f2, f3
+    
+    try:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            res = fsolve(system, [ng_st_point, beta_st_point-10], maxfev=2**21, full_output=False)
+            if res[0]>0 and d_st_point>0 and res[0]<n:
+                ng_st_point = res[0]
+                d_st_point = res[1]
+                #logq_st_point = res[2]
+    except Exception as e:
+            print(f"Error in fsolve for d: {e}")
+
+    #init_point_tolerance = abs(eq2_init(res[0], res[1])) + abs(eq3_init(res[0], res[1])) 
+    #print("init_guess:", [ng_st_point, beta_st_point, max(beta_st_point, d_st_point), logq_st_point])
+    #print("init_point_tolerance:", init_point_tolerance)
 
     # if no candidates found, try again with new initial guess up to bound_trials  times
-    bound_trials = 200
-    while len(res) == 0 and bound_trials > 0:
+    init_guess = [ng_st_point, beta_st_point, max(beta_st_point, d_st_point), logq_st_point]
+    #print("init_guess:", init_guess)
+    bound_trials = bound_trials_max
+    while bound_trials > 0:
         bound_trials -= 1
-        shift = random.randint(-B, B)
-        init_guess2 = [max(12, initial_guess[0]+shift),
-                       max(40, initial_guess[1]-shift)]
-        res = numerical_logq_hybrid_runoptimize(n, l, std_e, h, init_guess2, mitm, coreSVP)
-        print("re-start numerical_logq_hybrid_runoptimize #",
-              200-bound_trials, "...")
-        if len(res) > 0:
-            break
 
-    if len(res) == 0:
-        print("numerical_logq_hybrid_runoptimize couldn't find a solution after",
-              200-bound_trials, "trial for this parameters set")
-        return 450  # float('inf')
+        
+        #list of solution tuples of the form [l, n, h, logq, beta, d, ng, wg]
+        res, init_guess = numerical_logq_hybrid_runoptimize(n, l, std_e, h, init_guess, tolerance_bound, mitm, coreSVP, smallest_logq_found=best_logq)
+        
+        #verify each solution tuple
+        #keep the tuple with the smallest logq
+        for [l, n, h, logq, beta, d, ng, w] in res:
+            #tbz, tenum, babai = exact_runtime(n, logq, std_e, h, beta, d, ng, w, mitm, coreSVP)
+            #if babai<10: #we assumed babai probability is close to 1
+            #    continue
+            #prob = probability_enum(n, h, ng, w)
+            #if prob == -1:
+            #    continue
 
-    best_logq = check_candidates_logq_exact(res, mitm, std_e, coreSVP)
+            #rt_red = coreSVP(beta, d) + 1 - prob
+            #rt_enum = ss_enum(ng, w) - prob + 2*log2(d)
+            #babai = babai_prob(n-ng, logq, std_e, beta, d, xi)
+            #rt = max(rt_red,rt_enum) - babai
+
+            rt_lambda = numerical_lambda_hybrid(n, logq, std_e, h, mitm, coreSVP, initial_guess=[ng, beta, d], bound_trials_max=15, verbose=False)
+
+            #lambda_hybrid = numerical_lambda_hybrid_v2(n, logq, std_e, h, mitm, coreSVP)
+            print("Check for logq = ", logq, "estimated rt = ", rt_lambda)
+            # output the smallest found logq. It seems that we overestimate the attack compared to the LatticeEstimator
+            if  abs(rt_lambda-l) < tolerance_bound and logq < best_logq:
+                best_diff = abs(rt_lambda - l)
+                best_logq = logq
+                print(f"Solution found: logq = {logq} with rt = {rt_lambda} after {bound_trials_max - bound_trials} attempts with best_diff = {best_diff}")
+                #print(" rt_red:", rt_red, " rt_enum:", rt_enum, "rt = ", rt, "for d = ", d, "ng = ", ng, "w = ", w)
+                some_logq_found = True
+
+        #if some_logq_found:
+        #    print("Found logq = ", best_logq, "with best_diff = ", best_diff)
+        #    break
+            
+    if best_logq==float("inf"):
+        print(f"Warning: Numerical_logq_hybrid_runoptimize couldn't find a solution after {bound_trials_max} trials \
+               for this parameters set. Try to rerun again. Returning fixed value. ")
+        return ceil(logq_st_point)  
 
     return best_logq
 
@@ -729,9 +879,10 @@ def check_candidates_logq_exact(candidate_list, mitm, std_e, coreSVP):
         if abs(rt - l) < best_diff+5 and logq < best_logq:
             best_diff = abs(max(tbz, tenum) - babai - l)
             best_logq = logq
-            #print(logq, l, max(tbz,tenum)-babai, best_diff  )
+            print("From candidate check: logq:", logq, l, max(tbz,tenum)-babai, best_diff  )
+            print(" ng:", ng, " w:", w, " beta:", beta, " d: ", d, " tbz:", tbz, " tenum:", tenum)
             found = True
-            # print('found logq:', logq)
+            #print('found logq:', logq)
 
     if not found:
         print('No solution found setting best_diff to',
