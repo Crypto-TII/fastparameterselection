@@ -55,7 +55,7 @@ class Cost(UserDict):
 
     val_map = {"beta": "%8d", "beta_": "%8d", "d": "%8d", "delta": "%8.6f"}
 
-    def str(self, keyword_width=0, newline=False, round_bound=46000, compact=False):
+    def str(self, keyword_width=0, newline=False, round_bound=2048, compact=False):
         """
 
         :param keyword_width:  keys are printed with this width

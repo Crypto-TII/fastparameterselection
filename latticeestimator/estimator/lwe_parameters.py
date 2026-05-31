@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass
 
-from copy import copy
 from sage.all import oo, binomial, log, sqrt, ceil
 
 from .nd import NoiseDistribution, DiscreteGaussian
@@ -13,8 +12,7 @@ class LWEParameters:
     """The parameters for a Learning With Errors problem instance."""
 
     n: int  #: the dimension of the LWE sample vector (Z/qZ)^n.
-    #: the modulus of the space Z/qZ of integers the LWE samples are in.
-    q: int
+    q: int  #: the modulus of the space Z/qZ of integers the LWE samples are in.
     Xs: NoiseDistribution  #: the distribution on Z/qZ from which the LWE secret is drawn
     Xe: NoiseDistribution  #: the distribution on Z/qZ from which the error term is drawn
 
@@ -24,17 +22,10 @@ class LWEParameters:
 
     tag: str = None  #: a name for the patameter set
 
-    # def __post_init__(self, **kwds):
-    #     self.Xs = self.Xs.resize(self.n)
-    #     if self.m < oo:
-    #         self.Xe = self.Xe.resize(self.m)
-
     def __post_init__(self, **kwds):
-        self.Xs = copy(self.Xs)
-        self.Xs.n = self.n
+        self.Xs = self.Xs.resize(self.n)
         if self.m < oo:
-            self.Xe = copy(self.Xe)
-            self.Xe.n = self.m
+            self.Xe = self.Xe.resize(self.m)
 
     @property
     def _homogeneous(self):

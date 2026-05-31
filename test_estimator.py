@@ -57,4 +57,12 @@ def run_estimator():
 
 if __name__ == "__main__":
     #run_estimator()
-    run_estimator_hybrid()
+    #run_estimator_hybrid()
+    FHEParam = LWEParameters(
+                    n =2**15,
+                    q= 2**828,
+                    Xs=ND.SparseTernary(p = 192/2, m=192/2, n=2**15),
+                    Xe=ND.DiscreteGaussian(stddev=3.19)
+                )
+    primal_hybrid_cost = LWE.primal_hybrid(FHEParam, red_cost_model=RC.BDGL16, mitm=False)
+    print(primal_hybrid_cost)

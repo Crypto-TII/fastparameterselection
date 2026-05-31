@@ -79,7 +79,7 @@ def parse_options(argv):
     """
     try:
         opts, args = getopt.getopt(argv, "a,b,h,v,c", [
-                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm", "coreSVP="])
+                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm", "coreSVP=", "nrestart="])
     except Exception as e:
         print(e)
         helper()
@@ -208,8 +208,9 @@ def handle_options(opts):
         's_eta': 1,       # Parameter for binomial distribution (secret)
         'eta': 1,         # Parameter for binomial distribution (error)
         'q': 2,           # Modulus for uniformmod distribution
-        'mitm': False,
-        'coreSVP': ["BDGL", coreSVP_models["BDGL"]]
+        'mitm': False,    # Whether to consider meet-in-the-middle guessing in hybrid or not (IN PROGRESS)
+        'coreSVP': ["BDGL", coreSVP_models["BDGL"]], # lambda expression that relates lambda, beta, and (possibly) d (IN PROGRESS)
+        'nrestart': None  # Number of restarts for hybrid optimizarion
     }
     l = 0
     table = False
@@ -217,6 +218,7 @@ def handle_options(opts):
     correction = False
     mitm = False
     coreSVP = ["BDGL", coreSVP_models.get("BDGL")]
+    nrestart = None
 
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
@@ -278,6 +280,8 @@ def handle_options(opts):
                 coreSVP = [user_model, coreSVP_models.get(user_model)]
             else:
                 print(f"Warning: Requested coreSVP model is not found in the dictionary, resort to BDGL")
+        elif opt=="--nrestart":
+            nrestart = int(arg)
         else:
             helper()
 
@@ -292,7 +296,7 @@ def handle_options(opts):
     if secret_dist_tag!='sparse' and params['mitm']==True:
         print(f"Warning: Mitm makes sense only for sparse secrets, will be ignored")
 
-    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm, coreSVP
+    return output_dict, l, secret_dist, error_dist, param, lwe_d, logq, verify, ntru_flag, table, hw, num_only, correction, error_dist_tag, mitm, coreSVP, nrestart
 
 
 def export_to_csv(data, output_file):
@@ -431,8 +435,9 @@ def helper():
     print("  --ntru                  Check NTRU parameters")
     print("  --num-only              Output only numerical results")
     print("  -c                      Apply correction logic")
-    print("  --mitm                  Estimate hybrid with meet-in-the-middle technique; for sparse secrets")
-    print("  --coreSVP               CoreSVP model (BDGL, MATZOV)")
+    print("  --mitm                  Estimate hybrid with meet-in-the-middle technique; for sparse secrets (WIP)")
+    print("  --coreSVP               CoreSVP model (BDGL, MATZOV) (WIP)")
+    print("  --nrestart              Number of restarts for hybrid optimizarion (optional)")
     print("  -h, --help              Show this help message and exit")
     print("\nExamples can be found in tests_commands folder.")
     sys.exit()
