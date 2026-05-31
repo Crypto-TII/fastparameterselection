@@ -373,6 +373,8 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
         data_point = {
             SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: math.floor(math.log2(primal_hybrid_cost["rop"]))
         }
+        if math.floor(math.log2(primal_hybrid_cost["rop"])) < l - 12:
+            print("Found logq appears to be too large for the target security level. You may want to restart")
     else:
         data_point = {
             SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid
@@ -675,7 +677,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
             primal_hybrid = LWE.primal_hybrid(
                 FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
             primal_hybrid_cost = math.floor(math.log2(primal_hybrid["rop"]))
-            print("LatticeEstimator returns:", primal_hybrid)
+            #print("LatticeEstimator returns:", primal_hybrid)
             data_point = {
                 SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
             }
