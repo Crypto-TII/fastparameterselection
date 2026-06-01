@@ -78,7 +78,7 @@ def numerical_lambda_bdd_rev1(n, logq, std_s, std_e):
     def eta(beta):
         if beta < 2:
             return 10*5
-        return beta + (log2(d_opt(beta))-log(beta))/0.292
+        return beta + (log2(d_opt(beta)))/0.292
 
 
     def main_eq(beta):
@@ -139,7 +139,7 @@ def numerical_n_bdd(l, logq, std_s, std_e):
     :return: n value.
     """
     eta_initial_guess = (l - 16.4) / 0.292
-    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+    def eta_eq(eta): return l - (0.292 * eta + 16.4)
     eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
     eta = eta_solution[0]
 
@@ -217,7 +217,7 @@ def numerical_n_usvp(l, logq, std_s, std_e):
 def numerical_logq_bdd(l, n, std_s, std_e):
 
     eta_initial_guess = (l - 16.4) / 0.292
-    def eta_eq(eta): return l - (0.292 * eta + log2(8 * eta) + 16.4)
+    def eta_eq(eta): return l - (0.292 * eta + 16.4)
     eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
     eta = eta_solution[0]
 
@@ -409,7 +409,7 @@ def numerical_std_e_bdd(l, n, logq, std_s):
     eta_initial_guess = (l - 16.4) / 0.292
 
     def eta_eq(eta):
-        return l - (0.292 * eta + log2(8 * eta) + 16.4)
+        return l - (0.292 * eta + 16.4)
 
     eta_solution = fsolve(eta_eq, eta_initial_guess, full_output=False)
 
