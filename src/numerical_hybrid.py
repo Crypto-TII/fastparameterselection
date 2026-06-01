@@ -389,34 +389,6 @@ def mitm_babai_probability(n, logq, sigma_e, h, beta, d, fast=False):
     return log2(p)
 
 
-# d = m+n-ng
-# UNUSED 
-def exact_runtime(n, logq, sigma_e, h, beta, d, ng, w, mitm, coreSVP = lambda beta, d: 0.292*beta+log2(8*d)+16.4):
-    """
-    The function is needed to filter solutions
-    :param n: LWE dimension
-    :param logq: LWE modulus
-    :param sigma_e: LWE error st. dev
-    :param h: Ternary secret weight
-    :param beta: BKZ parameter
-    :param d: optimal lattice dimension
-    :param ng: Number of guessed coordinates
-    :param w: Weight of guessed secret
-    :return: tuple (runtime of bkz, runtime of enumeration, babai probability) on log2-scale
-    """
-    ng = int(ng)
-    prob =  probability_enum(n, h, ng, w)
-    t_bkz = coreSVP(beta, d) - prob#0.292*beta + log2(8*d) + 16.4 - prob
-    sigma_s = sqrt(h/n)
-    xi = sigma_e / sigma_s 
-    babai = babai_prob(n-ng, logq, sigma_e, beta, d, xi)
-    if mitm:
-        t_enum = 0.5*ss_enum(ng, w)+2*log2(d) - prob
-        babai += mitm_babai_probability(n-ng, logq, sigma_e, h, beta, d, fast=True) #admissibility probability
-    else:
-        t_enum = ss_enum(ng, w)+2*log2(d) - prob
-    return t_bkz, t_enum, babai
-
 
 def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max, initial_guess = False, verbose=True):
     """
