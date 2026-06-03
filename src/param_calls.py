@@ -574,10 +574,14 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
 def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only):
 
     secret = secret_dist.tag
+    
 
     if verify and estimator_installed:
         lwe_parameters = LWE.Parameters(
-            lwe_d, 2 ** lq, secret_dist, error_dist)
+            n = lwe_d,
+            q = 2**lq,
+            Xs = secret_dist,
+            Xe = error_dist)
         try:
             lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))

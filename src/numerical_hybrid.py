@@ -414,6 +414,11 @@ def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max
     if bound_trials_max==None:
         bound_trials_max = 350
 
+    if h<=16:
+        wg_range = range(1, h+1)
+    else:
+        wg_range = range(2, min(52, h//2))
+
     #perturb initial point by a random value from [-shift_bound, shift_bound].
     shift_bound = 10
     if n>=2**15:
@@ -453,7 +458,7 @@ def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max
         bound_trials -= 1
 
         # Brute-forcing for w
-        for wg in range(2, min(52, h//2)):
+        for wg in wg_range:
 
             #eq1: runtime of lattice reduction == runtume of enumeration (do not take into account probabiltiy of the weigt of guessed coordinates)
             #if mitm=true, square root enumeration runtime

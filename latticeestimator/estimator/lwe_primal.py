@@ -167,7 +167,7 @@ class PrimalUSVP:
         params: LWEParameters,
         red_cost_model=red_cost_model_default,
         red_shape_model=red_shape_model_default,
-        optimize_d=False,
+        optimize_d=True,
         log_level=1,
         **kwds,
     ):
@@ -640,7 +640,7 @@ class PrimalHybrid:
         m: int = oo,
         babai: bool = True,
         mitm: bool = True,
-        optimize_d=False,
+        optimize_d=True,
         log_level=5,
         **kwds,
     ):

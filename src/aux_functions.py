@@ -1,4 +1,4 @@
-from nd import NoiseDistribution as ND
+from nd import NoiseDistribution as ND, Binary, Ternary, CenteredBinomial, DiscreteGaussian, SparseTernary, UniformMod, Uniform
 import math
 import csv
 import sys
@@ -137,30 +137,30 @@ def set_distribution(dist_type, params, is_error=False):
     prefix = '' if is_error else 's_'  # Use 's_' prefix for secret parameters
 
     if dist_type == 'binary':
-        dist = ND.UniformMod(2)
+        dist = Binary
     elif dist_type == 'ternary':
-        dist = ND.UniformMod(3)
+        dist = Ternary
     elif dist_type == 'sparse':
         try:
-            dist = ND.SparseTernary(
+            dist = SparseTernary(
                 p=params['hw']/2, m=params['hw']/2, n=params['n'])
         except:
             print("Error: Hamming weight --hw is required for sparse secret")
             sys.exit()
     elif dist_type == 'uniformmod':
-        dist = ND.UniformMod(params['q'])
+        dist = UniformMod(params['q'])
     elif dist_type == 'uniform':
         try:
-            dist = ND.Uniform(params[f'{prefix}a'], params[f'{prefix}b'])
+            dist = Uniform(params[f'{prefix}a'], params[f'{prefix}b'])
         except:
             print(
                 f"Error: Interval bounds --{prefix}a and --{prefix}b are required for uniform distribution")
             sys.exit()
     elif dist_type == 'gaussian':
-        dist = ND.DiscreteGaussian(params[f'{prefix}std'])
+        dist = DiscreteGaussian(params[f'{prefix}std'])
     elif dist_type == 'binomial':
         try:
-            dist = ND.CenteredBinomial(params[f'{prefix}eta'])
+            dist = CenteredBinomial(params[f'{prefix}eta'])
         except:
             print(
                 f"Error: Parameter --{prefix}eta is required for binomial distribution")
