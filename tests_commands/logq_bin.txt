@@ -7,3 +7,13 @@ python3 src/estimate.py --param "logq" --lambda "100" --n "2048" --secret "binar
 python3 src/estimate.py --param "logq" --lambda "128" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table
 python3 src/estimate.py --param "logq" --lambda "192" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table
 python3 src/estimate.py --param "logq" --lambda "256" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table
+
+python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+python3 src/estimate.py --param "logq" --lambda "128" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+python3 src/estimate.py --param "logq" --lambda "192" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+python3 src/estimate.py --param "logq" --lambda "256" --n "1024" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+
+python3 src/estimate.py --param "logq" --lambda "100" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+python3 src/estimate.py --param "logq" --lambda "128" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+python3 src/estimate.py --param "logq" --lambda "192" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table -c
+python3 src/estimate.py --param "logq" --lambda "256" --n "2048" --secret "binary" --error "gaussian" --std "3.19" -v --table -c

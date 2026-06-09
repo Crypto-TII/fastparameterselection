@@ -8,7 +8,10 @@ from const import (
     LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
     LAMBDA_USVP_S_TER, LAMBDA_BDD_BIN, LAMBDA_BDD_TER, LAMBDA_BDD_S_BIN,
     LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
-    N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER
+    N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER,
+    USVP, USVP_S, USVP_NUM, BDD, BDD_S, BDD_NUM, LWE_USVP, LWE_BDD,
+    HYBRID, LWE_HYBRID, LAMBDA,
+    WARNING_THRESHOLD
 )
 sys.path.append('./latticeestimator')
 
@@ -41,10 +44,74 @@ def check_ntru(output_dict):
             exit(0)
 
 
-def print_warnings(verify, estimator_installed):
+def print_warnings(verify, estimator_installed, data=None, threshold=WARNING_THRESHOLD):
     print("\n")
     if verify and not estimator_installed:
         print("Warning: Verification not possible, Lattice Estimator not installed")
+
+    if verify and estimator_installed and data:
+        # lambda mode: formula security vs estimator security (formula > estimator is dangerous)
+        lambda_comparisons = [
+            (USVP,     LWE_USVP, "usvp",     "est usvp"),
+            (USVP_S,   LWE_USVP, "usvp_s",   "est usvp"),
+            (USVP_NUM, LWE_USVP, "usvp num", "est usvp"),
+            (BDD,      LWE_BDD,  "bdd",      "est bdd"),
+            (BDD_S,    LWE_BDD,  "bdd_s",    "est bdd"),
+            (BDD_NUM,  LWE_BDD,  "bdd num",  "est bdd"),
+        ]
+
+        worst_diff = 0
+        worst_msg = None
+        diffs = []
+
+        for row in data:
+            # lambda mode
+            for formula_key, est_key, formula_label, est_label in lambda_comparisons:
+                if formula_key not in row or est_key not in row:
+                    continue
+                diff = row[formula_key] - row[est_key]
+                diffs.append(diff)
+                if diff > threshold and diff > worst_diff:
+                    worst_diff = diff
+                    worst_msg = (
+                        f"{formula_label} ({row[formula_key]}) is greater than {est_label} "
+                        f"({row[est_key]}) by {diff} > {threshold}. "
+                        f"Consider lowering the ciphertext modulus."
+                    )
+
+            # hybrid mode: formula security vs estimator security
+            if HYBRID in row and LWE_HYBRID in row:
+                diff = row[HYBRID] - row[LWE_HYBRID]
+                diffs.append(diff)
+                if diff > threshold and diff > worst_diff:
+                    worst_diff = diff
+                    worst_msg = (
+                        f"hybrid ({row[HYBRID]}) is greater than est hybrid "
+                        f"({row[LWE_HYBRID]}) by {diff} > {threshold}. "
+                        f"Consider lowering the ciphertext modulus."
+                    )
+
+            # logq / std_e mode: target lambda vs estimator security (lambda > estimator is dangerous)
+            if LAMBDA in row:
+                for est_key, est_label in [(LWE_USVP, "est usvp"), (LWE_BDD, "est bdd")]:
+                    if est_key not in row:
+                        continue
+                    diff = row[LAMBDA] - row[est_key]
+                    diffs.append(diff)
+                    if diff > threshold and diff > worst_diff:
+                        worst_diff = diff
+                        worst_msg = (
+                            f"target lambda ({row[LAMBDA]}) is greater than {est_label} "
+                            f"({row[est_key]}) by {diff} > {threshold}. "
+                            f"Consider increasing the ciphertext modulus."
+                        )
+
+        if worst_msg:
+            mean = sum(diffs) / len(diffs)
+            std = math.sqrt(sum((d - mean) ** 2 for d in diffs) / len(diffs))
+            print(f"Warning: Some instances differ from the LWE estimator (e.g. {worst_msg})")
+            print(f"         Average difference: {mean:.2f}, std: {std:.2f}")
+
     print("\n")
 
 

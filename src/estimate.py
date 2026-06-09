@@ -78,7 +78,7 @@ def main(argv):
         print("Parameter " + param + " not valid")
         return
 
-    print_warnings(verify, estimator_installed)
+    print_warnings(verify, estimator_installed, data)
 
     if param != "est":
         return output_dict[param]

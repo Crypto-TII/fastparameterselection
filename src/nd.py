@@ -369,6 +369,7 @@ class Uniform(NoiseDistribution):
             stddev=RR(sqrt((m**2 - 1) / 12)),
             bounds=(a, b),
             _density=(1 - 1 / m if a <= 0 and b >= 0 else 1),
+            tag=tag,
         )
 
     def __hash__(self):
