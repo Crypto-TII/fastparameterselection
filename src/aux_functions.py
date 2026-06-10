@@ -88,7 +88,7 @@ def print_warnings(verify, estimator_installed, data=None, threshold=WARNING_THR
                     worst_msg = (
                         f"hybrid ({row[HYBRID]}) is greater than est hybrid "
                         f"({row[LWE_HYBRID]}) by {diff} > {threshold}. "
-                        f"Consider lowering the ciphertext modulus."
+                        f"Consider restarting the optimzation and/or lowering the ciphertext modulus."
                     )
 
             # logq / std_e mode: target lambda vs estimator security (lambda > estimator is dangerous)
