@@ -5,7 +5,7 @@ import os
 
 # --- Usage ---
 # python compare_lambda_estimates_global_split.py file1.csv file2.csv ...
-filenames = ["std_e.csv"]
+filenames = ["table_13_17_std_e_binary.csv"]
 
 if not filenames:
     print("Usage: python compare_lambda_estimates_global_split.py <file1.csv> [file2.csv ...]")

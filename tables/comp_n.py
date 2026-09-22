@@ -9,8 +9,8 @@ import os
 #filenames = sys.argv[1:]
 
 filenames = [
-    "n_bin_80.csv", "n_bin_100.csv", "n_bin_110.csv", "n_bin_120.csv",
-    "n_bin_128.csv", "n_bin_140.csv", "n_ter_2_10.csv", "n_ter_2_15.csv"
+    "table_06_08_n_binary.csv", "table_07_09_n_ternary.csv",
+    "table_11_15_n_num_ternary.csv"
 ]
 
 if not filenames:
@@ -19,7 +19,7 @@ if not filenames:
 
 # --- Define which columns belong to which group ---
 groups = {
-    "usvp": ["est usvp", "est usvp_s", "est num"],
+    "usvp": ["est usvp", "est usvp_s", "est usvp num"],
     "bdd": ["est bdd", "est bdd_s", "est bdd num"],
 }
 
