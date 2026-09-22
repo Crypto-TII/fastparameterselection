@@ -313,7 +313,7 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
         if table:
             data_point = {
                 SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d,
-                STD_E_USVP: est_usvp_numerical, STD_E_BDD: est_bdd_numerical, OUTPUT: return_value
+                LOGQ_USVP: est_usvp_numerical, LOGQ_BDD: est_bdd_numerical, OUTPUT: return_value
             }
         else:
             data_point = {

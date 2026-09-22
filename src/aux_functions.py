@@ -1,6 +1,7 @@
 from nd import NoiseDistribution as ND, Binary, Ternary, CenteredBinomial, DiscreteGaussian, SparseTernary, UniformMod, Uniform
 import math
 import csv
+import random
 import sys
 import getopt
 from formulas import check_overstreched
@@ -15,6 +16,7 @@ from const import (
 )
 sys.path.append('./latticeestimator')
 
+import numpy as np
 from numpy import log2, log
 coreSVP_models = {
     "BDGL": lambda beta, d: 0.292*beta+log2(8*d)+16.4, #default
@@ -145,8 +147,10 @@ def parse_options(argv):
     :return: List of options and arguments.
     """
     try:
-        opts, args = getopt.getopt(argv, "a,b,h,v,c", [
-                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "file=", "hw=",  "std=", "eta=", "ntru", "table", "num-only", "fit", "mitm", "coreSVP=", "nrestart="])
+        opts, args = getopt.getopt(argv, "a:b:hvc", [
+                                   "attack=", "dist=", "simpl=", "secret=", "error=", "param=", "n=", "lambda=", "logq=", "hw=",
+                                   "std=", "eta=", "q=", "s-std=", "s-a=", "s-b=", "s-eta=",
+                                   "ntru", "table", "num-only", "fit", "mitm", "coreSVP=", "nrestart=", "seed=", "help"])
     except Exception as e:
         print(e)
         helper()
@@ -286,6 +290,7 @@ def handle_options(opts):
     mitm = False
     coreSVP = ["BDGL", coreSVP_models.get("BDGL")]
     nrestart = None
+    seed = 0
 
     for opt, arg in opts:
         if opt == '--help' or opt == '-h':
@@ -335,6 +340,10 @@ def handle_options(opts):
             params['s_eta'] = float(arg)  # Secret distribution eta
         elif opt == '--eta':
             params['eta'] = float(arg)  # Error distribution eta
+        elif opt == '--q':
+            params['q'] = int(arg)  # Modulus for the uniformmod distribution
+        elif opt == '--seed':
+            seed = int(arg)
         elif opt == '--secret':
             secret_dist_tag = str(arg)
         elif opt == '--error':
@@ -351,6 +360,12 @@ def handle_options(opts):
             nrestart = int(arg)
         else:
             helper()
+
+    # Several numerical solvers (numerical_hybrid, numerical_std_e_*) use
+    # randomised restarts. Seed both RNGs so a given command line always
+    # produces the same answer; override with --seed.
+    random.seed(seed)
+    np.random.seed(seed)
 
     secret_dist = set_distribution(secret_dist_tag, params)
     error_dist = set_distribution(error_dist_tag, params, is_error=True)
