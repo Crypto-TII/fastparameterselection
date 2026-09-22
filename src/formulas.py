@@ -100,7 +100,7 @@ def delta_exact(beta):
     elif beta < 40:
         for i in range(1, len(small)):
             if small[i][0] > beta:
-                return RR(small[i - 1][1])
+                return float(small[i - 1][1])
     elif beta == 40:
         return small[-1][1]
     else:

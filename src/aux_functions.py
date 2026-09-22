@@ -12,7 +12,7 @@ from const import (
     N_BDD_BIN, N_BDD_TER, N_BDD_S_BIN, N_BDD_S_TER,
     USVP, USVP_S, USVP_NUM, BDD, BDD_S, BDD_NUM, LWE_USVP, LWE_BDD,
     HYBRID, LWE_HYBRID, LAMBDA,
-    WARNING_THRESHOLD
+    WARNING_THRESHOLD, MAX_CORRECTION_CALLS
 )
 sys.path.append('./latticeestimator')
 
@@ -39,11 +39,11 @@ def check_ntru(output_dict):
     if output_dict['l'] != 0:
         if beta_ > 0 and output_dict['l'] > 0 and (output_dict['l'] - 0.292 * beta_) > 20:
             print("Error: the ntru parameters are in the overstretched regime")
-            exit(0)
+            sys.exit(1)
     else:
         if beta_ > 0:
             print("Error: the ntru parameters are in the overstretched regime")
-            exit(0)
+            sys.exit(1)
 
 
 def print_warnings(verify, estimator_installed, data=None, threshold=WARNING_THRESHOLD):
@@ -217,7 +217,7 @@ def set_distribution(dist_type, params, is_error=False):
                 p=params['hw']/2, m=params['hw']/2, n=params['n'])
         except:
             print("Error: Hamming weight --hw is required for sparse secret")
-            sys.exit()
+            sys.exit(1)
     elif dist_type == 'uniformmod':
         dist = UniformMod(params['q'])
     elif dist_type == 'uniform':
@@ -226,7 +226,7 @@ def set_distribution(dist_type, params, is_error=False):
         except:
             print(
                 f"Error: Interval bounds --{prefix}a and --{prefix}b are required for uniform distribution")
-            sys.exit()
+            sys.exit(1)
     elif dist_type == 'gaussian':
         dist = DiscreteGaussian(params[f'{prefix}std'])
     elif dist_type == 'binomial':
@@ -235,10 +235,10 @@ def set_distribution(dist_type, params, is_error=False):
         except:
             print(
                 f"Error: Parameter --{prefix}eta is required for binomial distribution")
-            sys.exit()
+            sys.exit(1)
     else:
         print(f"{'Error' if is_error else 'Secret'} distribution not supported")
-        sys.exit()
+        sys.exit(1)
 
     return dist
 
@@ -305,7 +305,7 @@ def handle_options(opts):
                 lwe_d = int(arg)
             except:
                 print("Error: Invalid LWE dimension format")
-                sys.exit()
+                sys.exit(1)
             output_dict['n'] = lwe_d
             params['n'] = lwe_d
         elif opt == '--lambda':
@@ -477,7 +477,7 @@ def parse_logq(logq_str):
                 start, end = map(int, part.split('-'))
             except:
                 print("Error: Invalid logq format")
-                sys.exit()
+                sys.exit(1)
             logq.extend(range(start, end + 1))
         else:
             logq.append(int(part))
@@ -492,7 +492,7 @@ def helper_fit():
     print('python3 fit_formula.py --param "lambda" --attack "bdd" --dist "ternary" --simpl 1')
     print('python3 fit_formula.py --param "n" --attack "usvp" --dist "binary" --simpl 0')
     print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
-    sys.exit()
+    sys.exit(1)
 
 
 def helper():
@@ -522,7 +522,7 @@ def helper():
     print("  --nrestart              Number of restarts for hybrid optimizarion (optional)")
     print("  -h, --help              Show this help message and exit")
     print("\nExamples can be found in tests_commands folder.")
-    sys.exit()
+    sys.exit(1)
 
 
 def create_explanation_dict(headers):
@@ -624,7 +624,7 @@ def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_
 def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, param, num_calls_usvp, num_calls_bdd, error_dist_tag=None):
 
     if lwe_usvp >= l:
-        while (lwe_usvp >= l):
+        while lwe_usvp >= l and num_calls_usvp < MAX_CORRECTION_CALLS:
             corrected_lwe_usvp = lwe_usvp
             corrected_usvp = est_usvp_numerical
             print("Applying correction lwe usvp >= l", "logq ",
@@ -648,7 +648,7 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             print("2**est_usvp_numerical: ", 2**est_usvp_numerical)
             print("LWE usvp", lwe_usvp)
     else:
-        while (lwe_usvp < l):
+        while lwe_usvp < l and num_calls_usvp < MAX_CORRECTION_CALLS:
             if param == 'logq':
                 est_usvp_numerical -= 1
             elif param == 'std_e':
@@ -670,7 +670,7 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             print("LWE usvp", lwe_usvp)
 
     if lwe_bdd >= l:
-        while (lwe_bdd >= l):
+        while lwe_bdd >= l and num_calls_bdd < MAX_CORRECTION_CALLS:
             corrected_lwe_bdd = lwe_bdd
             corrected_bdd = est_bdd_numerical
             print("Applying correction lwe bdd >= l", "logq ",
@@ -697,7 +697,7 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             print("LWE bdd", lwe_bdd)
     else:
         print("Applying correction lwe bdd < l", "est ", lwe_bdd, "lambda", l)
-        while (lwe_bdd < l):
+        while lwe_bdd < l and num_calls_bdd < MAX_CORRECTION_CALLS:
 
             if param == 'logq':
                 est_bdd_numerical -= 1

@@ -152,7 +152,7 @@ def _parse_options(options):
             secret_q = 3
         else:
             print("Secret distribution not supported")
-            sys.exit()
+            sys.exit(1)
 
     handlers = {
         '--attack': ('attack_val', lambda a: a),

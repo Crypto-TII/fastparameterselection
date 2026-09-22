@@ -179,13 +179,13 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
             lwe_bdd, lwe_usvp, lwe_bdd_s, lwe_usvp_s = 0, 0, 0, 0
             if not num_only:
                 lwe_parameters_usvp = LWE.Parameters(
-                    est_usvp, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+                    est_usvp, 2 ** lq, secret_dist, error_dist)
                 lwe_parameters_bdd = LWE.Parameters(
-                    est_bdd, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+                    est_bdd, 2 ** lq, secret_dist, error_dist)
                 lwe_parameters_usvp_s = LWE.Parameters(
-                    est_usvp_s, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+                    est_usvp_s, 2 ** lq, secret_dist, error_dist)
                 lwe_parameters_bdd_s = LWE.Parameters(
-                    est_bdd_s, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+                    est_bdd_s, 2 ** lq, secret_dist, error_dist)
                 lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
                     lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
                 lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
@@ -196,9 +196,9 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
                     lwe_parameters_bdd_s, red_cost_model=RC.BDGL16)["rop"]))
 
             lwe_parameters_usvp_num = LWE.Parameters(
-                est_usvp_numerical, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+                est_usvp_numerical, 2 ** lq, secret_dist, error_dist)
             lwe_parameters_bdd_num = LWE.Parameters(
-                est_bdd_numerical, 2 ** lq, secret_dist, ND.DiscreteGaussian(std_e))
+                est_bdd_numerical, 2 ** lq, secret_dist, error_dist)
 
             lwe_usvp_numerical = math.floor(math.log2(LWE.primal_usvp(
                 lwe_parameters_usvp_num, red_cost_model=RC.BDGL16)["rop"]))
@@ -589,7 +589,7 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
                 lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
         except Exception as e:
             print(f"Error in the Lattice Estimator: {e}")
-            exit(0)
+            sys.exit(1)
 
         if not num_only:
             estimates = {
