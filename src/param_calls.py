@@ -273,7 +273,7 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
     est_bdd_numerical = int(math.floor(
         numerical_logq_bdd(l, lwe_d, std_s, std_e)))
 
-    return_value = max(est_usvp_numerical, est_bdd_numerical)
+    return_value = min(est_usvp_numerical, est_bdd_numerical)
     output_dict['logq'] = return_value
 
     if verify and estimator_installed:

@@ -59,6 +59,12 @@ Tables 14, 15, 16 and 17 in the paper must be replaced from the files here.
   attack's log q rather than at `output`, so read the row as two independent
   results plus a recommendation, not as three views of one value.
 
+- Tables 12 and 16 as printed in the paper have their `log q num` columns
+  swapped for the ternary secret. Regenerating gives, for n=32768, uSVP
+  1096 / 872 / 608 / 474 -- which is exactly the paper's *Table 16* column --
+  and BDD 1112 / 880 / 611 / 475, which is the paper's *Table 12* column. The
+  `Est` columns are correct where they stand, so each printed row pairs a
+  security level with the other table's modulus.
 - Table 20's four rows do not reproduce the values printed in the paper, and
   two of the printed rows are short of their claimed security level: (110,
   512, 17) measures 102 bits and (110, 3072, 101) measures 101 bits.
