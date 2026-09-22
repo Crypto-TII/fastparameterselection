@@ -1,4 +1,4 @@
-from nd import NoiseDistribution as ND
+from nd import NoiseDistribution as ND, UniformMod
 import lmfit
 import numpy as np
 from aux_functions import helper_fit
@@ -145,10 +145,10 @@ def _parse_options(options):
         nonlocal secret, std_s, secret_q
         secret = arg
         if secret == 'binary':
-            std_s = float(ND.UniformMod(2).stddev)
+            std_s = float(UniformMod(2).stddev)
             secret_q = 2
         elif secret == 'ternary':
-            std_s = float(ND.UniformMod(3).stddev)
+            std_s = float(UniformMod(3).stddev)
             secret_q = 3
         else:
             print("Secret distribution not supported")

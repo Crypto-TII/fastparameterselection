@@ -19,7 +19,7 @@ from numerical_hybrid import numerical_lambda_hybrid, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
 from const import (
-    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, LWE_USVP_C, USVP_S, LWE_USVP_S, USVP_NUM, LWE_NUM, BDD, LWE_BDD, LWE_BDD_C, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, LOGQ_USVP_C, LOGQ_BDD_C, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, STD_E_USVP_C, STD_E_BDD_C, EST, NUM_CALLS_USVP, NUM_CALLS_BDD
+    SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, LWE_USVP_C, USVP_S, LWE_USVP_S, USVP_NUM, LWE_USVP_NUM, LWE_BDD_NUM, BDD, LWE_BDD, LWE_BDD_C, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, LOGQ_USVP_C, LOGQ_BDD_C, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, STD_E_USVP_C, STD_E_BDD_C, EST, NUM_CALLS_USVP, NUM_CALLS_BDD
 )
 
 import sys
@@ -215,8 +215,8 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
                 if not num_only:
                     data_point = {
                         SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp, USVP_S: est_usvp_s, LWE_USVP_S: lwe_usvp_s,
-                        USVP_NUM: est_usvp_numerical, LWE_NUM: lwe_usvp_numerical, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, LWE_BDD_S: lwe_bdd_s,
-                        BDD_NUM: est_bdd_numerical, LWE_NUM: lwe_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
+                        USVP_NUM: est_usvp_numerical, LWE_USVP_NUM: lwe_usvp_numerical, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, LWE_BDD_S: lwe_bdd_s,
+                        BDD_NUM: est_bdd_numerical, LWE_BDD_NUM: lwe_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
                     }
                 else:
                     data_point = {

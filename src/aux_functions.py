@@ -537,6 +537,8 @@ def create_explanation_dict(headers):
         "usvp 3.19": "The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_usvp",
         "est usvp": "Output of the Lattice Estimator for the (unique) SVP attack",
         "est bdd": "Output of the Lattice Estimator for the BDD attack",
+        "est usvp num": "Output of the Lattice Estimator using the result from the numerical approximation for the (unique) SVP attack",
+        "est bdd num": "Output of the Lattice Estimator using the result from the numerical approximation for the BDD attack",
         "est usvp_s": "Output of the Lattice Estimator using the result from the simplified formula for the (unique) SVP attack",
         "est bdd_s": "Output of the Lattice Estimator using the result from the simplified formula for the BDD attack",
         "output": "Recommended value to be used considering all the outputs of the formulas and numerical methods",
