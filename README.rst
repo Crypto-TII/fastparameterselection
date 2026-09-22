@@ -150,6 +150,21 @@ The fitted constants in ``src/const.py`` can be regenerated from ``dataset/`` wi
 
    bash find_all_constants.sh
 
+Tests
+-----
+
+.. code-block:: bash
+
+   pip install pytest
+   python3 -m pytest              # everything
+   python3 -m pytest -m "not slow"  # skip refitting the constants
+
+The suite pins values printed in the paper, so a change to a formula that
+would move a published table fails the build. Tests marked ``needs_sage`` run
+the command line and skip themselves when SageMath is not installed; the rest
+cover the formulas, the numerical solvers and the per-call generators and need
+only numpy and scipy.
+
 ToDo list
 ----
 
