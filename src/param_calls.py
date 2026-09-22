@@ -15,7 +15,7 @@ from formulas import (
     model_n_usvp, model_n_usvp_s, model_n_bdd_rev1, model_n_bdd_s,
 )
 from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_bdd_rev1, numerical_lambda_usvp
-from numerical_hybrid import numerical_lambda_hybrid_v2, numerical_logq_hybrid
+from numerical_hybrid import numerical_lambda_hybrid, numerical_logq_hybrid
 from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
 from const import (
@@ -50,19 +50,20 @@ def process_parameters(params, table):
     error_dist_tag = params['error_tag']
     mitm = params['mitm']
     coreSVP = params['coreSVP']
+    nrestart = params['nrestart']
 
     if param == 'n':
         data = process_n(logq, l, error_dist, model_values['n_usvp'], model_values['n_usvp_s'],
                          model_values['n_bdd'], model_values['n_bdd_s'], verify, estimator_installed, secret_dist, table, num_only, output_dict)
     elif param == 'logq':
         data = process_logq(
-            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict, mitm, coreSVP)
+            l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict, mitm, coreSVP, nrestart)
     elif param == 'std_e':
         data = process_std_e(
             logq, l, lwe_d, verify, estimator_installed, secret_dist, error_dist, correction, error_dist_tag, table, output_dict)
     elif param == 'lambda':
         data = process_lambda(logq, lwe_d, error_dist, model_values['lambda_usvp'], model_values['lambda_usvp_s'], model_values[
-            'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret_dist, hw, table, num_only, output_dict, mitm, coreSVP)
+            'lambda_bdd'], model_values['lambda_bdd_s'], verify, estimator_installed, secret_dist, hw, table, num_only, output_dict, mitm, coreSVP, nrestart)
     elif param == "est":
         data = process_est(logq, lwe_d, error_dist, secret_dist)
     else:
@@ -77,7 +78,7 @@ def process_n(logq, l, std_e, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimato
     return data
 
 
-def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict, mitm, coreSVP):
+def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, hw, table, output_dict, mitm, coreSVP, nrestart):
 
     secret = secret_dist.tag
 
@@ -86,7 +87,7 @@ def process_logq(l, lwe_d, error_dist, verify, estimator_installed, correction, 
             l, lwe_d, error_dist, verify, estimator_installed, correction, secret_dist, table, output_dict)
     else:
         data = process_logq_param_hybrid(
-            l, lwe_d, error_dist, verify, estimator_installed, secret_dist, hw, output_dict, mitm, coreSVP)
+            l, lwe_d, error_dist, verify, estimator_installed, secret_dist, hw, output_dict, mitm, coreSVP, nrestart)
     return data
 
 
@@ -96,14 +97,14 @@ def process_std_e(logq, l, lwe_d, verify, estimator_installed, secret_dist, erro
     return data
 
 
-def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict, mitm, coreSVP):
+def process_lambda(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, h, table, num_only, output_dict, mitm, coreSVP, nrestart):
     secret = secret_dist.tag
     if secret != 'SparseTernary':
         data = process_lambda_param(logq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s,
                                     lambda_bdd, lambda_bdd_s, verify, estimator_installed, secret_dist, table, num_only, output_dict)
     else:
         data = process_lambda_param_hybrid(
-            logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict, mitm, coreSVP)
+            logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict, mitm, coreSVP, nrestart)
 
     return data
 
@@ -323,7 +324,7 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
     return data
 
 
-def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed, secret_dist, h, output_dict, mitm, coreSVP):
+def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed, secret_dist, h, output_dict, mitm, coreSVP, nrestart):
     """
     Process the parameter 'logq' and estimate its value using various models and numerical solvers.
 
@@ -337,6 +338,9 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
     :param secret_q: Secret modulus.
     :param h: Hamming weight.
     :param output_dict: Dictionary to store the output values.
+    :param mitm: Boolean flag to indicate if we use mitm for enumeration or not (WIP)
+    :param coreSVP: Lambda expression relating lambda with beta and (optionally) d. (WIP)
+    :param nrestart: user input number of restart for numerical optimization
 
     :return: List of data points with estimated values for 'logq'.
     """
@@ -344,15 +348,17 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
     data = []
     secret = secret_dist.tag
     std_e = error_dist.stddev
-    est_hybrid = numerical_logq_hybrid(lwe_d, l, h, mitm, std_e, coreSVP[1])
+    est_hybrid = numerical_logq_hybrid(lwe_d, l, h, mitm, std_e, coreSVP[1], nrestart)
 
     if verify and estimator_installed:
+        print(f"Calling the LatticeEstimator to verify the result. May take some time...")
         FHEParam = LWE.Parameters(
             n=lwe_d,
             q=2**est_hybrid,
             Xs=ND.SparseTernary(h/2, h/2, lwe_d),
             Xe=ND.DiscreteGaussian(stddev=std_e)
         )
+        #TODO: add more coreSVP models
         match coreSVP[0]:
                 case "BDGL":
                     redcostmodel=RC.BDGL16
@@ -361,11 +367,14 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
                 case _:
                     print(f"unrecognized coreSVP")
                     return
-        primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-            FHEParam, red_cost_model=redcostmodel, mitm=mitm)["rop"]))
+        primal_hybrid_cost = LWE.primal_hybrid(
+            FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
+        #print("LatticeEstimator returns:", primal_hybrid_cost)
         data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: math.floor(math.log2(primal_hybrid_cost["rop"]))
         }
+        if math.floor(math.log2(primal_hybrid_cost["rop"])) < l - 12:
+            print("Found logq appears to be too large for the target security level. You may want to restart")
     else:
         data_point = {
             SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid
@@ -565,10 +574,14 @@ def process_lambda_for_lq(lq, lwe_d, error_dist, lambda_usvp, lambda_usvp_s, lam
 def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, est_bdd, est_bdd_s, est_num_bdd, est_num_usvp, return_value, verify, estimator_installed, table, num_only):
 
     secret = secret_dist.tag
+    
 
     if verify and estimator_installed:
         lwe_parameters = LWE.Parameters(
-            lwe_d, 2 ** lq, secret_dist, error_dist)
+            n = lwe_d,
+            q = 2**lq,
+            Xs = secret_dist,
+            Xe = error_dist)
         try:
             lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
@@ -621,7 +634,7 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
     return data_point
 
 
-def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict, mitm, coreSVP):
+def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify, estimator_installed, output_dict, mitm, coreSVP, nrestart):
     """
     Process the parameter 'lambda' and estimate its value using various models and numerical solvers.
 
@@ -633,8 +646,9 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
     :param verify: Boolean flag to indicate if verification is needed.
     :param estimator_installed: Boolean flag to indicate if the estimator is installed.
     :param output_dict: Dictionary to store the output values.
-    :param mitm: Boolean flag to indicated if we use meet in the middle technique for guessing s
-    :param coreSVP: TODO
+    :param mitm: Boolean flag to indicate if we use mitm for enumeration or not (WIP)
+    :param coreSVP: Lambda expression relating lambda with beta and (optionally) d. (WIP)
+    :param nrestart: user input number of restart for numerical optimization
     :return: List of data points with estimated values for 'lambda'.
     """
 
@@ -646,9 +660,10 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
         output_dict['lambda'] = []
     for lq in logq:
         est_hybrid = math.floor(
-            numerical_lambda_hybrid_v2(lwe_d, lq, std_e, h, mitm, coreSVP[1]))
+            numerical_lambda_hybrid(lwe_d, lq, std_e, h, mitm, coreSVP[1], nrestart))
 
         if verify and estimator_installed:
+            print(f"Calling the LatticeEstimator to verify the result. May take some time...")
             FHEParam = LWE.Parameters(
                 n=lwe_d,
                 q=2**lq,
@@ -663,8 +678,10 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
                 case _:
                     print(f"unrecognized coreSVP")
                     return
-            primal_hybrid_cost = math.floor(math.log2(LWE.primal_hybrid(
-                FHEParam, red_cost_model=redcostmodel, mitm=mitm)["rop"]))
+            primal_hybrid = LWE.primal_hybrid(
+                FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
+            primal_hybrid_cost = math.floor(math.log2(primal_hybrid["rop"]))
+            #print("LatticeEstimator returns:", primal_hybrid)
             data_point = {
                 SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
             }

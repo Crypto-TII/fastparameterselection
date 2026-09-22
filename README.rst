@@ -161,6 +161,12 @@ Find an estimation of the standard deviation of the error distribution, given th
 
 **Note**: In the Docker version, we applied a change to the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_ to address an imprecision in the case where the standard deviation of the error distribution is much larger than ``3.19``.
 
+ToDo list
+----
+
+* Include meet-in-the-middle for the hybrid attack. Challenge: derive compact formula for admissibility probability. Current status: added equations for optimization that include mitm speed-up for enumeration. Not tested.
+* Improve runtime of numerical_lambda_hybrid(). Compute probability_enum() and babai_prob() on the log scale directly. 
+
 Bugs
 ----
 

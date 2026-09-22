@@ -57,4 +57,13 @@ def run_estimator():
 
 if __name__ == "__main__":
     #run_estimator()
-    run_estimator_hybrid()
+    #run_estimator_hybrid()
+    FHEParam = LWEParameters(
+                    n =2**16,
+                    q= 2**1200,
+                    #Xs=ND.SparseTernary(p = 192/2, m=192/2, n=2**15),
+                    Xs=ND.Ternary,
+                    Xe=ND.DiscreteGaussian(stddev=3.19)
+                )
+    primal_bdd_cost = LWE.primal_usvp(FHEParam)
+    print(primal_bdd_cost)
