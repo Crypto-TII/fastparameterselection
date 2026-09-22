@@ -67,6 +67,9 @@ def main(argv):
 
     data = process_parameters(params, table)
 
+    if param == "est":
+        return
+
     export_to_csv(data, "output.csv")
 
     if param in ['n', 'logq', 'std_e', 'lambda']:

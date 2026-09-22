@@ -23,15 +23,11 @@ from const import (
 )
 
 import sys
-sys.path.append('./latticeestimator')
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'latticeestimator'))
 
 warnings.filterwarnings('error')
-
-coreSVP_models = {
-    "BDGL": lambda beta, d: 0.292*beta+log2(8*d)+16.4, #default
-    "MATZOV": lambda beta, d: 0.296*(beta - beta*0.28768/log(beta/17.1))+20.387+log2(5.4**2*d)    
-}
-
 
 def process_parameters(params, table):
     param = params['param']
@@ -67,7 +63,7 @@ def process_parameters(params, table):
     elif param == "est":
         data = process_est(logq, lwe_d, error_dist, secret_dist)
     else:
-        data = helper(), []
+        helper()  # exits
     return data
 
 
@@ -116,7 +112,7 @@ def process_est(logq, lwe_d, error_dist, secret_dist):
         parameters = LWE.Parameters(
             lwe_d, 2 ** lq, secret_dist, error_dist)
         LWE.estimate(parameters, red_cost_model=RC.BDGL16)
-    return [], []
+    return []
 
 
 def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n_bdd_s, verify, estimator_installed, table, num_only, output_dict):

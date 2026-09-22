@@ -3,6 +3,7 @@ import math
 import csv
 import sys
 import getopt
+from pathlib import Path
 from formulas import check_overstreched
 from rng import set_base_seed
 from const import (
@@ -14,7 +15,7 @@ from const import (
     HYBRID, LWE_HYBRID, LAMBDA,
     WARNING_THRESHOLD, MAX_CORRECTION_CALLS
 )
-sys.path.append('./latticeestimator')
+sys.path.append(str(Path(__file__).resolve().parent.parent / 'latticeestimator'))
 
 from numpy import log2, log
 coreSVP_models = {
@@ -417,7 +418,8 @@ def closest_power_of_2(n):
     :return: Closest power of 2.
     """
     if n <= 0:
-        raise ValueError("Input must be a positive number.")
+        print(f"Error: cannot take the closest power of two of {n}")
+        sys.exit(1)
 
     # Calculate the power of 2 just below and above the number
     lower_pow = 2 ** math.floor(math.log2(n))
@@ -470,8 +472,8 @@ def parse_logq(logq_str):
         if '-' in part:
             try:
                 start, end = map(int, part.split('-'))
-            except:
-                print("Error: Invalid logq format")
+            except ValueError:
+                print(f"Error: invalid log q range '{part}', expected e.g. 20-30")
                 sys.exit(1)
             logq.extend(range(start, end + 1))
         else:
@@ -504,17 +506,22 @@ def helper():
     print("  --error <error>         Error distribution (binary, ternary, sparse, uniformmod, uniform, gaussian, binomial)")
     print("  --hw <hw>               Hamming weight (for sparse secrets) (e.g., 64)")
     print("  --std <std>             Standard deviation for Gaussian distribution (e.g., 3.19)")
-    print("  --eta <eta>             Parameter for binomial distribution (e.g., 1)")
-    print("  -a <a>                  Lower bound for uniform distribution (e.g., 0)")
-    print("  -b <b>                  Upper bound for uniform distribution (e.g., 1)")
-    print("  --verify                Verify results against the Lattice Estimator")
+    print("  --eta <eta>             Parameter for binomial distribution, error (e.g., 3)")
+    print("  --s-eta <eta>           Parameter for binomial distribution, secret (e.g., 3)")
+    print("  --s-std <std>           Standard deviation for Gaussian distribution, secret")
+    print("  --q <q>                 Modulus for the uniformmod distribution")
+    print("  -a <a>, -b <b>          Bounds for uniform distribution, error (e.g., -2 2)")
+    print("  --s-a <a>, --s-b <b>    Bounds for uniform distribution, secret")
+    print("  -v                      Verify results against the Lattice Estimator")
     print("  --table                 Output results from all the formulas")
     print("  --ntru                  Check NTRU parameters")
     print("  --num-only              Output only numerical results")
     print("  -c                      Apply correction logic")
     print("  --mitm                  Estimate hybrid with meet-in-the-middle technique; for sparse secrets (WIP)")
     print("  --coreSVP               CoreSVP model (BDGL, MATZOV) (WIP)")
-    print("  --nrestart              Number of restarts for hybrid optimizarion (optional)")
+    print("  --nrestart <n>          Number of restarts for hybrid optimisation (optional)")
+    print("  --seed <n>              Base seed for the randomised solvers (default 0)")
+    print("  --fit                   Refit the formula constants from dataset/")
     print("  -h, --help              Show this help message and exit")
     print("\nExamples can be found in tests_commands folder.")
     sys.exit(1)
