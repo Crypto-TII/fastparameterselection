@@ -1,4 +1,4 @@
-import random
+from rng import call_rng
 from sage.all import RR, binomial, RealDistribution, prod, erf
 from numpy import pi, exp, log, log2, sqrt, ceil, floor
 from scipy.optimize import fsolve
@@ -408,6 +408,8 @@ def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max
     sigma_s = sqrt(h / n)
     xi = sigma_e / sigma_s
 
+    rng = call_rng("numerical_lambda_hybrid", n, logq, sigma_e, h, mitm)
+
     rt_min = float('inf')
     sol_tolerance_bound = 2  # max solution tolerance
 
@@ -513,9 +515,9 @@ def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max
             
 
             #perturb initial_guess for the next round
-            initial_guess = [max(2,initial_guess[0]+random.randint(-shift_bound, shift_bound)), 
-                             max(45, initial_guess[1]-random.randint(-shift_bound, shift_bound)), 
-                             initial_guess[2]-random.randint(-shift_bound, shift_bound)]
+            initial_guess = [max(2,initial_guess[0]+rng.randint(-shift_bound, shift_bound)), 
+                             max(45, initial_guess[1]-rng.randint(-shift_bound, shift_bound)), 
+                             initial_guess[2]-rng.randint(-shift_bound, shift_bound)]
 
 
             if sol_tolerance < sol_tolerance_bound:
@@ -592,7 +594,7 @@ def numerical_logq_starting_point(n, l, sigma_e, h):
     return logq_solution, beta_solustion
 
 
-def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, tolerance_bound, mitm, coreSVP, smallest_logq_found = float("inf")):
+def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, tolerance_bound, mitm, coreSVP, smallest_logq_found = float("inf"), rng = None):
     """
     Internal function. Brute-forces over wg-weight, runs optimization routine to find smaller logq
     :param n: LWE dimension
@@ -608,6 +610,9 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, tolerance
     """
     sigma_s = sqrt(h/n)
     xi = sigma_e / sigma_s
+
+    if rng is None:
+        rng = call_rng("numerical_logq_hybrid_runoptimize", n, l, sigma_e, h, mitm)
 
     #we re-randomize initial_guess by a random value from [-shift_bound, shift_bound]. The larger n, the larger interval helps
     shift_bound = 20
@@ -659,10 +664,10 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, tolerance
                 warnings.simplefilter("always")
 
                 #randomize the guess with wg
-                init_guess_rand = [max(wg+1,initial_guess[0]-random.randint(-shift_bound, shift_bound)), 
-                                   max(45,initial_guess[1]-random.randint(-shift_bound, shift_bound)), 
-                                   max(120, initial_guess[2]-random.randint(-shift_bound, shift_bound)), 
-                                   max(8, min(smallest_logq_found,initial_guess[3])-random.randint(-shift_bound, shift_bound))]
+                init_guess_rand = [max(wg+1,initial_guess[0]-rng.randint(-shift_bound, shift_bound)), 
+                                   max(45,initial_guess[1]-rng.randint(-shift_bound, shift_bound)), 
+                                   max(120, initial_guess[2]-rng.randint(-shift_bound, shift_bound)), 
+                                   max(8, min(smallest_logq_found,initial_guess[3])-rng.randint(-shift_bound, shift_bound))]
                 #res = fsolve(system, init_guess_rand, maxfev=2**21, full_output=False)
                 #print("init_guess_rand:", init_guess_rand)
                 res_ = optimize.root(system, init_guess_rand, method='lm') #calling with method 'lm' because it works for more-eqs-than-vars case
@@ -716,6 +721,8 @@ def numerical_logq_hybrid(n, l, h, mitm, std_e, coreSVP, nrestart):
 
     Main hack to speed-up things: re-initialize starting point for the optimization as greedily as possible for faster convergance to smaller q
     """
+
+    rng = call_rng("numerical_logq_hybrid", n, l, h, mitm, std_e, nrestart)
 
     #max allowed difference between target lambda and estimated lambda for found logq
     tolerance_bound_lambda = 12
@@ -791,7 +798,7 @@ def numerical_logq_hybrid(n, l, h, mitm, std_e, coreSVP, nrestart):
 
         #retursn res = [l, n, h, logq, beta, d, ng] and potentially better initial_guess
         #print("init_guess:", init_guess)
-        res, init_guess = numerical_logq_hybrid_runoptimize(n, l, std_e, h, init_guess, tolerance_bound_optimize, mitm, coreSVP, smallest_logq_found=best_logq)
+        res, init_guess = numerical_logq_hybrid_runoptimize(n, l, std_e, h, init_guess, tolerance_bound_optimize, mitm, coreSVP, smallest_logq_found=best_logq, rng=rng)
         
         if len(res)==0:
             #print("len res == 0")

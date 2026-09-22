@@ -2,7 +2,8 @@ from numpy import pi, exp, log, log2, sqrt
 from scipy.optimize import fsolve
 
 import numpy as np
-import random
+
+from rng import call_rng
 
 const = 2 * pi * exp(1)
 ln2 = log(2)
@@ -267,6 +268,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     # Initial guesses for n and beta
     std_e_initial_guess = 3.19
     beta_initial_guess = (l - 16.4) / 0.292
+    rng = call_rng("numerical_std_e_usvp", l, n, logq, std_s)
 
     def zeta(std_e):
         # print("std_e: ", std_e, "std_s: ", std_s)
@@ -318,10 +320,8 @@ def numerical_std_e_usvp(l, n, logq, std_s):
         # Random guess
 
         if i != 0:
-            initial_guess[0] = np.random.uniform(-guess_range,
-                                                 guess_range, size=1)
-            initial_guess[1] = np.random.uniform(-guess_range_beta,
-                                                 guess_range_beta, size=1)
+            initial_guess[0] = rng.uniform(-guess_range, guess_range)
+            initial_guess[1] = rng.uniform(-guess_range_beta, guess_range_beta)
 
         print(f"Checking {i+1} with initial guess {initial_guess}")
         try:
@@ -407,6 +407,7 @@ def numerical_std_e_bdd(l, n, logq, std_s):
     """
     retry_range = [-20, 60]
     std_e_initial_guess = 1
+    rng = call_rng("numerical_std_e_bdd", l, n, logq, std_s)
 
     max_retries = 100
     eta_initial_guess = (l - 16.4) / 0.292
@@ -441,7 +442,7 @@ def numerical_std_e_bdd(l, n, logq, std_s):
 
         # Generate a random starting point within the specified range
         if attempt != 0:
-            std_e_initial_guess = random.uniform(*retry_range)
+            std_e_initial_guess = rng.uniform(*retry_range)
 
         print(
             f"Attempt {attempt + 1} of {max_retries}... initial guess {std_e_initial_guess}")

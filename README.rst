@@ -140,7 +140,9 @@ Find an estimation of the standard deviation of the error distribution:
 Reproducibility
 ---------------
 
-Several numerical solvers (the hybrid attack, and ``--param std_e``) restart from randomised initial points. Both random number generators are seeded at start-up so that a given command line always produces the same answer; pass ``--seed`` to change it.
+Several numerical solvers (the hybrid attack, and ``--param std_e``) restart from randomised initial points. Each such call derives its own generator from a base seed and the call's own parameters, so a given set of LWE parameters always produces the same answer -- independently of how many other rows were computed in the same invocation. Pass ``--seed`` to change the base seed; see ``src/rng.py``.
+
+The hybrid solvers are sensitive to their restart budget. At ``--param logq --lambda 192 --n 1024 --hw 64 --secret sparse`` the default budget can settle on a log q that the Lattice Estimator scores far below the target, while ``--nrestart 1000`` finds the right one. Run the hybrid with ``-v`` and check the reported ``est hybrid`` against your target.
 
 The fitted constants in ``src/const.py`` can be regenerated from ``dataset/`` with:
 

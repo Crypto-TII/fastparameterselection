@@ -1,10 +1,10 @@
 from nd import NoiseDistribution as ND, Binary, Ternary, CenteredBinomial, DiscreteGaussian, SparseTernary, UniformMod, Uniform
 import math
 import csv
-import random
 import sys
 import getopt
 from formulas import check_overstreched
+from rng import set_base_seed
 from const import (
     LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
     LAMBDA_USVP_S_TER, LAMBDA_BDD_BIN, LAMBDA_BDD_TER, LAMBDA_BDD_S_BIN,
@@ -16,7 +16,6 @@ from const import (
 )
 sys.path.append('./latticeestimator')
 
-import numpy as np
 from numpy import log2, log
 coreSVP_models = {
     "BDGL": lambda beta, d: 0.292*beta+log2(8*d)+16.4, #default
@@ -361,11 +360,7 @@ def handle_options(opts):
         else:
             helper()
 
-    # Several numerical solvers (numerical_hybrid, numerical_std_e_*) use
-    # randomised restarts. Seed both RNGs so a given command line always
-    # produces the same answer; override with --seed.
-    random.seed(seed)
-    np.random.seed(seed)
+    set_base_seed(seed)
 
     secret_dist = set_distribution(secret_dist_tag, params)
     error_dist = set_distribution(error_dist_tag, params, is_error=True)
