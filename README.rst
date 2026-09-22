@@ -135,35 +135,23 @@ Find an estimation of the standard deviation of the error distribution:
 
    command: ["sage", "--python3", "src/estimate.py", "--param", "std_e",  "--lambda", "80", "--n", "1024", "--logq", "20", "--secret", "binary"]
 
-Find an estimation of the security level, given the example parameters in `example_lambda_binary.csv`:
+**Note**: for a standard deviation of the error much larger than ``3.19``, the Lattice Estimator becomes imprecise, so the ``est bdd`` column of ``--param std_e`` should be treated as indicative only.
 
-.. code-block:: yaml
+Reproducibility
+---------------
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "lambda", "--file", "./examples/example_lambda_binary.csv", "--verify", "1"]
+Several numerical solvers (the hybrid attack, and ``--param std_e``) restart from randomised initial points. Both random number generators are seeded at start-up so that a given command line always produces the same answer; pass ``--seed`` to change it.
 
-Find an estimation of the LWE dimension, given the example parameters in `example_n_ternary.csv`:
+The fitted constants in ``src/const.py`` can be regenerated from ``dataset/`` with:
 
-.. code-block:: yaml
+.. code-block:: bash
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "n", "--file", "./examples/example_n_ternary.csv"]
-
-Find an estimation of the size of the modulus q, given the example parameters in `example_logq_binary.csv`:
-
-.. code-block:: yaml
-
-   command: ["sage", "--python3", "src/estimate.py", "--param", "logq", "--file", "./examples/example_logq_binary.csv"]
-
-Find an estimation of the standard deviation of the error distribution, given the example parameters in `example_error_binary.csv`:
-
-.. code-block:: yaml
-
-   command: ["sage", "--python3", "src/estimate.py", "--param", "error", "--file", "./examples/example_error_binary.csv"]
-
-**Note**: In the Docker version, we applied a change to the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_ to address an imprecision in the case where the standard deviation of the error distribution is much larger than ``3.19``.
+   bash find_all_constants.sh
 
 ToDo list
 ----
 
+* Resolve the BDD ``eta`` equation (see the OPEN ITEM note at the top of ``src/numerical_solver.py``).
 * Include meet-in-the-middle for the hybrid attack. Challenge: derive compact formula for admissibility probability. Current status: added equations for optimization that include mitm speed-up for enumeration. Not tested.
 * Improve runtime of numerical_lambda_hybrid(). Compute probability_enum() and babai_prob() on the log scale directly. 
 

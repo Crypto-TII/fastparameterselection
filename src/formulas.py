@@ -234,9 +234,7 @@ def predicted_beta_usvp(d, lnq, sig, chi):
 
 # Main functions
 
-# Eq. (15)
-
-
+# Eq. (25)
 def model_lambda_usvp(d, logq, std_s, std_e, params):
     """
     Model the lambda value for the USVP model.
@@ -266,9 +264,7 @@ def model_lambda_usvp(d, logq, std_s, std_e, params):
                                              np.log(chi), np.log(np.divide(beta, const))))
     return np.multiply(params[0], beta) + np.multiply(params[1], np.log(m2)) + params[2]
 
-# Eq. (17)
-
-
+# Eq. (27)
 def model_lambda_usvp_s(d, logq, params):
     """
     Model the lambda value for the simplified USVP model.
@@ -285,6 +281,7 @@ def model_lambda_usvp_s(d, logq, params):
                        np.log(np.divide(params[1] * d, lnq))) + np.multiply(params[2], np.log(d)) + params[3]
 
 
+# Eq. (28)
 def model_lambda_bdd(d, logq, std_s, std_e, params):
     """
     Model the lambda value for the BDD model.
@@ -318,9 +315,7 @@ def model_lambda_bdd(d, logq, std_s, std_e, params):
 
     return np.real(np.multiply(params[0], beta) + params[1] * np.log(m2) + params[2])
 
-# Eq. (21)
-
-
+# Eq. (31)
 def model_lambda_bdd_s(d, logq, params):
     """
     Model the lambda value for the simplified BDD model.
@@ -335,9 +330,7 @@ def model_lambda_bdd_s(d, logq, params):
     return np.multiply(np.divide(params[0] * d, lnq),
                        np.log(params[1] * d / lnq)) + np.multiply(params[2], np.log(d)) + params[3]
 
-# Eq. (22)
-
-
+# Eq. (32)
 def model_n_usvp(l, logq, std_s, std_e, params):
     """
     Model the n value for the USVP model.
@@ -362,9 +355,7 @@ def model_n_usvp(l, logq, std_s, std_e, params):
 
     return leading_order
 
-# Eq. (23)
-
-
+# Eq. (33)
 def model_n_usvp_s(l, logq, params):
     """
     Model the n value for the simplified USVP model.
@@ -377,9 +368,7 @@ def model_n_usvp_s(l, logq, params):
     lnq = np.multiply(logq, ln2)
     return np.multiply(np.divide(l + params[0] * np.log(lnq), params[1] * np.log(l) + params[2]) + params[3], lnq)
 
-# Eq. (24)
-
-
+# Eq. (34)
 def model_n_bdd_rev1(l, logq, std_s, std_e, params):
     """
     Model the n value for the BDD model.
@@ -430,7 +419,7 @@ def model_n_bdd_rev1_exact(l, logq, std_s, std_e, params):
 
 
 
-# Eq. (25)
+# Eq. (35)
 def model_n_bdd_s(l, logq, params):
     """
     Model the n value for the simplified BDD model.

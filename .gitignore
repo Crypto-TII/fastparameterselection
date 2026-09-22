@@ -169,3 +169,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Tool output written into the repo root by every run
+output.csv
+compiled_output.csv
+debug_log.txt

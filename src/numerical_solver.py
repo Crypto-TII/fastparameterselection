@@ -9,6 +9,9 @@ ln2 = log(2)
 e = exp(1)
 
 
+# ---------------------------------------------------------------------------
+
+
 def _delta(beta):
     """
     Calculate the delta value for a given beta.
