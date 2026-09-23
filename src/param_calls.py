@@ -40,6 +40,19 @@ def cost_bits(cost):
     return math.floor(bits)
 
 
+def build_row(*entries):
+    """Build an output row from ordered (column, value[, include]) entries."""
+    row = {}
+    for entry in entries:
+        name, value, include = entry if len(entry) == 3 else (*entry, True)
+        if not include:
+            continue
+        if name in row:
+            raise ValueError(f"column {name!r} assigned twice while building a row")
+        row[name] = value
+    return row
+
+
 def verdict_for(chosen, candidates):
     """Return the estimator verdict for the candidate that was selected."""
     matching = [verdict for value, verdict in candidates if value == chosen]
@@ -224,37 +237,36 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
                 (est_bdd_s, lwe_bdd_s), (est_bdd_numerical, lwe_bdd_numerical),
             ]
 
-            if table:
-                if not num_only:
-                    data_point = {
-                        SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, LWE_USVP: lwe_usvp, USVP_S: est_usvp_s, LWE_USVP_S: lwe_usvp_s,
-                        USVP_NUM: est_usvp_numerical, LWE_USVP_NUM: lwe_usvp_numerical, BDD: est_bdd, LWE_BDD: lwe_bdd, BDD_S: est_bdd_s, LWE_BDD_S: lwe_bdd_s,
-                        BDD_NUM: est_bdd_numerical, LWE_BDD_NUM: lwe_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
-                    }
-                else:
-                    data_point = {
-                        SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP_NUM: est_usvp_numerical, LWE_USVP: lwe_usvp_numerical,
-                        BDD_NUM: est_bdd_numerical, LWE_BDD: lwe_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
-                    }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, OUTPUT: return_value, EST: verdict_for(return_value, candidates), POW: closest_power_of_2(return_value)
-                }
+            verified = True
         else:
-            if table:
-                if not num_only:
-                    data_point = {
-                        SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP: est_usvp, USVP_S: est_usvp_s, USVP_NUM: est_usvp_numerical,
-                        BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
-                    }
-                else:
-                    data_point = {
-                        SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, USVP_NUM: est_usvp_numerical, BDD_NUM: est_bdd_numerical, OUTPUT: return_value, POW: closest_power_of_2(return_value)
-                    }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, OUTPUT: return_value, POW: closest_power_of_2(return_value)
-                }
+            verified = False
+            candidates = []
+            lwe_usvp = lwe_usvp_s = lwe_usvp_numerical = 0
+            lwe_bdd = lwe_bdd_s = lwe_bdd_numerical = 0
+
+        full = table and not num_only
+        nums = table and num_only
+
+        data_point = build_row(
+            (SECRET_DIST, secret), (LAMBDA, l), (LOG_Q, lq),
+            (USVP,         est_usvp,           full),
+            (LWE_USVP,     lwe_usvp,           full and verified),
+            (USVP_S,       est_usvp_s,         full),
+            (LWE_USVP_S,   lwe_usvp_s,         full and verified),
+            (USVP_NUM,     est_usvp_numerical, table),
+            (LWE_USVP_NUM, lwe_usvp_numerical, full and verified),
+            (LWE_USVP,     lwe_usvp_numerical, nums and verified),
+            (BDD,          est_bdd,            full),
+            (LWE_BDD,      lwe_bdd,            full and verified),
+            (BDD_S,        est_bdd_s,          full),
+            (LWE_BDD_S,    lwe_bdd_s,          full and verified),
+            (BDD_NUM,      est_bdd_numerical,  table),
+            (LWE_BDD_NUM,  lwe_bdd_numerical,  full and verified),
+            (LWE_BDD,      lwe_bdd_numerical,  nums and verified),
+            (OUTPUT,       return_value),
+            (EST,          verdict_for(return_value, candidates), not table and verified),
+            (POW,          closest_power_of_2(return_value)),
+        )
         data.append(data_point)
 
     return data
@@ -615,36 +627,27 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
                 (est_num_bdd, lwe_bdd), (est_num_usvp, lwe_usvp),
             ]
 
-        if table:
-            if not num_only:
-                data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp,
-                    USVP_S: est_usvp_s, USVP_NUM: est_num_usvp,  LWE_USVP: lwe_usvp, BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_num_bdd, LWE_BDD: lwe_bdd, OUTPUT: return_value
-                }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP_NUM: est_num_usvp, LWE_USVP: lwe_usvp, BDD_NUM: est_num_bdd, LWE_BDD: lwe_bdd,
-                    OUTPUT: return_value
-                }
-        else:
-            data_point = {
-                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: verdict_for(return_value, candidates)
-            }
+        verified = True
     else:
-        if table:
-            if not num_only:
-                data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP: est_usvp,
-                    USVP_S: est_usvp_s, USVP_NUM: est_num_usvp, BDD: est_bdd, BDD_S: est_bdd_s, BDD_NUM: est_num_bdd, OUTPUT: return_value
-                }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, USVP_NUM: est_num_usvp, BDD_NUM: est_num_bdd, OUTPUT: return_value
-                }
-        else:
-            data_point = {
-                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value
-            }
+        verified = False
+        candidates = []
+        lwe_usvp = lwe_bdd = 0
+
+    full = table and not num_only
+
+    data_point = build_row(
+        (SECRET_DIST, secret), (LWE_DIM, lwe_d), (LOG_Q, lq),
+        (USVP,     est_usvp,     full),
+        (USVP_S,   est_usvp_s,   full),
+        (USVP_NUM, est_num_usvp, table),
+        (LWE_USVP, lwe_usvp,     table and verified),
+        (BDD,      est_bdd,      full),
+        (BDD_S,    est_bdd_s,    full),
+        (BDD_NUM,  est_num_bdd,  table),
+        (LWE_BDD,  lwe_bdd,      table and verified),
+        (OUTPUT,   return_value),
+        (EST,      verdict_for(return_value, candidates), verified and not table),
+    )
 
     return data_point
 
