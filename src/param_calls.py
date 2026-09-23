@@ -312,7 +312,6 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
             lwe_parameters_usvp, red_cost_model=RC.BDGL16))
 
         corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
-        est_bdd_numerical_aux, est_usvp_numerical_aux, lwe_bdd_aux, lwe_usvp_aux = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
 
         num_calls_usvp, num_calls_bdd = 1, 1
 
@@ -320,30 +319,31 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
             return_value, corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp, num_calls_usvp, num_calls_bdd = correction_logic(
                 l, lwe_d, None, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'logq', num_calls_usvp, num_calls_bdd)
 
-        if table and correction:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d,
-                LOGQ_USVP: est_usvp_numerical_aux, LWE_USVP: lwe_usvp_aux, LOGQ_USVP_C: corrected_logq_usvp, LWE_USVP_C: corrected_lwe_usvp, NUM_CALLS_USVP: num_calls_usvp, LOGQ_BDD: est_bdd_numerical_aux, LWE_BDD: lwe_bdd_aux, LOGQ_BDD_C: corrected_logq_bdd, LWE_BDD_C: corrected_lwe_bdd, NUM_CALLS_BDD: num_calls_bdd, OUTPUT: return_value
-            }
-        elif table and not correction:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d,
-                LOGQ_USVP: est_usvp_numerical_aux, LWE_USVP: lwe_usvp_aux, LOGQ_BDD: est_bdd_numerical_aux, LWE_BDD: lwe_bdd_aux, OUTPUT: return_value
-            }
-        else:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, OUTPUT: return_value, EST: return_value
-            }
+        verified = True
     else:
-        if table:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d,
-                LOGQ_USVP: est_usvp_numerical, LOGQ_BDD: est_bdd_numerical, OUTPUT: return_value
-            }
-        else:
-            data_point = {
-                SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, OUTPUT: return_value
-            }
+        verified = False
+        lwe_usvp = lwe_bdd = 0
+        corrected_logq_usvp = corrected_logq_bdd = 0
+        corrected_lwe_usvp = corrected_lwe_bdd = 0
+        num_calls_usvp = num_calls_bdd = 0
+
+    corrected = table and verified and correction
+
+    data_point = build_row(
+        (SECRET_DIST, secret), (LAMBDA, l), (LWE_DIM, lwe_d),
+        (LOGQ_USVP,      est_usvp_numerical,  table),
+        (LWE_USVP,       lwe_usvp,            table and verified),
+        (LOGQ_USVP_C,    corrected_logq_usvp, corrected),
+        (LWE_USVP_C,     corrected_lwe_usvp,  corrected),
+        (NUM_CALLS_USVP, num_calls_usvp,      corrected),
+        (LOGQ_BDD,       est_bdd_numerical,   table),
+        (LWE_BDD,        lwe_bdd,             table and verified),
+        (LOGQ_BDD_C,     corrected_logq_bdd,  corrected),
+        (LWE_BDD_C,      corrected_lwe_bdd,   corrected),
+        (NUM_CALLS_BDD,  num_calls_bdd,       corrected),
+        (OUTPUT,         return_value),
+        (EST,            return_value,        verified and not table),
+    )
     data.append(data_point)
 
     return data
@@ -395,15 +395,18 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
         primal_hybrid_cost = LWE.primal_hybrid(
             FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
         #print("LatticeEstimator returns:", primal_hybrid_cost)
-        data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: cost_bits(primal_hybrid_cost)
-        }
-        if cost_bits(primal_hybrid_cost) < l - 12:
+        measured = cost_bits(primal_hybrid_cost)
+        data_point = build_row(
+            (SECRET_DIST, secret), (LWE_DIM, lwe_d), (LAMBDA, l), (HW, h),
+            (LOGQ_HYBRID, est_hybrid), (LWE_HYBRID, measured),
+        )
+        if measured < l - 12:
             print("Found logq appears to be too large for the target security level. You may want to restart")
     else:
-        data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid
-        }
+        data_point = build_row(
+            (SECRET_DIST, secret), (LWE_DIM, lwe_d), (LAMBDA, l), (HW, h),
+            (LOGQ_HYBRID, est_hybrid),
+        )
 
     return_value = est_hybrid
     output_dict['logq'] = return_value
@@ -485,7 +488,8 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
             ]
 
             corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
-            est_bdd_numerical_aux, est_usvp_numerical_aux, lwe_bdd_aux, lwe_usvp_aux = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
+            est_bdd_reported, est_usvp_reported = est_bdd_numerical, est_usvp_numerical
+            lwe_bdd_reported, lwe_usvp_reported = lwe_bdd, lwe_usvp
 
             num_calls_usvp = 1
             num_calls_bdd = 1
@@ -505,30 +509,32 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
                 return_value, corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp, num_calls_usvp, num_calls_bdd = correction_logic(
                     l, lwe_d, lq, lwe_usvp, lwe_bdd, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, 'std_e', num_calls_usvp, num_calls_bdd, error_dist_tag)
 
-            if table and correction:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
-                    STD_E_USVP: est_usvp_numerical_aux, LWE_USVP: lwe_usvp_aux, STD_E_USVP_C: corrected_std_e_usvp, LWE_USVP_C: corrected_lwe_usvp, NUM_CALLS_USVP: num_calls_usvp, STD_E_BDD: est_bdd_numerical_aux, LWE_BDD: lwe_bdd_aux, STD_E_BDD_C: corrected_std_e_bdd, LWE_BDD_C: corrected_lwe_bdd, NUM_CALLS_BDD: num_calls_bdd, OUTPUT: return_value
-                }
-            elif table and not correction:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
-                    STD_E_USVP: est_usvp_numerical_aux, LWE_USVP: lwe_usvp_aux, STD_E_BDD: est_bdd_numerical_aux, LWE_BDD: lwe_bdd_aux, OUTPUT: return_value
-                }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: verdict_for(return_value, candidates)
-                }
+            verified = True
         else:
-            if table:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq,
-                    STD_E_USVP: est_usvp_numerical, STD_E_BDD: est_bdd_numerical, OUTPUT: return_value
-                }
-            else:
-                data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value
-                }
+            verified = False
+            candidates = []
+            lwe_usvp_reported = lwe_bdd_reported = 0
+            est_usvp_reported, est_bdd_reported = est_usvp_numerical, est_bdd_numerical
+            corrected_std_e_usvp = corrected_std_e_bdd = 0
+            corrected_lwe_usvp = corrected_lwe_bdd = 0
+
+        corrected = table and verified and correction
+
+        data_point = build_row(
+            (SECRET_DIST, secret), (LAMBDA, l), (LWE_DIM, lwe_d), (LOG_Q, lq),
+            (STD_E_USVP,     est_usvp_reported,    table),
+            (LWE_USVP,       lwe_usvp_reported,    table and verified),
+            (STD_E_USVP_C,   corrected_std_e_usvp, corrected),
+            (LWE_USVP_C,     corrected_lwe_usvp,   corrected),
+            (NUM_CALLS_USVP, num_calls_usvp,       corrected),
+            (STD_E_BDD,      est_bdd_reported,     table),
+            (LWE_BDD,        lwe_bdd_reported,     table and verified),
+            (STD_E_BDD_C,    corrected_std_e_bdd,  corrected),
+            (LWE_BDD_C,      corrected_lwe_bdd,    corrected),
+            (NUM_CALLS_BDD,  num_calls_bdd,        corrected),
+            (OUTPUT,         return_value),
+            (EST,            verdict_for(return_value, candidates), verified and not table),
+        )
         data.append(data_point)
 
     return data
@@ -700,13 +706,16 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
                 FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
             primal_hybrid_cost = cost_bits(primal_hybrid)
             #print("LatticeEstimator returns:", primal_hybrid)
-            data_point = {
-                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
-            }
+            verified = True
         else:
-            data_point = {
-                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid
-            }
+            verified = False
+            primal_hybrid_cost = 0
+
+        data_point = build_row(
+            (SECRET_DIST, secret), (LWE_DIM, lwe_d), (LOG_Q, lq), (HW, h),
+            (HYBRID, est_hybrid),
+            (LWE_HYBRID, primal_hybrid_cost, verified),
+        )
 
         if len(logq) > 1:
             output_dict['lambda'].append(est_hybrid)
