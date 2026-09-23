@@ -29,6 +29,12 @@ sys.path.append(str(Path(__file__).resolve().parent.parent / 'latticeestimator')
 
 warnings.filterwarnings('error')
 
+def verdict_for(chosen, candidates):
+    """Return the estimator verdict for the candidate that was selected."""
+    matching = [verdict for value, verdict in candidates if value == chosen]
+    return min(matching) if matching else 0
+
+
 def process_parameters(params, table):
     param = params['param']
     logq = params['logq']
@@ -201,11 +207,11 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
             lwe_bdd_numerical = math.floor(math.log2(LWE.primal_bdd(
                 lwe_parameters_bdd_num, red_cost_model=RC.BDGL16)["rop"]))
 
-            estimates = {
-                est_usvp: lwe_usvp, est_usvp_s: lwe_usvp_s,
-                est_usvp_numerical: lwe_usvp_numerical, est_bdd: lwe_bdd,
-                est_bdd_s: lwe_bdd_s, est_bdd_numerical: lwe_bdd_numerical
-            }
+            candidates = [
+                (est_usvp, lwe_usvp), (est_usvp_s, lwe_usvp_s),
+                (est_usvp_numerical, lwe_usvp_numerical), (est_bdd, lwe_bdd),
+                (est_bdd_s, lwe_bdd_s), (est_bdd_numerical, lwe_bdd_numerical),
+            ]
 
             if table:
                 if not num_only:
@@ -221,7 +227,7 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
                     }
             else:
                 data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, OUTPUT: return_value, EST: estimates[return_value], POW: closest_power_of_2(return_value)
+                    SECRET_DIST: secret, LAMBDA: l, LOG_Q: lq, OUTPUT: return_value, EST: verdict_for(return_value, candidates), POW: closest_power_of_2(return_value)
                 }
         else:
             if table:
@@ -451,9 +457,9 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
 
                 num_calls_usvp = 1
 
-            estimates = {
-                est_usvp_numerical: lwe_usvp, est_bdd_numerical: lwe_bdd
-            }
+            candidates = [
+                (est_usvp_numerical, lwe_usvp), (est_bdd_numerical, lwe_bdd),
+            ]
 
             corrected_std_e_bdd, corrected_std_e_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
             est_bdd_numerical_aux, est_usvp_numerical_aux, lwe_bdd_aux, lwe_usvp_aux = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
@@ -488,7 +494,7 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
                 }
             else:
                 data_point = {
-                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: estimates[return_value]
+                    SECRET_DIST: secret, LAMBDA: l, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: verdict_for(return_value, candidates)
                 }
         else:
             if table:
@@ -588,13 +594,15 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
             sys.exit(1)
 
         if not num_only:
-            estimates = {
-                est_usvp: lwe_usvp, est_bdd: lwe_bdd, est_usvp_s: lwe_usvp, est_bdd_s: lwe_bdd, est_num_bdd: lwe_bdd, est_num_usvp: lwe_usvp
-            }
+            candidates = [
+                (est_usvp, lwe_usvp), (est_bdd, lwe_bdd),
+                (est_usvp_s, lwe_usvp), (est_bdd_s, lwe_bdd),
+                (est_num_bdd, lwe_bdd), (est_num_usvp, lwe_usvp),
+            ]
         else:
-            estimates = {
-                est_num_bdd: lwe_bdd, est_num_usvp: lwe_usvp
-            }
+            candidates = [
+                (est_num_bdd, lwe_bdd), (est_num_usvp, lwe_usvp),
+            ]
 
         if table:
             if not num_only:
@@ -609,7 +617,7 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
                 }
         else:
             data_point = {
-                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: estimates[return_value]
+                SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, OUTPUT: return_value, EST: verdict_for(return_value, candidates)
             }
     else:
         if table:
