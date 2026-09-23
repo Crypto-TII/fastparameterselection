@@ -1,4 +1,7 @@
+import functools
+
 from rng import call_rng
+from numerical_solver import strict_numerics
 from sage.all import RR, binomial, RealDistribution, prod, erf
 from numpy import pi, exp, log, log2, sqrt, ceil, floor
 from scipy.optimize import fsolve
@@ -390,6 +393,7 @@ def mitm_babai_probability(n, logq, sigma_e, h, beta, d, fast=False):
 
 
 
+@strict_numerics
 def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max, initial_guess = False, verbose=True):
     """
     Caller's function for sec. level of hybrid attack
@@ -708,6 +712,7 @@ def numerical_logq_hybrid_runoptimize(n, l, sigma_e, h, initial_guess, tolerance
     return best_solution, initial_guess
 
 
+@strict_numerics
 def numerical_logq_hybrid(n, l, h, mitm, std_e, coreSVP, nrestart):
     """
     Caller's function: runs numerical_logq_hybrid_runoptimize with different initial guesses, checks the output with numerical_lambda_hybrid()

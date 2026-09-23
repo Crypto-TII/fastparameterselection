@@ -1,3 +1,6 @@
+import functools
+import warnings
+
 from numpy import pi, exp, log, log2, sqrt
 from scipy.optimize import fsolve
 
@@ -13,6 +16,16 @@ e = exp(1)
 # ---------------------------------------------------------------------------
 
 
+def strict_numerics(fn):
+    """Run a solver with numpy's warnings promoted to errors."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            return fn(*args, **kwargs)
+    return wrapper
+
+
 def _delta(beta):
     """
     Calculate the delta value for a given beta.
@@ -24,6 +37,7 @@ def _delta(beta):
     return (beta / (2 * pi * e) * (pi * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
 
 
+@strict_numerics
 def numerical_lambda_bdd(n, logq, std_s, std_e):
     """
     Estimate the lambda value for the BDD model using numerical methods.
@@ -59,6 +73,7 @@ def numerical_lambda_bdd(n, logq, std_s, std_e):
     return l_solution
 
 
+@strict_numerics
 def numerical_lambda_bdd_rev1(n, logq, std_s, std_e):
 
     # print("in numerical_lambda_bdd_rev1!")
@@ -100,6 +115,7 @@ def numerical_lambda_bdd_rev1(n, logq, std_s, std_e):
     return l_solution
 
 
+@strict_numerics
 def numerical_lambda_usvp(n, logq, std_s, std_e):
     """
     Estimate the lambda value for the USVP model using numerical methods.
@@ -132,6 +148,7 @@ def numerical_lambda_usvp(n, logq, std_s, std_e):
     return l_solution
 
 
+@strict_numerics
 def numerical_n_bdd(l, logq, std_s, std_e):
     """
     Estimate the n value for the BDD model using numerical methods.
@@ -175,6 +192,7 @@ def numerical_n_bdd(l, logq, std_s, std_e):
     return n_solution
 
 
+@strict_numerics
 def numerical_n_usvp(l, logq, std_s, std_e):
     """
     Estimate the n value for the USVP model using numerical methods.
@@ -218,6 +236,7 @@ def numerical_n_usvp(l, logq, std_s, std_e):
     return n_solution
 
 
+@strict_numerics
 def numerical_logq_bdd(l, n, std_s, std_e):
 
     eta_initial_guess = (l - 16.4) / 0.292
@@ -252,6 +271,17 @@ def numerical_logq_bdd(l, n, std_s, std_e):
     return lnq_solution/ln2
 
 
+def _plausible_std_e_root(solution):
+    """Reject roots with a non-finite std_e or a block size at 2*pi*e."""
+    try:
+        std_e, beta = solution
+    except (TypeError, ValueError):
+        return False
+    return (np.isfinite(std_e) and std_e > 0
+            and np.isfinite(beta) and beta > const + 1)
+
+
+@strict_numerics
 def numerical_std_e_usvp(l, n, logq, std_s):
     """
     Estimate the n value for the USVP model using numerical methods.
@@ -327,11 +357,12 @@ def numerical_std_e_usvp(l, n, logq, std_s):
         try:
             solution, info, ier, msg = fsolve(
                 system_usvp_l, initial_guess, full_output=True, xtol=1e-3, maxfev=1000)
-        except Exception as e:
+        except (ArithmeticError, ValueError, RuntimeWarning):
             continue
 
-        if ier == 1:
+        if ier == 1 and _plausible_std_e_root(solution):
             break
+        ier = 0
 
     if ier != 1:  # Check if fsolve converged
         print(
@@ -346,6 +377,7 @@ def numerical_std_e_usvp(l, n, logq, std_s):
     return std_e_solution, True
 
 
+@strict_numerics
 def numerical_logq_usvp(l, n, std_s, std_e):
     """
     Estimate the n value for the USVP model using numerical methods.
@@ -393,6 +425,7 @@ def numerical_logq_usvp(l, n, std_s, std_e):
     return lnq_solution/ln2
 
 
+@strict_numerics
 def numerical_std_e_bdd(l, n, logq, std_s):
     """
     Estimate the std_e value for the BDD model using numerical methods, with retry logic for convergence.

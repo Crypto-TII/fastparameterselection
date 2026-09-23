@@ -24,6 +24,18 @@ coreSVP_models = {
 }
 
 
+def cost_bits(cost):
+    """Lattice Estimator cost in bits, or inf when the cost is infinite."""
+    rop = cost["rop"]
+    try:
+        bits = math.log2(float(rop))
+    except (OverflowError, ValueError, TypeError):
+        return math.inf
+    if math.isinf(bits) or math.isnan(bits):
+        return math.inf
+    return math.floor(bits)
+
+
 def check_estimator_installed():
     try:
         global LWE, RC
@@ -641,8 +653,8 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             lwe_parameters_usvp, _ = get_parameters(
                 lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
 
-            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+            lwe_usvp = cost_bits(LWE.primal_usvp(
+                lwe_parameters_usvp, red_cost_model=RC.BDGL16))
 
             print("correction")
             print("USVP parameters", lwe_parameters_usvp)
@@ -658,8 +670,8 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             num_calls_usvp += 1
             lwe_parameters_usvp, _ = get_parameters(
                 lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
-            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+            lwe_usvp = cost_bits(LWE.primal_usvp(
+                lwe_parameters_usvp, red_cost_model=RC.BDGL16))
             corrected_lwe_usvp = lwe_usvp
             corrected_usvp = est_usvp_numerical
             print("Applying correction lwe usvp < l", "logq ",
@@ -687,8 +699,8 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             _, lwe_parameters_bdd = get_parameters(
                 lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
             try:
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_bdd = cost_bits(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16))
             except Exception:
                 continue
 
@@ -710,8 +722,8 @@ def correction_logic(l, lwe_d, lnq, lwe_usvp, lwe_bdd, secret_dist, error_dist, 
             _, lwe_parameters_bdd = get_parameters(
                 lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param)
             try:
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_bdd = cost_bits(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16))
             except Exception:
                 continue
             corrected_lwe_bdd = lwe_bdd

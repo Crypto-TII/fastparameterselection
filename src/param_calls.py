@@ -27,7 +27,18 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / 'latticeestimator'))
 
-warnings.filterwarnings('error')
+
+def cost_bits(cost):
+    """Lattice Estimator cost in bits, or inf when the cost is infinite."""
+    rop = cost["rop"]
+    try:
+        bits = math.log2(float(rop))
+    except (OverflowError, ValueError, TypeError):
+        return math.inf
+    if math.isinf(bits) or math.isnan(bits):
+        return math.inf
+    return math.floor(bits)
+
 
 def verdict_for(chosen, candidates):
     """Return the estimator verdict for the candidate that was selected."""
@@ -188,24 +199,24 @@ def process_n_param(logq, l, secret_dist, error_dist, n_usvp, n_usvp_s, n_bdd, n
                     est_usvp_s, 2 ** lq, secret_dist, error_dist)
                 lwe_parameters_bdd_s = LWE.Parameters(
                     est_bdd_s, 2 ** lq, secret_dist, error_dist)
-                lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-                lwe_usvp_s = math.floor(math.log2(LWE.primal_usvp(
-                    lwe_parameters_usvp_s, red_cost_model=RC.BDGL16)["rop"]))
-                lwe_bdd_s = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd_s, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_usvp = cost_bits(LWE.primal_usvp(
+                    lwe_parameters_usvp, red_cost_model=RC.BDGL16))
+                lwe_bdd = cost_bits(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16))
+                lwe_usvp_s = cost_bits(LWE.primal_usvp(
+                    lwe_parameters_usvp_s, red_cost_model=RC.BDGL16))
+                lwe_bdd_s = cost_bits(LWE.primal_bdd(
+                    lwe_parameters_bdd_s, red_cost_model=RC.BDGL16))
 
             lwe_parameters_usvp_num = LWE.Parameters(
                 est_usvp_numerical, 2 ** lq, secret_dist, error_dist)
             lwe_parameters_bdd_num = LWE.Parameters(
                 est_bdd_numerical, 2 ** lq, secret_dist, error_dist)
 
-            lwe_usvp_numerical = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters_usvp_num, red_cost_model=RC.BDGL16)["rop"]))
-            lwe_bdd_numerical = math.floor(math.log2(LWE.primal_bdd(
-                lwe_parameters_bdd_num, red_cost_model=RC.BDGL16)["rop"]))
+            lwe_usvp_numerical = cost_bits(LWE.primal_usvp(
+                lwe_parameters_usvp_num, red_cost_model=RC.BDGL16))
+            lwe_bdd_numerical = cost_bits(LWE.primal_bdd(
+                lwe_parameters_bdd_num, red_cost_model=RC.BDGL16))
 
             candidates = [
                 (est_usvp, lwe_usvp), (est_usvp_s, lwe_usvp_s),
@@ -283,10 +294,10 @@ def process_logq_param(l, lwe_d, error_dist, verify, estimator_installed, correc
             lwe_d, 2 ** est_bdd_numerical, secret_dist, error_dist)
         lwe_parameters_usvp = LWE.Parameters(
             lwe_d, 2 ** est_usvp_numerical, secret_dist, error_dist)
-        lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-            lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
-        lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-            lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+        lwe_bdd = cost_bits(LWE.primal_bdd(
+            lwe_parameters_bdd, red_cost_model=RC.BDGL16))
+        lwe_usvp = cost_bits(LWE.primal_usvp(
+            lwe_parameters_usvp, red_cost_model=RC.BDGL16))
 
         corrected_logq_bdd, corrected_logq_usvp, corrected_lwe_bdd, corrected_lwe_usvp = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
         est_bdd_numerical_aux, est_usvp_numerical_aux, lwe_bdd_aux, lwe_usvp_aux = est_bdd_numerical, est_usvp_numerical, lwe_bdd, lwe_usvp
@@ -373,9 +384,9 @@ def process_logq_param_hybrid(l, lwe_d, error_dist, verify, estimator_installed,
             FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
         #print("LatticeEstimator returns:", primal_hybrid_cost)
         data_point = {
-            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: math.floor(math.log2(primal_hybrid_cost["rop"]))
+            SECRET_DIST: secret, LWE_DIM: lwe_d, LAMBDA: l, HW: h, LOGQ_HYBRID: est_hybrid, LWE_HYBRID: cost_bits(primal_hybrid_cost)
         }
-        if math.floor(math.log2(primal_hybrid_cost["rop"])) < l - 12:
+        if cost_bits(primal_hybrid_cost) < l - 12:
             print("Found logq appears to be too large for the target security level. You may want to restart")
     else:
         data_point = {
@@ -444,16 +455,16 @@ def process_std_e_param(logq, l, lwe_d, verify, estimator_installed, secret_dist
             if est_bdd_numerical_status:
                 lwe_parameters_bdd = LWE.Parameters(
                     lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_bdd_numerical}, is_error=True))
-                lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                    lwe_parameters_bdd, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_bdd = cost_bits(LWE.primal_bdd(
+                    lwe_parameters_bdd, red_cost_model=RC.BDGL16))
 
                 num_calls_bdd = 1
 
             if est_usvp_numerical_status:
                 lwe_parameters_usvp = LWE.Parameters(
                     lwe_d, 2 ** lq, secret_dist, set_distribution(error_dist_tag, {'std': 2**est_usvp_numerical}, is_error=True))
-                lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                    lwe_parameters_usvp, red_cost_model=RC.BDGL16)["rop"]))
+                lwe_usvp = cost_bits(LWE.primal_usvp(
+                    lwe_parameters_usvp, red_cost_model=RC.BDGL16))
 
                 num_calls_usvp = 1
 
@@ -585,10 +596,10 @@ def create_data_point(lq, lwe_d, error_dist, secret_dist, est_usvp, est_usvp_s, 
             Xs = secret_dist,
             Xe = error_dist)
         try:
-            lwe_bdd = math.floor(math.log2(LWE.primal_bdd(
-                lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
-            lwe_usvp = math.floor(math.log2(LWE.primal_usvp(
-                lwe_parameters, red_cost_model=RC.BDGL16)["rop"]))
+            lwe_bdd = cost_bits(LWE.primal_bdd(
+                lwe_parameters, red_cost_model=RC.BDGL16))
+            lwe_usvp = cost_bits(LWE.primal_usvp(
+                lwe_parameters, red_cost_model=RC.BDGL16))
         except Exception as e:
             print(f"Error in the Lattice Estimator: {e}")
             sys.exit(1)
@@ -684,7 +695,7 @@ def process_lambda_param_hybrid(logq, lwe_d, h, error_dist, secret_dist, verify,
                     return
             primal_hybrid = LWE.primal_hybrid(
                 FHEParam, red_cost_model=redcostmodel, mitm=mitm, babai=True)
-            primal_hybrid_cost = math.floor(math.log2(primal_hybrid["rop"]))
+            primal_hybrid_cost = cost_bits(primal_hybrid)
             #print("LatticeEstimator returns:", primal_hybrid)
             data_point = {
                 SECRET_DIST: secret, LWE_DIM: lwe_d, LOG_Q: lq, HW: h, HYBRID: est_hybrid, LWE_HYBRID: primal_hybrid_cost
