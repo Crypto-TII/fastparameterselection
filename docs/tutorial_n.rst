@@ -9,7 +9,7 @@ various sizes of the ciphertext modulus:
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19"
+   python3 -m fastparameterselection.estimate --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19"
 
 .. code-block:: text
 
@@ -28,7 +28,7 @@ dimension is more secure.
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19" --table
+   python3 -m fastparameterselection.estimate --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19" --table
 
 .. code-block:: text
 
@@ -46,7 +46,7 @@ Each formula's dimension is fed back into the Lattice Estimator, so every
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19" --table -v
+   python3 -m fastparameterselection.estimate --param "n" --lambda "128" --logq "27;37;45;54" --secret "binary" --error "gaussian" --std "3.19" --table -v
 
 .. code-block:: text
 

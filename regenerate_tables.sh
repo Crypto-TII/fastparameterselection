@@ -39,7 +39,7 @@ _start() {          # _start <filename>
 
 _run() {            # _run <estimate.py args...>
     echo "    $*"
-    if ! $PY src/estimate.py "$@" --seed "$SEED" >/dev/null 2>&1; then
+    if ! $PY -m fastparameterselection.estimate "$@" --seed "$SEED" >/dev/null 2>&1; then
         echo "    !! FAILED: $*" >&2
         return 1
     fi

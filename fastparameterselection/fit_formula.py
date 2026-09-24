@@ -1,12 +1,12 @@
-from nd import NoiseDistribution as ND, UniformMod
+from .nd import NoiseDistribution as ND, UniformMod
 import lmfit
 import numpy as np
-from aux_functions import helper_fit
+from .aux_functions import helper_fit
 import pickle
 
 import sys
 
-from formulas import (
+from .formulas import (
     model_n_bdd_rev1, model_n_bdd_s, model_n_usvp, model_n_usvp_s, model_lambda_usvp, model_lambda_bdd, model_lambda_bdd_s, model_lambda_usvp_s
 )
 

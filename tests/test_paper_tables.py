@@ -12,8 +12,8 @@ import math
 
 import pytest
 
-import const
-from formulas import (
+from fastparameterselection import const
+from fastparameterselection.formulas import (
     model_lambda_bdd,
     model_lambda_bdd_s,
     model_lambda_usvp,
@@ -23,7 +23,7 @@ from formulas import (
     model_n_usvp,
     model_n_usvp_s,
 )
-from numerical_solver import (
+from fastparameterselection.numerical_solver import (
     numerical_lambda_bdd_rev1,
     numerical_lambda_usvp,
     numerical_logq_bdd,

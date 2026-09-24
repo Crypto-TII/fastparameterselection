@@ -7,7 +7,7 @@ still reaches a target security level. Values are reported as
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
+   python3 -m fastparameterselection.estimate --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
 
 .. code-block:: text
 
@@ -22,7 +22,7 @@ attacks.
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table
+   python3 -m fastparameterselection.estimate --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table
 
 .. code-block:: text
 
@@ -34,7 +34,7 @@ attacks.
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v
+   python3 -m fastparameterselection.estimate --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v
 
 .. code-block:: text
 

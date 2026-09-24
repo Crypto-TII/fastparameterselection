@@ -13,8 +13,8 @@ many other rows were computed in the same invocation:
 .. code-block:: bash
 
    # these agree
-   python3 src/estimate.py --param "std_e" --lambda "128" --n "1024" --logq "32;48;64" --secret "binary"
-   python3 src/estimate.py --param "std_e" --lambda "128" --n "1024" --logq "32" --secret "binary"
+   python3 -m fastparameterselection.estimate --param "std_e" --lambda "128" --n "1024" --logq "32;48;64" --secret "binary"
+   python3 -m fastparameterselection.estimate --param "std_e" --lambda "128" --n "1024" --logq "32" --secret "binary"
 
 Pass ``--seed`` to change the base seed. See ``src/rng.py``.
 

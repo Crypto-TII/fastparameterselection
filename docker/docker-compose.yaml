@@ -4,9 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ../src:/app/src
+      - ../fastparameterselection:/app/fastparameterselection
       - ../latticeestimator:/app/latticeestimator
       - ../dataset:/app/dataset
       - ../tests_commands:/app/tests_commands
     working_dir: /app
-    command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "35", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
+    command: [ "sage", "--python3", "-m", "fastparameterselection.estimate", "--param", "lambda",  "--n", "1024", "--logq", "35", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]

@@ -1,11 +1,11 @@
 import sys
-from aux_functions import (
+from .aux_functions import (
     check_estimator_installed, set_functions_params, parse_options, handle_options,
     print_table, helper_headers, handle_errors,
     print_warnings, check_ntru, export_to_csv, get_secret_value
 )
-from param_calls import process_parameters
-from fit_formula import find_constants
+from .param_calls import process_parameters
+from .fit_formula import find_constants
 
 
 
@@ -87,5 +87,10 @@ def main(argv):
         return output_dict[param]
 
 
-if __name__ == "__main__":
+def cli():
+    """Console entry point: ``fastparams`` after installation."""
     main(sys.argv[1:])
+
+
+if __name__ == "__main__":
+    cli()

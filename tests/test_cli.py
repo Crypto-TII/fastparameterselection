@@ -4,6 +4,7 @@ These run ``src/estimate.py`` as a subprocess, so they cover option parsing,
 rounding and formatting as well as the formulas.
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -13,11 +14,11 @@ import pytest
 pytestmark = pytest.mark.needs_sage
 
 
-def run(estimate_py, *args, cwd=None):
+def run(estimate_py, *args, cwd=None, env=None):
     """Invoke the tool and return its stdout, asserting it exited cleanly."""
     out = subprocess.run(
-        [sys.executable, str(estimate_py), *args],
-        capture_output=True, text=True, timeout=1800, cwd=cwd,
+        [sys.executable, *estimate_py, *args],
+        capture_output=True, text=True, timeout=1800, cwd=cwd, env=env,
     )
     assert out.returncode == 0, f"exited {out.returncode}\n{out.stdout}\n{out.stderr}"
     return out.stdout
@@ -72,10 +73,16 @@ def test_section6_error_stddev(estimate_py):
 # Behaviour of the command line itself
 # --------------------------------------------------------------------------
 
-def test_runs_from_any_directory(estimate_py, tmp_path):
-    """The vendored Lattice Estimator must resolve relative to src/, not cwd."""
+def test_runs_from_any_directory(estimate_py, tmp_path, repo_root):
+    """Nothing may depend on the working directory.
+
+    The vendored Lattice Estimator is resolved from the package location, so
+    running from elsewhere must give the same answer. PYTHONPATH stands in for
+    an install, which the test environment does not assume.
+    """
+    env = dict(os.environ, PYTHONPATH=str(repo_root))
     out = run(estimate_py, "--param", "lambda", "--n", "1024", "--logq", "20",
-              "--secret", "binary", "--std", "3.19", cwd=tmp_path)
+              "--secret", "binary", "--std", "3.19", cwd=tmp_path, env=env)
     assert outputs(out) == ["173"]
 
 
@@ -94,7 +101,7 @@ def test_logq_range_syntax(estimate_py):
 ])
 def test_bad_input_exits_nonzero(estimate_py, args):
     """Failures must be visible to a shell script, not reported as success."""
-    out = subprocess.run([sys.executable, str(estimate_py), *args],
+    out = subprocess.run([sys.executable, *estimate_py, *args],
                          capture_output=True, text=True, timeout=600)
     assert out.returncode != 0
 

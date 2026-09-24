@@ -1,7 +1,7 @@
 import functools
 
-from rng import call_rng
-from numerical_solver import strict_numerics
+from .rng import call_rng
+from .numerical_solver import strict_numerics
 from sage.all import RR, binomial, RealDistribution, prod, erf
 from numpy import pi, exp, log, log2, sqrt, ceil, floor
 from scipy.optimize import fsolve

@@ -6,7 +6,7 @@ reaches a target security level.
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19"
+   python3 -m fastparameterselection.estimate --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19"
 
 .. code-block:: text
 
@@ -21,7 +21,7 @@ the *smallest* modulus, and that is what the ``output`` column reports.
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" --table
+   python3 -m fastparameterselection.estimate --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" --table
 
 .. code-block:: text
 
@@ -33,7 +33,7 @@ the *smallest* modulus, and that is what the ``output`` column reports.
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" --table -v
+   python3 -m fastparameterselection.estimate --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" --table -v
 
 .. code-block:: text
 

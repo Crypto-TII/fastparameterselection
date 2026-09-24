@@ -18,7 +18,7 @@ derivations: `A Tool for Fast and Secure LWE Parameter Selection: the FHE case
 
 .. code-block:: bash
 
-   python3 src/estimate.py --param "lambda" --n "1024" --logq "20;35;40" --secret "binary" --std "3.19"
+   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "20;35;40" --secret "binary" --std "3.19"
 
 .. code-block:: text
 
@@ -38,7 +38,9 @@ Installation
 Common errors
 -------------
 
-Some MacOS users may encounter an error when running the tool using `python3 src/estimate.py`. This is due to the fact that the tool requires SageMath to run. To resolve this issue, you can run the tool using SageMath directly:
+Some MacOS users may encounter an error when running the tool using `python3 -m fastparameterselection.estimate`. This is due to the fact that the tool requires SageMath to run. To resolve this issue, you can run the tool using SageMath directly:
+
+Some MacOS users may encounter an error when running the tool using `python3 -m fastparameterselection.estimate`. This is due to the fact that the tool requires SageMath to run. To resolve this issue, you can run the tool using SageMath directly:
 
 Use with Docker
 ---------------

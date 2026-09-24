@@ -6,7 +6,7 @@ from scipy.optimize import fsolve
 
 import numpy as np
 
-from rng import call_rng
+from .rng import call_rng
 
 const = 2 * pi * exp(1)
 ln2 = log(2)

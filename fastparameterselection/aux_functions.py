@@ -1,12 +1,12 @@
-from nd import NoiseDistribution as ND, Binary, Ternary, CenteredBinomial, DiscreteGaussian, SparseTernary, UniformMod, Uniform
+from .nd import NoiseDistribution as ND, Binary, Ternary, CenteredBinomial, DiscreteGaussian, SparseTernary, UniformMod, Uniform
 import math
 import csv
 import sys
 import getopt
 from pathlib import Path
-from formulas import check_overstreched
-from rng import set_base_seed
-from const import (
+from .formulas import check_overstreched
+from .rng import set_base_seed
+from .const import (
     LAMBDA_USVP_BIN, LAMBDA_USVP_TER, LAMBDA_USVP_S_BIN,
     LAMBDA_USVP_S_TER, LAMBDA_BDD_BIN, LAMBDA_BDD_TER, LAMBDA_BDD_S_BIN,
     LAMBDA_BDD_S_TER, N_USVP_BIN, N_USVP_TER, N_USVP_S_BIN, N_USVP_S_TER,
@@ -15,7 +15,9 @@ from const import (
     HYBRID, LWE_HYBRID, LAMBDA,
     WARNING_THRESHOLD, MAX_CORRECTION_CALLS
 )
-sys.path.append(str(Path(__file__).resolve().parent.parent / 'latticeestimator'))
+_vendored = Path(__file__).resolve().parent.parent / 'latticeestimator'
+if _vendored.is_dir():
+    sys.path.append(str(_vendored))
 
 from numpy import log2, log
 coreSVP_models = {

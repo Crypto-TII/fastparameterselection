@@ -174,3 +174,8 @@ cython_debug/
 output.csv
 compiled_output.csv
 debug_log.txt
+
+# packaging
+build/
+dist/
+*.egg-info/

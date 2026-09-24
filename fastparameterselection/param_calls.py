@@ -10,22 +10,24 @@ import math
 from numpy import log2, log
 import traceback
 
-from formulas import (
+from .formulas import (
     model_lambda_usvp, model_lambda_usvp_s, model_lambda_bdd, model_lambda_bdd_s,
     model_n_usvp, model_n_usvp_s, model_n_bdd_rev1, model_n_bdd_s,
 )
-from numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_bdd_rev1, numerical_lambda_usvp
-from numerical_hybrid import numerical_lambda_hybrid, numerical_logq_hybrid
-from aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
+from .numerical_solver import numerical_n_usvp, numerical_n_bdd, numerical_logq_usvp, numerical_logq_bdd, numerical_std_e_usvp, numerical_std_e_bdd, numerical_lambda_bdd, numerical_lambda_bdd_rev1, numerical_lambda_usvp
+from .numerical_hybrid import numerical_lambda_hybrid, numerical_logq_hybrid
+from .aux_functions import closest_power_of_2, helper, set_distribution, correction_logic
 
-from const import (
+from .const import (
     SECRET_DIST, LAMBDA, LOG_Q, USVP, LWE_USVP, LWE_USVP_C, USVP_S, LWE_USVP_S, USVP_NUM, LWE_USVP_NUM, LWE_BDD_NUM, BDD, LWE_BDD, LWE_BDD_C, BDD_S, LWE_BDD_S, BDD_NUM, OUTPUT, POW, LWE_DIM, LOGQ_BDD, LOGQ_USVP, LOGQ_USVP_C, LOGQ_BDD_C, HW, HYBRID, LOGQ_HYBRID, LWE_HYBRID, STD_E_USVP, STD_E_BDD, STD_E_USVP_C, STD_E_BDD_C, EST, NUM_CALLS_USVP, NUM_CALLS_BDD
 )
 
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).resolve().parent.parent / 'latticeestimator'))
+_vendored = Path(__file__).resolve().parent.parent / 'latticeestimator'
+if _vendored.is_dir():
+    sys.path.append(str(_vendored))
 
 
 def cost_bits(cost):

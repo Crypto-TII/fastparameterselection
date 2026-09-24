@@ -14,9 +14,9 @@ import sys
 
 import pytest
 
-import const
-import rng
-from numerical_solver import numerical_std_e_usvp
+from fastparameterselection import const
+from fastparameterselection import rng
+from fastparameterselection.numerical_solver import numerical_std_e_usvp
 
 STD_BINARY = 0.5
 
@@ -98,7 +98,7 @@ FITS = [
 def test_fitted_constants_regenerate(estimate_py, param, attack, secret, simpl, expected):
     """Refitting from dataset/ must reproduce what src/const.py records."""
     out = subprocess.run(
-        [sys.executable, str(estimate_py), "--fit", "--param", param,
+        [sys.executable, *estimate_py, "--fit", "--param", param,
          "--attack", attack, "--secret", secret, "--error", "3.19",
          "--simpl", str(simpl)],
         capture_output=True, text=True, timeout=1800,
