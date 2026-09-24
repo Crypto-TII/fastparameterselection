@@ -60,3 +60,7 @@ To evaluate Kyber-512, whose secret and error are both centered binomial with
    ``--eta`` and ``--s-eta`` must be given explicitly. They default to 1, and
    ``--std`` is ignored for a binomial distribution, so omitting them silently
    estimates a different scheme.
+
+.. seealso::
+
+   :doc:`overview`, :doc:`options`, :doc:`limitations`.

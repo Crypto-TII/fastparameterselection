@@ -44,3 +44,8 @@ the *smallest* modulus, and that is what the ``output`` column reports.
 ``est usvp`` and ``est bdd`` are each measured at their own attack's modulus,
 not at ``output``. Read the row as two independent results plus a
 recommendation, rather than as three views of one value.
+
+.. seealso::
+
+   :doc:`overview`, :doc:`tutorial_lambda`, :doc:`tutorial_n`,
+   :doc:`tutorial_stde`, :doc:`tutorial_correction`, :doc:`limitations`.

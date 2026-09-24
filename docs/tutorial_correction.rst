@@ -43,3 +43,7 @@ find. The correction is bounded at ``MAX_CORRECTION_CALLS`` in
 ``src/const.py``.
 
 The same option works for ``--param "logq"``.
+
+.. seealso::
+
+   :doc:`tutorial_logq`, :doc:`tutorial_stde`, :doc:`limitations`.

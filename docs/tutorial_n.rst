@@ -56,3 +56,8 @@ Each formula's dimension is fed back into the Lattice Estimator, so every
       Binary       | 128    | 37    | 1425 | 129      | 1424   | 129        | 1416     | 128          | 1442 | 129     | 1441  | 129       | 1431    | 128         | 1442   | 1024
       Binary       | 128    | 45    | 1728 | 129      | 1729   | 129        | 1723     | 129          | 1746 | 129     | 1746  | 129       | 1735    | 128         | 1746   | 2048
       Binary       | 128    | 54    | 2069 | 129      | 2072   | 129        | 2068     | 129          | 2088 | 129     | 2090  | 129       | 2077    | 128         | 2090   | 2048
+
+.. seealso::
+
+   :doc:`overview`, :doc:`tutorial_lambda`, :doc:`tutorial_logq`,
+   :doc:`tutorial_stde`, :doc:`limitations`.

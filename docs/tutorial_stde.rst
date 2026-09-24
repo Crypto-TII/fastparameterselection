@@ -46,3 +46,8 @@ Here the BDD solver's value of `26.02` measures at 177 bits against a target of
 192, so it needs the correction described in :doc:`tutorial_correction`. Note
 also that the Lattice Estimator loses precision when :math:`\sigma_e` is far
 from `3.19`, so treat these ``est`` columns as indicative.
+
+.. seealso::
+
+   :doc:`overview`, :doc:`tutorial_lambda`, :doc:`tutorial_n`,
+   :doc:`tutorial_logq`, :doc:`tutorial_correction`, :doc:`limitations`.

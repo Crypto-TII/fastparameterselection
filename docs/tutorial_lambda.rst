@@ -77,3 +77,9 @@ columns are its verdict, as ``floor(log2(rop))`` under the BDGL16 cost model.
       Binary       | 1024     | 33    | 103  | 103    | 102      | 103      | 101 | 101   | 100     | 101     | 101   
       Binary       | 1024     | 37    | 92   | 92     | 90       | 91       | 90  | 90    | 88      | 90      | 90    
       Binary       | 1024     | 42    | 81   | 81     | 78       | 80       | 79  | 79    | 77      | 79      | 79    
+
+.. seealso::
+
+   :doc:`overview` for what the columns mean, :doc:`tutorial_n`,
+   :doc:`tutorial_logq` and :doc:`tutorial_stde` for the other three
+   parameters, and :doc:`limitations` before relying on a result.
