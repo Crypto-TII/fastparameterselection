@@ -33,19 +33,96 @@ Read :doc:`limitations` before relying on a result.
 Installation
 ------------
 
+SageMath is required and **cannot be installed by pip**: ``nd.py`` imports
+``sage.all``, and the Lattice Estimator used by ``-v`` is a Sage library.
+Install Sage first, by whichever route suits your system:
 
+.. code-block:: bash
 
-Common errors
--------------
+   sudo apt install sagemath          # Debian/Ubuntu
+   conda install -c conda-forge sage  # conda
 
-Some MacOS users may encounter an error when running the tool using `python3 -m fastparameterselection.estimate`. This is due to the fact that the tool requires SageMath to run. To resolve this issue, you can run the tool using SageMath directly:
+Then install this package into that interpreter:
 
-Some MacOS users may encounter an error when running the tool using `python3 -m fastparameterselection.estimate`. This is due to the fact that the tool requires SageMath to run. To resolve this issue, you can run the tool using SageMath directly:
+.. code-block:: bash
+
+   pip install git+https://github.com/Crypto-TII/fastparameterselection
+
+which provides a ``fastparams`` command:
+
+.. code-block:: bash
+
+   fastparams --param "lambda" --n "1024" --logq "27" --secret "binary" --std "3.19"
+
+From a checkout, without installing, the module form works too:
+
+.. code-block:: bash
+
+   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "27" --secret "binary" --std "3.19"
+
+Building the package needs ``setuptools >= 61`` for PEP 621 support; older
+versions silently produce an empty ``UNKNOWN`` wheel.
+
+The remaining Python dependencies (numpy, scipy, lmfit) are installed
+automatically. The Lattice Estimator is vendored in the repository, so ``-v``
+works from a checkout; after a pip install it is used only if an ``estimator``
+package is importable.
+
+On some MacOS setups ``python3`` cannot see Sage even when it is installed. Run
+the tool through Sage itself in that case:
+
+.. code-block:: bash
+
+   sage --python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "27" --secret "binary"
 
 Use with Docker
 ---------------
 
+You can build and run the repository with Docker using the following command:
 
+.. code-block:: bash
+
+   docker-compose -f ./docker/docker-compose.yaml up --build
+
+To only run the container, use:
+
+.. code-block:: bash
+
+   docker-compose -f ./docker/docker-compose.yaml up
+
+Currently, it runs `estimate.py` to obtain the parameter ``lambda``, given ``n = 1024``, ``logq = 35``, binary secret distribution, and standard deviation of the error distribution ``3.19``. To run the estimation with your parameters, you can modify the command line in `docker-compose.yaml` as follows:
+
+Find an estimation of the security level:
+
+.. code-block:: yaml
+
+   command: [ "sage", "--python3", "-m", "fastparameterselection.estimate", "--param", "lambda",  "--n", "1024", "--logq", "20-30;35;40-60", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
+
+Find an estimation of the security level and verify it against the Lattice Estimator:
+
+.. code-block:: yaml
+
+   command: [ "sage", "--python3", "-m", "fastparameterselection.estimate", "--param", "lambda",  "--n", "1024", "--logq", "20-30;35;40-60", "--secret", "binary", "--error", "gaussian", "--std", "3.19", "-v" ]
+
+Find an estimation of the LWE dimension:
+
+.. code-block:: yaml
+
+   command: ["sage", "--python3", "-m", "fastparameterselection.estimate", "--param", "n",  "--lambda", "80", "--logq", "20", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
+
+Find an estimation of the size of the modulus q:
+
+.. code-block:: yaml
+
+   command: ["sage", "--python3", "-m", "fastparameterselection.estimate", "--param", "logq",  "--lambda", "80", "--n", "1024", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
+
+Find an estimation of the standard deviation of the error distribution:
+
+.. code-block:: yaml
+
+   command: ["sage", "--python3", "-m", "fastparameterselection.estimate", "--param", "std_e",  "--lambda", "80", "--n", "1024", "--logq", "20", "--secret", "binary"]
+
+**Note**: for a standard deviation of the error much larger than ``3.19``, the Lattice Estimator becomes imprecise, so the ``est bdd`` column of ``--param std_e`` should be treated as indicative only.
 
 Where to go next
 ----------------
