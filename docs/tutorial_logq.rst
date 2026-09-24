@@ -1,38 +1,46 @@
 Estimating Modulus
 ==================
 
-Use ``--param "logq"`` to estimate the modulus (`logq`) of the scheme.
-
-The following commands estimate the modulus for a binary secret distribution, error distribution as a discrete Gaussian with standard deviation of `3.19`, target security levels (`lambda`), and LWE dimensions:
+Use ``--param "logq"`` to estimate the largest ciphertext modulus that still
+reaches a target security level.
 
 .. code-block:: bash
 
-      python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19"
-
-**Output Example**
+   python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19"
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | output
-      ---------------+--------+----------+-------
-      Uniform (-1 0) | 100    | 1024     | 33    
+      secret dist. | lambda | lwe dim. | output
+      -------------+--------+----------+-------
+      Binary       | 100    | 1024     | 33    
+
+A larger modulus is weaker, so the binding constraint is the attack tolerating
+the *smallest* modulus, and that is what the ``output`` column reports.
 
 **Show all estimations from formulas/numerical methods**
 
-When adding the option ``--table``, the output shows the individual results for each of the formulas and numerical methods.
+.. code-block:: bash
+
+   python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" --table
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | logq usvp | logq bdd | output
-      ---------------+--------+----------+-----------+----------+-------
-      Uniform (-1 0) | 100    | 1024     | 33        | 33       | 33    
+      secret dist. | lambda | lwe dim. | logq usvp | logq bdd | output
+      -------------+--------+----------+-----------+----------+-------
+      Binary       | 100    | 1024     | 33        | 33       | 33    
 
 **Compare results against the Lattice Estimator**
 
-Use option ``-v``, to see the result (columns est 'name of attack / num') of running the Lattice Estimator with the given parameters and compare them with our formulas/numerical methods.
+.. code-block:: bash
+
+   python3 src/estimate.py --param "logq" --lambda "100" --n "1024" --secret "binary" --error "gaussian" --std "3.19" --table -v
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | logq usvp | est usvp | logq bdd | est bdd | output
-      ---------------+--------+----------+-----------+----------+----------+---------+-------
-      Uniform (-1 0) | 100    | 1024     | 33        | 103      | 33       | 101     | 33  
+      secret dist. | lambda | lwe dim. | logq usvp | est usvp | logq bdd | est bdd | output
+      -------------+--------+----------+-----------+----------+----------+---------+-------
+      Binary       | 100    | 1024     | 33        | 103      | 33       | 101     | 33    
+
+``est usvp`` and ``est bdd`` are each measured at their own attack's modulus,
+not at ``output``. Read the row as two independent results plus a
+recommendation, rather than as three views of one value.

@@ -12,6 +12,7 @@ Fast Parameter Selection's Documentation
    tutorial_stde
    tutorial_correction
    tutorial_non_fhe
+   reproducibility
 
 .. toctree::
    :caption: API Reference

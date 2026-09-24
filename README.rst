@@ -109,25 +109,25 @@ Find an estimation of the security level:
 
 .. code-block:: yaml
 
-   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "3.19"]
+   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
 
 Find an estimation of the security level and verify it against the Lattice Estimator:
 
 .. code-block:: yaml
 
-   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "3.19", "--verify", "1" ]
+   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "gaussian", "--std", "3.19", "-v" ]
 
 Find an estimation of the LWE dimension:
 
 .. code-block:: yaml
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "n",  "--lambda", "80", "--logq", "20", "--secret", "binary", "--error", "3.19"]
+   command: ["sage", "--python3", "src/estimate.py", "--param", "n",  "--lambda", "80", "--logq", "20", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
 
 Find an estimation of the size of the modulus q:
 
 .. code-block:: yaml
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "logq",  "--lambda", "80", "--n", "1024", "--secret", "binary", "--error", "3.19"]
+   command: ["sage", "--python3", "src/estimate.py", "--param", "logq",  "--lambda", "80", "--n", "1024", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
 
 Find an estimation of the standard deviation of the error distribution:
 
@@ -166,7 +166,7 @@ cover the formulas, the numerical solvers and the per-call generators and need
 only numpy and scipy.
 
 ToDo list
-----
+---------
 
 * Resolve the BDD ``eta`` equation (see the OPEN ITEM note at the top of ``src/numerical_solver.py``).
 * Include meet-in-the-middle for the hybrid attack. Challenge: derive compact formula for admissibility probability. Current status: added equations for optimization that include mitm speed-up for enumeration. Not tested.

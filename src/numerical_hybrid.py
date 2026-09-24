@@ -368,7 +368,7 @@ def mitm_babai_probability(n, logq, sigma_e, h, beta, d, fast=False):
     """
     The function is taken from the LatticeEstimator (GSA + Babai probability)
     Compute the "e-admissibility" probability associated to the mitm step, according to
-    [WAHC:SonChe19]_
+    [WAHC:SonChe19]
 
     :params r: the squared GSO lengths
     :params stddev: the std.dev of the error distribution
@@ -403,7 +403,7 @@ def numerical_lambda_hybrid(n, logq, sigma_e, h, mitm, coreSVP, bound_trials_max
     :param h: Ternary secret weight
     :param mimt (bool): If true, estimate enumeration in hybrid usin mitm technique. TODO: admissibility probability is assumed 1 (underestimate)
     :param coreSVP: lambda expression that relates lambda, beta and (possibly) d in desired coreSVP model.
-    :param initial_guess: tuple [ng_, beta_, d_] for initial guess (useful if called from logq search)
+    :param initial_guess: tuple ``[ng_, beta_, d_]`` for initial guess (useful if called from logq search)
     :param bound_trials_max: max number of optimization restarts
     :param verbose: bool, verbosity
     :return: security level for hybrid attack. Return float('inf') if numerical solver fails

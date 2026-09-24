@@ -1,38 +1,48 @@
 Estimating Error Standard Deviation
 ===================================
 
-Use ``--param "std_e"`` to estimate the error standard deviation (`std_e`) of the scheme.
-
-The following commands estimate the error standard deviation for a binary secret distribution, target security levels (`lambda`), LWE dimensions, and various sizes for the ciphertext modulus:
+Use ``--param "std_e"`` to estimate the smallest error standard deviation that
+still reaches a target security level. Values are reported as
+:math:`\log_2 \sigma_e`.
 
 .. code-block:: bash
 
-      python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
-
-**Output Example**
+   python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | log q | output           
-      ---------------+--------+----------+-------+-------
-      Uniform (-1 0) | 192    | 2048     | 64    | 28.60 
+      secret dist. | lambda | lwe dim. | log q | output           
+      -------------+--------+----------+-------+------------------
+      Binary       | 192    | 2048     | 64    | 28.60            
+
+A larger error is more secure, so the reported value is the largest across the
+attacks.
 
 **Show all estimations from formulas/numerical methods**
 
-When adding the option ``--table``, the output shows the individual results for each of the formulas and numerical methods.
+.. code-block:: bash
+
+   python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | log q | log2(std_e) usvp  | log2(std_e) bdd    | output           
-      ---------------+--------+----------+-------+-------------------+--------------------+-------
-      Uniform (-1 0) | 192    | 2048     | 64    | 28.60             | 25.71              | 28.60   
+      secret dist. | lambda | lwe dim. | log q | log2(std_e) usvp  | log2(std_e) bdd   | output           
+      -------------+--------+----------+-------+-------------------+-------------------+------------------
+      Binary       | 192    | 2048     | 64    | 28.60             | 26.02             | 28.60            
 
 **Compare results against the Lattice Estimator**
 
-Use option ``-v``, to see the result (columns est 'name of attack / num') of running the Lattice Estimator with the given parameters and compare them with our formulas/numerical methods.
+.. code-block:: bash
+
+   python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | log q | log2(std_e) usvp   | est usvp | log2(std_e) bdd   | est bdd | output           
-      ---------------+--------+----------+-------+--------------------+----------+-------------------+---------+-------
-      Uniform (-1 0) | 192    | 2048     | 64    | 25.71              | 177      | 28.60             | 190     | 28.60 
+      secret dist. | lambda | lwe dim. | log q | log2(std_e) usvp  | est usvp | log2(std_e) bdd   | est bdd | output           
+      -------------+--------+----------+-------+-------------------+----------+-------------------+---------+------------------
+      Binary       | 192    | 2048     | 64    | 28.60             | 192      | 26.02             | 177     | 28.60            
+
+Here the BDD solver's value of `26.02` measures at 177 bits against a target of
+192, so it needs the correction described in :doc:`tutorial_correction`. Note
+also that the Lattice Estimator loses precision when :math:`\sigma_e` is far
+from `3.19`, so treat these ``est`` columns as indicative.

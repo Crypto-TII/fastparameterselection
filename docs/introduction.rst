@@ -1,134 +1,14 @@
-A Tool for Fast and Secure LWE Parameter Selection
-===================================================
+Introduction
+============
 
 We offer a tool to select secure parameters for LWE-based applications in a fast and flexible way. The tool can provide you with any of the following parameters: security level, size of the ciphertext modulus, LWE dimension, and standard deviation of the error distribution.
 
 Our tool is constructed by studying the uSVP, BDD and Hybrid attacks against LWE. From this study, we derive formulas that describe each of the aforementioned parameters as a function of the others. You can find all the details in this paper: `A Tool for Fast and Secure LWE Parameter Selection: the FHE case <https://eprint.iacr.org/2024/1895>`_.
 
-Options
-----------------------------
-
-Our tool supports the following command-line options:
-
-General Options
----------------
-
-- **-h, --help**:
-  Display the help message and exit.
-
-- **--param PARAM**:
-  Specify the parameter to estimate. Options include:
-   - **"lambda"**: Security level.
-   - **"n"**: LWE dimension.
-   - **"logq"**: Modulus size.
-   - **"std_e"**: Standard deviation of the error distribution.
-
-  **--logq LOGQ**:
-  Specify the modulus size (e.g., "32;64" or "20-30").
-
-- **--lambda LAMBDA**:
-  Specify the target security level (e.g., "80", "128").
-
-- **--n N**:
-  Specify the LWE dimension (e.g., "1024", "2048").
-
-Secret and Error Distribution Options
-----------------------------
-
-- **--secret SECRET and --error ERROR** 
-  Specify the secret distribution. Options include:
-
-   - **"binary"**: Uniform binary distribution.
-   - **"ternary"**: Uniform ternary distribution.
-   - **"uniformmod"**: Uniform modulus distribution (requires **--p**).
-   - **"uniform"**: Uniform distribution (requires **--a** and **--b**).
-   - **"sparse"**: Sparse ternary distribution (requires **--hw**).
-   - **"gaussian"**: Discrete Gaussian distribution (requires **--s-std**).
-   - **"binomial"**: Centered binomial distribution (requires **--s-eta**).
-
-
-- **--s-std S_STD**:
-  Standard deviation for the secret distribution (used with "gaussian").
-
-- **--s-a S_A**:
-  Lower bound for the secret distribution (used with "uniform").
-
-- **--s-b S_B**:
-  Upper bound for the secret distribution (used with "uniform").
-
-- **--hw HW**:
-  Hamming weight for the secret distribution (used with "sparse").
-
-- **--s-eta S_ETA**:
-  Parameter for the centered binomial distribution (used with "binomial").
-
-- **--std STD**:
-  Standard deviation for the error distribution (used with "gaussian").
-
-- **--a A**:
-  Lower bound for the error distribution (used with "uniform").
-
-- **--b B**:
-  Upper bound for the error distribution (used with "uniform").
-
-- **--eta ETA**:
-  Parameter for the centered binomial distribution (used with "binomial").
-
-Additional Options
--------------------
-
-- **--table**:
-  Output results in a table format.
-
-- **--num-only**:
-  Output only numerical results (no headers).
-
-- **-v**:
-  Compare results against the Lattice Estimator.
-
-- **--ntru**:
-  Use NTRU-specific parameter estimation.
-
-- **-c, --correction**:
-  Apply correction factors to the estimation.
-
-Table Description
-----------------------------
-
-The output table may contain any of the following columns:
-
-- **secret dist.**: The distribution of the secret (can be binary, ternary, or sparse).
-- **lwe dim.**: The Learning With Errors (LWE) dimension.
-- **lambda**: The security level.
-- **log q**: The size of the modulus q in bits.
-- **lwe est**: The output of running the Lattice Estimator using the output of our formulas and the rest of the LWE parameters.
-- **usvp**: Output of the formula which estimates the cost of the (unique) SVP attack.
-- **usvp_s**: Output of the simplified formula (removing dependency on beta) which estimates the cost of the (unique) SVP attack.
-- **bdd**: Output of the formula which estimates the cost of the BDD attack.
-- **bdd_s**: Output of the simplified formula (removing dependency on beta) which estimates the cost of the BDD attack.
-- **logq usvp**: Output of the numerical approximation of log q for the (unique) SVP attack.
-- **logq bdd**: Output of the numerical approximation of log q for the BDD attack.
-- **usvp num**: Output of the numerical approximation of the (unique) SVP attack.
-- **bdd num**: Output of the numerical approximation of the BDD attack.
-- **log2(std_e) usvp**: Output of the numerical approximation of the (log2) standard deviation of the error for the (unique) SVP attack.
-- **log2(std_e) bdd**: Output of the numerical approximation of the (log2) standard deviation of the error for the BDD attack.
-- **bdd 3.19**: The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_bdd.
-- **usvp 3.19**: The result of running the Lattice Estimator with standard deviation of the error 3.19 and primal_usvp.
-- **est usvp**: Output of the Lattice Estimator for the (unique) SVP attack.
-- **est bdd**: Output of the Lattice Estimator for the BDD attack.
-- **est usvp_s**: Output of the Lattice Estimator using the result from the simplified formula for the (unique) SVP attack.
-- **est bdd_s**: Output of the Lattice Estimator using the result from the simplified formula for the BDD attack.
-- **output**: Recommended value to be used considering all the outputs of the formulas and numerical methods.
-- **pow**: Closest power of 2 to the LWE dimension recommended in Output.
-- **hw**: Hamming weight of the secret.
-- **hybrid**: Output of the numerical approximation for lambda of the hybrid attack.
-- **logq hybrid**: Output of the numerical approximation for logq of the hybrid attack.
-- **est hybrid**: Output of the Lattice Estimator for the hybrid attack.
-- **est**: Output of the Lattice Estimator.
-
-
 Basic Usage
 ----------------------------
+
+We present the basic usage of the tool below. For more advanced usage, please refer to the `readthedocs <https://fastparameterselection.readthedocs.io/en/latest/>`_ section.
 
 Find an estimation of the security level by running:
 
@@ -195,9 +75,8 @@ Some MacOS users may encounter an error when running the tool using `python3 src
 Dependencies
 ------------
 
-We have added the functionality to compare the output of our formulas against the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_. Please download the Estimator if you want to use such functionality.
+We have added the functionality to compare the output of our formulas against the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_. We also use it for some of the more advanced features of our tool. Please use the custom version of the Estimator provided in this repository to avoid unexpected errors. Our code also depends on SageMath, you can follow this `link for an installation guide <https://doc.sagemath.org/html/en/installation/index.html>`_. 
 
-**Note**: At present, the Estimator is also needed to run one of the formulas. This will be fixed shortly.
 
 The following Python libraries are required:
 - `Numpy <https://numpy.org/>`_
@@ -230,25 +109,25 @@ Find an estimation of the security level:
 
 .. code-block:: yaml
 
-   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "3.19"]
+   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
 
 Find an estimation of the security level and verify it against the Lattice Estimator:
 
 .. code-block:: yaml
 
-   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "3.19", "--verify", "1" ]
+   command: [ "sage", "--python3", "src/estimate.py", "--param", "lambda",  "--n", "1024", "--logq", "20-30\\;35\\;40-60", "--secret", "binary", "--error", "gaussian", "--std", "3.19", "-v" ]
 
 Find an estimation of the LWE dimension:
 
 .. code-block:: yaml
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "n",  "--lambda", "80", "--logq", "20", "--secret", "binary", "--error", "3.19"]
+   command: ["sage", "--python3", "src/estimate.py", "--param", "n",  "--lambda", "80", "--logq", "20", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
 
 Find an estimation of the size of the modulus q:
 
 .. code-block:: yaml
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "logq",  "--lambda", "80", "--n", "1024", "--secret", "binary", "--error", "3.19"]
+   command: ["sage", "--python3", "src/estimate.py", "--param", "logq",  "--lambda", "80", "--n", "1024", "--secret", "binary", "--error", "gaussian", "--std", "3.19"]
 
 Find an estimation of the standard deviation of the error distribution:
 
@@ -256,31 +135,42 @@ Find an estimation of the standard deviation of the error distribution:
 
    command: ["sage", "--python3", "src/estimate.py", "--param", "std_e",  "--lambda", "80", "--n", "1024", "--logq", "20", "--secret", "binary"]
 
-Find an estimation of the security level, given the example parameters in `example_lambda_binary.csv`:
+**Note**: for a standard deviation of the error much larger than ``3.19``, the Lattice Estimator becomes imprecise, so the ``est bdd`` column of ``--param std_e`` should be treated as indicative only.
 
-.. code-block:: yaml
+Reproducibility
+---------------
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "lambda", "--file", "./examples/example_lambda_binary.csv", "--verify", "1"]
+Several numerical solvers (the hybrid attack, and ``--param std_e``) restart from randomised initial points. Each such call derives its own generator from a base seed and the call's own parameters, so a given set of LWE parameters always produces the same answer -- independently of how many other rows were computed in the same invocation. Pass ``--seed`` to change the base seed; see ``src/rng.py``.
 
-Find an estimation of the LWE dimension, given the example parameters in `example_n_ternary.csv`:
+The hybrid solvers are sensitive to their restart budget. At ``--param logq --lambda 192 --n 1024 --hw 64 --secret sparse`` the default budget can settle on a log q that the Lattice Estimator scores far below the target, while ``--nrestart 1000`` finds the right one. Run the hybrid with ``-v`` and check the reported ``est hybrid`` against your target.
 
-.. code-block:: yaml
+The fitted constants in ``src/const.py`` can be regenerated from ``dataset/`` with:
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "n", "--file", "./examples/example_n_ternary.csv"]
+.. code-block:: bash
 
-Find an estimation of the size of the modulus q, given the example parameters in `example_logq_binary.csv`:
+   bash find_all_constants.sh
 
-.. code-block:: yaml
+Tests
+-----
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "logq", "--file", "./examples/example_logq_binary.csv"]
+.. code-block:: bash
 
-Find an estimation of the standard deviation of the error distribution, given the example parameters in `example_error_binary.csv`:
+   pip install pytest
+   python3 -m pytest              # everything
+   python3 -m pytest -m "not slow"  # skip refitting the constants
 
-.. code-block:: yaml
+The suite pins values printed in the paper, so a change to a formula that
+would move a published table fails the build. Tests marked ``needs_sage`` run
+the command line and skip themselves when SageMath is not installed; the rest
+cover the formulas, the numerical solvers and the per-call generators and need
+only numpy and scipy.
 
-   command: ["sage", "--python3", "src/estimate.py", "--param", "error", "--file", "./examples/example_error_binary.csv"]
+ToDo list
+---------
 
-**Note**: In the Docker version, we applied a change to the `Lattice Estimator <https://github.com/malb/lattice-estimator>`_ to address an imprecision in the case where the standard deviation of the error distribution is much larger than ``3.19``.
+* Resolve the BDD ``eta`` equation (see the OPEN ITEM note at the top of ``src/numerical_solver.py``).
+* Include meet-in-the-middle for the hybrid attack. Challenge: derive compact formula for admissibility probability. Current status: added equations for optimization that include mitm speed-up for enumeration. Not tested.
+* Improve runtime of numerical_lambda_hybrid(). Compute probability_enum() and babai_prob() on the log scale directly. 
 
 Bugs
 ----
