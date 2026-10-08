@@ -545,10 +545,10 @@ def helper_fit():
     """
     Print the helper message for fitting and exit.
     """
-    print('python3 fit_formula.py --param "lambda" --attack "usvp" --dist "binary" --simpl 0')
-    print('python3 fit_formula.py --param "lambda" --attack "bdd" --dist "ternary" --simpl 1')
-    print('python3 fit_formula.py --param "n" --attack "usvp" --dist "binary" --simpl 0')
-    print('python3 fit_formula.py --param "n" --attack "bdd" --dist "ternary" --simpl 1')
+    print('fastparams --fit --param "lambda" --attack "usvp" --secret "binary" --error 3.19 --simpl 0')
+    print('fastparams --fit --param "lambda" --attack "bdd" --secret "ternary" --error 3.19 --simpl 1')
+    print('fastparams --fit --param "n" --attack "usvp" --secret "binary" --error 3.19 --simpl 0')
+    print('fastparams --fit --param "n" --attack "bdd" --secret "ternary" --error 3.19 --simpl 1')
     sys.exit(1)
 
 
@@ -556,7 +556,8 @@ def helper():
     """
     Print the helper message and exit.
     """
-    print("Usage: python3 src/estimate.py [OPTIONS]")
+    print("Usage: fastparams [OPTIONS]")
+    print("   or: python3 -m fastparameterselection.estimate [OPTIONS]")
     print("\nOptions:")
     print("  --param <param>         Parameter to estimate (lambda, n, logq, std_e, est)")
     print("  --n <n>                 LWE dimension (e.g., 1024)")

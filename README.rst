@@ -26,31 +26,54 @@ Install Sage first, by whichever route suits your system:
    sudo apt install sagemath          # Debian/Ubuntu
    conda install -c conda-forge sage  # conda
 
-Then install this package into that interpreter:
+Then install this package into that interpreter. Install **from a checkout, in
+editable mode**, so that ``-v`` keeps working:
 
 .. code-block:: bash
 
-   pip install git+https://github.com/Crypto-TII/fastparameterselection
+   git clone https://github.com/Crypto-TII/fastparameterselection
+   cd fastparameterselection
+   pip install -e .
 
-which provides a ``fastparams`` command:
+This provides a ``fastparams`` command that runs from any directory:
 
 .. code-block:: bash
 
    fastparams --param "lambda" --n "1024" --logq "27" --secret "binary" --std "3.19"
 
-From a checkout, without installing, the module form works too:
+Editable mode matters for ``-v``. The Lattice Estimator is vendored in the
+repository and is located relative to the package, so an editable install finds
+it, while a copying install (``pip install .`` or
+``pip install git+https://...``) does not. With a copying install ``-v`` prints
+``Failed to import lattice_estimator`` and the verification columns are skipped;
+everything else still works.
+
+Without installing at all, the module form works from a checkout:
 
 .. code-block:: bash
 
    python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "27" --secret "binary" --std "3.19"
 
-Building the package needs ``setuptools >= 61`` for PEP 621 support; older
-versions silently produce an empty ``UNKNOWN`` wheel.
+Build tooling
+~~~~~~~~~~~~~
+
+Installing needs ``setuptools >= 61`` for PEP 621 metadata, and ``>= 64`` for
+the editable install above. Older versions fail in two confusing ways: an
+editable install reports a missing ``build_editable`` hook, and a regular
+install silently produces an empty wheel named ``UNKNOWN-0.0.0`` and exits
+successfully.
+
+On distributions that ship an old pip (Ubuntu 22.04 ships pip 22.0.2 and
+setuptools 59.6), the system setuptools leaks into pip's isolated build
+environment, so the build fails this way even when a newer setuptools is
+available. Upgrade both first:
+
+.. code-block:: bash
+
+   pip install --user -U pip setuptools
 
 The remaining Python dependencies (numpy, scipy, lmfit) are installed
-automatically. The Lattice Estimator is vendored in the repository, so ``-v``
-works from a checkout; after a pip install it is used only if an ``estimator``
-package is importable.
+automatically.
 
 On some MacOS setups ``python3`` cannot see Sage even when it is installed. Run
 the tool through Sage itself in that case:
