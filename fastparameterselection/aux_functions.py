@@ -446,31 +446,77 @@ def closest_power_of_2(n):
         return upper_pow
 
 
-def print_table(headers, rows):
+ASCII_BOX = {"h": "-", "v": "|", "cross": "-+-"}
+UNICODE_BOX = {"h": "\u2500", "v": "\u2502", "cross": "\u2500\u253c\u2500"}
+
+
+def _use_unicode(stream):
+    """Box-drawing only on an interactive terminal that can encode it.
+
+    Piped output stays ASCII, so redirected results and the listings in the
+    paper keep a stable plain-text form.
+    """
+    if not hasattr(stream, "isatty") or not stream.isatty():
+        return False
+    try:
+        "\u2502".encode(stream.encoding or "ascii")
+    except (LookupError, UnicodeEncodeError):
+        return False
+    return True
+
+
+def _format_cell(value):
+    """Render one cell, keeping the two-decimal convention for floats."""
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    return str(value)
+
+
+def _is_numeric(text):
+    try:
+        float(text)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def print_table(headers, rows, stream=None):
     """
     Print a table with headers and rows.
 
+    Numeric columns are right aligned so digits line up; text columns stay left
+    aligned. No line carries trailing whitespace.
+
     :param headers: List of headers.
     :param rows: List of rows.
+    :param stream: Output stream, default ``sys.stdout``.
     """
-    # Calculate the maximum width for each column
-    col_widths = [max(len(str(cell)) for cell in col)
-                  for col in zip(headers, *rows)]
+    stream = sys.stdout if stream is None else stream
+    box = UNICODE_BOX if _use_unicode(stream) else ASCII_BOX
 
-    # Create a format string for each row
-    row_format = " | ".join(["{:<" + str(width) + "}" for width in col_widths])
+    headers = [str(h) for h in headers]
+    body = [[_format_cell(v) for v in row] for row in rows]
 
-    # Print the header
-    print(row_format.format(*headers))
+    widths = [max(len(c) for c in col) for col in zip(headers, *body)] \
+        if body else [len(h) for h in headers]
 
-    # Print the separator
-    print("-+-".join(['-' * width for width in col_widths]))
+    # A column is numeric when every one of its cells is a number.
+    right = [all(_is_numeric(row[i]) for row in body) if body else False
+             for i in range(len(headers))]
 
-    # Print the rows
-    for row in rows:
-        formatted_row = [f"{value:.2f}" if isinstance(
-            value, float) else str(value) for value in row]
-        print(row_format.format(*formatted_row))
+    sep = " " + box["v"] + " "
+
+    def line(cells):
+        out = sep.join(
+            cell.rjust(w) if r else cell.ljust(w)
+            for cell, w, r in zip(cells, widths, right)
+        )
+        return out.rstrip()
+
+    print(line(headers), file=stream)
+    print(box["cross"].join(box["h"] * w for w in widths), file=stream)
+    for row in body:
+        print(line(row), file=stream)
 
 
 def parse_logq(logq_str):
@@ -591,24 +637,23 @@ def create_explanation_dict(headers):
     return explanation_dict
 
 
-def helper_headers(header):
+def helper_headers(header, stream=None):
     """
-    Print the headers and their explanations.
+    Print a legend for the column headers.
+
+    One line per column, so the legend stays below the result rather than
+    pushing it off the screen.
 
     :param header: List of headers.
+    :param stream: Output stream, default ``sys.stdout``.
     """
+    stream = sys.stdout if stream is None else stream
     explanation_dict = create_explanation_dict(header)
+    width = max(len(h) for h in explanation_dict)
 
-    max_length = max(len(header) for header in explanation_dict.keys())
-    max_length_exp = max(len(explanation)
-                         for explanation in explanation_dict.values())
-
-    # Print each header and its explanation with proper formatting
-    for header, explanation in explanation_dict.items():
-        print(f"{header:<{max_length}}: {explanation}")
-
-    print("." * max_length_exp)
-    print('\n')
+    print("", file=stream)
+    for name, explanation in explanation_dict.items():
+        print(f"  {name:<{width}}  {explanation}", file=stream)
 
 
 def get_parameters(lwe_d, lnq, secret_dist, error_dist, est_usvp_numerical, est_bdd_numerical, error_dist_tag, param):

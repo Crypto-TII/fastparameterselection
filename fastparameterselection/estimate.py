@@ -75,8 +75,8 @@ def main(argv):
     if param in ['n', 'logq', 'std_e', 'lambda']:
         headers = list(data[0].keys()) if data else []
         data_values = [list(d.values()) for d in data]
-        helper_headers(headers)
         print_table(headers, data_values)
+        helper_headers(headers)
     else:
         print("Parameter " + param + " not valid")
         return
