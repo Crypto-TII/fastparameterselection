@@ -5,7 +5,6 @@ from .aux_functions import (
     print_warnings, check_ntru, export_to_csv, get_secret_value
 )
 from .param_calls import process_parameters
-from .fit_formula import find_constants
 
 
 
@@ -14,6 +13,8 @@ def main(argv):
     opts = parse_options(argv)
 
     if any(opt == "--fit" for opt, _ in opts):
+        # lmfit is needed only here, and is not part of a SageMath install.
+        from .fit_formula import find_constants
         find_constants(opts)
         return
 

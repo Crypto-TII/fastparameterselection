@@ -1,6 +1,6 @@
 # Python dependencies.
 #
-# SageMath is also required: src/nd.py imports sage.all.
+# SageMath is also required: fastparameterselection/nd.py imports sage.all.
 # https://doc.sagemath.org/html/en/installation/index.html
 #
 # The Lattice Estimator is vendored in ./latticeestimator and needs no install.
