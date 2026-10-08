@@ -23,14 +23,25 @@ jobs:
         run: python -m pytest -q
         # Tests marked needs_sage skip themselves; see tests/conftest.py.
 
-  # The command line and the refitting of src/const.py both go through
-  # src/nd.py, which imports sage.all.
+  # The command line and the refitting of fastparameterselection/const.py both
+  # go through fastparameterselection/nd.py, which imports sage.all.
+  #
+  # Sage runs through `docker run` rather than a job-level `container:`. The
+  # image runs as the unprivileged `sage` user while the runner owns its
+  # workspace as root, so actions/checkout fails inside it with EACCES on
+  # /__w/_temp. Running the container as root is not a way out either: Sage
+  # ignores `--python3` as root and drops into its REPL. Checking out on the
+  # host and mounting the tree read-only avoids both.
   full:
     runs-on: ubuntu-latest
-    container: sagemath/sagemath:10.3
     steps:
       - uses: actions/checkout@v4
-      - name: Install Python dependencies into Sage's interpreter
-        run: sage --python3 -m pip install --user lmfit pytest
-      - name: Run the whole suite
-        run: sage --python3 -m pytest -q
+      - name: Run the whole suite inside SageMath
+        run: |
+          docker run --rm -v "$PWD":/src:ro sagemath/sagemath:10.3 bash -lc '
+            cp -r /src /tmp/repo && cd /tmp/repo &&
+            sage --pip install --quiet lmfit pytest &&
+            sage --python3 -m pytest -q
+          '
+          # The copy keeps writes (output.csv) inside the container, where the
+          # sage user owns the tree.
