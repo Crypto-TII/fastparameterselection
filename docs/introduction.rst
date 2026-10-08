@@ -18,7 +18,7 @@ derivations: `A Tool for Fast and Secure LWE Parameter Selection: the FHE case
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "20;35;40" --secret "binary" --std "3.19"
+   fastparams --param "lambda" --n "1024" --logq "20;35;40" --secret "binary" --std "3.19"
 
 .. code-block:: text
 
@@ -96,7 +96,7 @@ the tool through Sage itself in that case:
 
 .. code-block:: bash
 
-   sage --python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "27" --secret "binary"
+   sage --fastparams --param "lambda" --n "1024" --logq "27" --secret "binary"
 
 Use with Docker
 ---------------

@@ -10,7 +10,7 @@ Take the error standard deviation for a binary secret at
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v
+   fastparams --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v
 
 .. code-block:: text
 
@@ -29,7 +29,7 @@ many calls it took.
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v -c
+   fastparams --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v -c
 
 .. code-block:: text
 

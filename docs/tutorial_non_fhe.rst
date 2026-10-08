@@ -46,7 +46,7 @@ To evaluate Kyber-512, whose secret and error are both centered binomial with
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "512" --logq "12" \
+   fastparams --param "lambda" --n "512" --logq "12" \
       --secret "binomial" --s-eta "3" --error "binomial" --eta "3" --num-only
 
 .. code-block:: text

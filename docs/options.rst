@@ -2,7 +2,7 @@ Command line reference
 ======================
 
 Every invocation names the quantity to solve for with ``--param`` and supplies
-the others. Run ``python3 -m fastparameterselection.estimate -h`` for the same list in the
+the others. Run ``fastparams -h`` for the same list in the
 terminal.
 
 Choosing what to solve for

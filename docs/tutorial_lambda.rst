@@ -9,7 +9,7 @@ and various sizes of the ciphertext modulus:
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19"
+   fastparams --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19"
 
 .. code-block:: text
 
@@ -37,7 +37,7 @@ Eq. (31); ``usvp num`` and ``bdd num`` the numerical solvers of Section 5.
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19" --table
+   fastparams --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19" --table
 
 .. code-block:: text
 
@@ -61,7 +61,7 @@ columns are its verdict, as ``floor(log2(rop))`` under the BDGL16 cost model.
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19" --table -v
+   fastparams --param "lambda" --n "1024" --logq "20;24-28;30;33;37;42" --secret "binary" --error "gaussian" --std "3.19" --table -v
 
 .. code-block:: text
 

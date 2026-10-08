@@ -68,7 +68,7 @@ estimator. Once you have candidate parameters, confirm them:
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "27" \
+   fastparams --param "lambda" --n "1024" --logq "27" \
       --secret "binary" --error "gaussian" --std "3.19" --table -v
 
 The ``est`` columns are the Lattice Estimator's verdict under the BDGL16 cost

@@ -7,7 +7,7 @@ modulus and the error, and the tool solves for the fourth.
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "n" --lambda "128" --logq "27" --secret "binary" --std "3.19"
+   fastparams --param "n" --lambda "128" --logq "27" --secret "binary" --std "3.19"
 
 .. toctree::
    :maxdepth: 2

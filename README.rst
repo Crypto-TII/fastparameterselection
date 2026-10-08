@@ -80,7 +80,7 @@ the tool through Sage itself in that case:
 
 .. code-block:: bash
 
-   sage --python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "27" --secret "binary"
+   sage --fastparams --param "lambda" --n "1024" --logq "27" --secret "binary"
 
 Basic usage
 -----------
@@ -89,7 +89,7 @@ Estimate the security level of a parameter set:
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "lambda" --n "1024" --logq "20;35;40" --secret "binary" --std "3.19"
+   fastparams --param "lambda" --n "1024" --logq "20;35;40" --secret "binary" --std "3.19"
 
 .. code-block:: text
 
@@ -103,7 +103,7 @@ Estimate the LWE dimension needed for a target security level:
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "n" --lambda "80" --logq "20-23" --secret "binary" --std "3.19"
+   fastparams --param "n" --lambda "80" --logq "20-23" --secret "binary" --std "3.19"
 
 .. code-block:: text
 
@@ -118,7 +118,7 @@ Estimate the largest usable modulus:
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "logq" --lambda "80" --n "1024" --secret "binary" --error "gaussian" --std "3.19"
+   fastparams --param "logq" --lambda "80" --n "1024" --secret "binary" --error "gaussian" --std "3.19"
 
 .. code-block:: text
 
@@ -130,7 +130,7 @@ Estimate the smallest usable error:
 
 .. code-block:: bash
 
-   python3 -m fastparameterselection.estimate --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
+   fastparams --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
 
 .. code-block:: text
 
