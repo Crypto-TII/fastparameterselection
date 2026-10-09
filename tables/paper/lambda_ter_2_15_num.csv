@@ -1,0 +1,6 @@
+secret dist.,lwe dim.,log q,usvp num,est usvp,bdd num,est bdd,output
+Ternary,32768,475,255,256,255,256,255
+Ternary,32768,611,190,192,190,192,190
+Ternary,32768,880,126,128,126,128,126
+Ternary,32768,1050,104,106,104,106,104
+Ternary,32768,1400,77,79,77,79,77

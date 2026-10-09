@@ -141,15 +141,16 @@ table_11_15() {
 table_12() { table_12_16; }
 table_16() { table_12_16; }
 table_12_16() {
+    # Dimension outer, security level inner: the order the paper prints.
     _start "table_12_16_logq_binary.csv"
-    for l in 100 128 192 256; do
-        for n in 1024 2048; do
+    for n in 1024 2048; do
+        for l in 100 128 192 256; do
             _run --param logq --lambda "$l" --n "$n" --secret binary --error gaussian --std "$STD" --table -v
         done
     done
     _start "table_12_16_logq_ternary.csv"
-    for l in 100 128 192 256; do
-        for n in 1024 32768; do
+    for n in 1024 32768; do
+        for l in 100 128 192 256; do
             _run --param logq --lambda "$l" --n "$n" --secret ternary --error gaussian --std "$STD" --table -v
         done
     done

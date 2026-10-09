@@ -139,7 +139,8 @@ Estimate the smallest usable error:
    Binary       | 192    | 2048     | 64    | 28.60            
 
 Add ``--table`` to see each formula and solver separately, and ``-v`` to check
-the result against the Lattice Estimator.
+the result against the Lattice Estimator. Add ``--ntru`` to check whether the
+parameters fall in the overstretched NTRU regime.
 
 Before you rely on a result
 ---------------------------
@@ -148,8 +149,7 @@ The tool answers the security question only, and not every part of it. It does
 not model dual or quantum attacks, says nothing about whether a parameter set
 supports your circuit, and its fitted constants were learned at a standard
 deviation of 3.19 for binary and ternary secrets. The hybrid ``--param logq``
-search can return a modulus below the target, and ``--ntru`` is known to be
-broken.
+search can return a modulus below the target.
 
 The full list is on the `limitations
 <https://fastparameterselection.readthedocs.io/en/latest/limitations.html>`_
@@ -246,7 +246,6 @@ ToDo list
 * Include meet-in-the-middle for the hybrid attack. Challenge: derive a compact formula for the admissibility probability. Current status: equations for the optimisation including the mitm speed-up for enumeration are in place, untested.
 * Improve the runtime of ``numerical_lambda_hybrid()``. Computing ``probability_enum()`` and ``ss_enum()`` on the log scale is both faster and removes their dependency on Sage; a prototype agreed with the current code to 1e-10 and ran up to 750x faster.
 * Make the hybrid ``--param logq`` search reject a modulus its own lambda model does not vouch for, instead of returning it with a warning.
-* Fix ``--ntru``: ``check_overstreched()`` reports every parameter set as overstretched.
 
 Bugs
 ----

@@ -20,7 +20,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install numpy scipy lmfit pytest
       - name: Run the tests that do not need SageMath
-        run: python -m pytest -q
+        run: python -m pytest -v
         # Tests marked needs_sage skip themselves; see tests/conftest.py.
 
   # The command line and the refitting of fastparameterselection/const.py both
@@ -41,7 +41,7 @@ jobs:
           docker run --rm -v "$PWD":/src:ro sagemath/sagemath:10.3 bash -lc '
             cp -r /src /tmp/repo && cd /tmp/repo &&
             sage --pip install --quiet lmfit pytest &&
-            sage --python3 -m pytest -q
+            sage --python3 -m pytest -v
           '
           # The copy keeps writes (output.csv) inside the container, where the
           # sage user owns the tree.

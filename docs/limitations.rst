@@ -57,9 +57,6 @@ signal to rerun with a different ``--seed`` or to use the closed forms.
 available. Restarting with a different ``--seed``, or raising ``--nrestart``
 for the hybrid, sometimes finds a better one.
 
-**NTRU checking does not work.** The ``--ntru`` option reports every parameter
-set as overstretched and should not be relied on.
-
 Verifying a result
 ------------------
 

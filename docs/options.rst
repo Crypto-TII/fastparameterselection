@@ -97,8 +97,8 @@ Solver control
    * - ``--mitm``
      - meet-in-the-middle guessing in the hybrid attack. Work in progress
    * - ``--ntru``
-     - check for the overstretched NTRU regime. **Currently broken**: it
-       reports every parameter set as overstretched
+     - check whether the parameters fall in the overstretched NTRU regime,
+       and stop if they do
 
 Refitting
 ---------
