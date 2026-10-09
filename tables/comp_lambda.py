@@ -5,10 +5,8 @@ import os
 
 # --- Configuration ---
 filenames = [
-    "lambda_bin_2_10.csv", "lambda_bin_2_11.csv", "lambda_ter_2_10.csv", "lambda_ter_2_15.csv",
-    "lambda_ter_2_16.csv", "lambda_ter_2_17.csv", "lambda_hybrid_2_13.csv", "lambda_hybrid_2_15.csv",
-    "lambda_bin_2_10_num.csv", "lambda_bin_2_11_num.csv", "lambda_ter_2_10_num.csv",
-    "lambda_ter_2_15_num.csv"
+    "table_02_04_lambda_binary.csv", "table_03_05_lambda_ternary.csv",
+    "table_10_14_lambda_num.csv", "table_18_lambda_hybrid.csv"
 ]
 
 # filenames = sys.argv[1:]  # You can use command line arguments too.

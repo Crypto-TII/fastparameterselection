@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastparameterselection"
+version = "1.0.0"
+description = "Fast and secure LWE parameter selection for FHE"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Beatrice Biasioli" },
+    { name = "Elena Kirshanova" },
+    { name = "Chiara Marcolla" },
+    { name = "Sergi Rovira" },
+]
+keywords = ["LWE", "FHE", "lattice", "cryptography", "parameter selection"]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.15",
+    "lmfit>=1.3",
+]
+
+# SageMath is required at runtime but cannot be installed by pip; see the
+# installation notes in the README. The Lattice Estimator, needed only for -v,
+# is vendored in a source checkout.
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+docs = ["sphinx", "sphinx-book-theme"]
+
+[project.urls]
+Homepage = "https://github.com/Crypto-TII/fastparameterselection"
+Documentation = "https://fastparameterselection.readthedocs.io"
+Paper = "https://eprint.iacr.org/2024/1895"
+
+[project.scripts]
+fastparams = "fastparameterselection.estimate:cli"
+
+[tool.setuptools]
+packages = ["fastparameterselection"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: refits the formula constants from dataset/; minutes rather than seconds",
+    "needs_sage: requires SageMath, because nd.py imports sage.all",
+]

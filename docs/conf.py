@@ -22,15 +22,16 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ["sage", "sage.all", "scipy", "numpy", "scipy.optimize"]
+MOCK_MODULES = ["sage", "sage.all", "scipy", "scipy.optimize", "scipy.special",
+                "numpy", "lmfit"]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath("."))
-sys.path.insert(0, os.path.abspath('../src'))
+sys.path.insert(0, os.path.abspath('..'))
 
 
 project = 'Fast Parameter Selection'
-copyright = '2025, Beatrice Biasioli, Elena Kirshanova, Chiara Marcolla, Sergi Rovira'
+copyright = '2024-2026, Beatrice Biasioli, Elena Kirshanova, Chiara Marcolla, Sergi Rovira'
 author = 'Beatrice Biasioli, Elena Kirshanova, Chiara Marcolla, Sergi Rovira'
 release = '1.0'
 
@@ -57,6 +58,17 @@ sys.path.insert(0, os.path.abspath('..'))
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
+html_title = 'Fast Parameter Selection'
+
+html_theme_options = {
+    "repository_url": "https://github.com/Crypto-TII/fastparameterselection",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": True,
+    "repository_branch": "master",
+    "path_to_docs": "docs",
+    "home_page_in_toc": True,
+}
 
 # -- Napoleon settings -------------------------------------------------------
 # Configure Napoleon for better docstring parsing

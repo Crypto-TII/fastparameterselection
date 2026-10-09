@@ -1,2 +1,9 @@
-numpy==2.2.0
-scipy==1.15.2
+# Python dependencies.
+#
+# SageMath is also required: fastparameterselection/nd.py imports sage.all.
+# https://doc.sagemath.org/html/en/installation/index.html
+#
+# The Lattice Estimator is vendored in ./latticeestimator and needs no install.
+numpy>=1.26
+scipy>=1.15
+lmfit>=1.3

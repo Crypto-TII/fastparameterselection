@@ -1,0 +1,5 @@
+secret dist.,lambda,log q,usvp,est usvp,usvp_s,est usvp_s,usvp num,est usvp num,bdd,est bdd,bdd_s,est bdd_s,bdd num,est bdd num,output,pow
+Binary,80,42,1036,81,1037,81,1037,81,1047,80,1050,81,1042,80,1050,1024
+Binary,80,58,1432,81,1425,80,1439,81,1444,80,1445,80,1436,80,1445,1024
+Binary,80,71,1754,81,1739,80,1764,81,1767,80,1766,80,1754,80,1767,2048
+Binary,80,84,2075,81,2052,80,2088,81,2090,81,2088,81,2072,80,2090,2048

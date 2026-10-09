@@ -1,0 +1,7 @@
+secret dist.,lwe dim.,log q,usvp num,est usvp,bdd num,est bdd,output
+Binary,2048,28,260,261,257,257,257
+Binary,2048,32,225,226,223,223,223
+Binary,2048,37,192,193,190,190,190
+Binary,2048,53,129,130,127,129,127
+Binary,2048,64,105,106,103,105,103
+Binary,2048,84,78,80,77,79,77

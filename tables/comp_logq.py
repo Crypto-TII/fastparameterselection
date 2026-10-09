@@ -8,7 +8,10 @@ import os
 #   python stats_logq_all.py file1.csv file2.csv ...
 #filenames = sys.argv[1:]
 
-filenames = ["logq_bin.csv", "logq_hybrid_2_10.csv", "logq_hybrid_2_15.csv"]
+filenames = [
+    "table_12_16_logq_binary.csv", "table_12_16_logq_ternary.csv",
+    "table_19_logq_hybrid.csv", "table_20_examples.csv"
+]
 
 if not filenames:
     print("Usage: python stats_logq_all.py <file1.csv> [file2.csv ...]")
@@ -16,7 +19,7 @@ if not filenames:
 
 # --- Define which columns belong to which group ---
 groups = {
-    "usvp": ["est usvp", "est usvp_s", "est num"],
+    "usvp": ["est usvp", "est usvp_s", "est usvp num"],
     "bdd": ["est bdd", "est bdd_s", "est bdd num"],
     "hybrid": ["est hybrid"]
 }

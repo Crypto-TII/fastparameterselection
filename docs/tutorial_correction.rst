@@ -1,33 +1,49 @@
-Finding optimal values 
+Finding optimal values
 ======================
 
-Our tool offers a close approximation to the optimal values for the ciphertext modulus and the standard deviation of the error distribution. However,  we can use the output offered by the tool as a starting point for an exhaustive search of the optimal parameters using a LWE estimator.
-In our tool, we use the Lattice Estimator. 
+The tool gives a close approximation to the largest secure modulus and the
+smallest secure error. Its output can then be used as the starting point for
+an exhaustive search with an LWE estimator; here we use the Lattice Estimator.
 
-The following command estimate the error standard deviation for a binary secret distribution, target security levels (`lambda`), LWE dimensions, and various sizes for the ciphertext modulus:
-
-.. code-block:: bash
-
-      python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary"
-
-.. code-block:: text
-
-      secret dist.   | lambda | lwe dim. | log q | log2(std_e) usvp   | est usvp | log2(std_e) bdd   | est bdd | output           
-      ---------------+--------+----------+-------+--------------------+----------+-------------------+---------+------------------
-      Uniform (-1 0) | 192    | 2048     | 64    | 25.71              | 177      | 28.60             | 190     | 28.60  
-
-Observe that given the output of the numerical methods, we obtain a security level of `177` for the USVP attack and `190` for the BDD attack. We can get closer to the optimal values by using the Lattice Estimator. 
-
-**Appling the correction**
-
-By adding the option ``--correct`` or ``-c``, we can find the optimal values for the ciphertext modulus and the standard deviation of the error distribution. The output will show the corrected values.
+Take the error standard deviation for a binary secret at
+:math:`\lambda = 192`, `n = 2048`, :math:`\log q = 64`:
 
 .. code-block:: bash
 
-      python3 src/estimate.py --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v -c
+   fastparams --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v
 
 .. code-block:: text
 
-      secret dist.   | lambda | lwe dim. | log q | log2(std_e) usvp   | est usvp | log2(std_e) bdd   | est bdd | output           
-      ---------------+--------+----------+-------+--------------------+----------+-------------------+---------+------------------
-      Uniform (-1 0) | 192    | 2048     | 64    | 26.21              | 195      | 29.10             | 194     | 29.10  
+      secret dist. | lambda | lwe dim. | log q | log2(std_e) usvp  | est usvp | log2(std_e) bdd   | est bdd | output           
+      -------------+--------+----------+-------+-------------------+----------+-------------------+---------+------------------
+      Binary       | 192    | 2048     | 64    | 28.60             | 192      | 26.02             | 177     | 28.60            
+
+The uSVP solver's value already reaches the target, but the BDD solver's
+`26.02` measures at only 177 bits against a target of 192.
+
+**Applying the correction**
+
+Adding ``-c`` walks each value towards the target in steps of 0.1, calling the
+Lattice Estimator at each step, and reports both the corrected value and how
+many calls it took.
+
+.. code-block:: bash
+
+   fastparams --param "std_e" --lambda "192" --n "2048" --logq "64" --secret "binary" --table -v -c
+
+.. code-block:: text
+
+      secret dist. | lambda | lwe dim. | log q | log2(std_e) usvp  | est usvp | * log2(std_e) usvp | * est usvp | est calls usvp | log2(std_e) bdd   | est bdd | * log2(std_e) bdd | * est bdd | est calls bdd | output           
+      -------------+--------+----------+-------+-------------------+----------+--------------------+------------+----------------+-------------------+---------+-------------------+-----------+---------------+------------------
+      Binary       | 192    | 2048     | 64    | 28.60             | 192      | 28.50              | 192        | 3              | 26.02             | 177     | 28.92             | 192       | 30            | 28.92            
+
+Columns prefixed ``*`` are the corrected values. The BDD value moves from
+`26.02` to `28.92`, which measures at 192, and took 30 estimator calls to
+find. The correction is bounded at ``MAX_CORRECTION_CALLS`` in
+``src/const.py``.
+
+The same option works for ``--param "logq"``.
+
+.. seealso::
+
+   :doc:`tutorial_logq`, :doc:`tutorial_stde`, :doc:`limitations`.

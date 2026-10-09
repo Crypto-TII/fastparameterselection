@@ -1,0 +1,9 @@
+secret dist.,lambda,lwe dim.,logq usvp,est usvp,logq bdd,est bdd,output
+Ternary,100,1024,34,102,34,100,34
+Ternary,100,32768,1096,101,1112,100,1096
+Ternary,128,1024,27,131,27,129,27
+Ternary,128,32768,872,129,880,128,872
+Ternary,192,1024,18,204,18,199,18
+Ternary,192,32768,608,193,611,192,608
+Ternary,256,1024,14,265,14,259,14
+Ternary,256,32768,474,257,475,256,474

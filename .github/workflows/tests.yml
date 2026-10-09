@@ -1,0 +1,47 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Formulas, numerical solvers and the per-call generators. These import
+  # nothing that needs SageMath, so they run on a plain Python and are the
+  # fast guard against a formula changing without the paper changing.
+  formulas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy scipy lmfit pytest
+      - name: Run the tests that do not need SageMath
+        run: python -m pytest -v
+        # Tests marked needs_sage skip themselves; see tests/conftest.py.
+
+  # The command line and the refitting of fastparameterselection/const.py both
+  # go through fastparameterselection/nd.py, which imports sage.all.
+  #
+  # Sage runs through `docker run` rather than a job-level `container:`. The
+  # image runs as the unprivileged `sage` user while the runner owns its
+  # workspace as root, so actions/checkout fails inside it with EACCES on
+  # /__w/_temp. Running the container as root is not a way out either: Sage
+  # ignores `--python3` as root and drops into its REPL. Checking out on the
+  # host and mounting the tree read-only avoids both.
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the whole suite inside SageMath
+        run: |
+          docker run --rm -v "$PWD":/src:ro sagemath/sagemath:10.3 bash -lc '
+            cp -r /src /tmp/repo && cd /tmp/repo &&
+            sage --pip install --quiet lmfit pytest &&
+            sage --python3 -m pytest -v
+          '
+          # The copy keeps writes (output.csv) inside the container, where the
+          # sage user owns the tree.

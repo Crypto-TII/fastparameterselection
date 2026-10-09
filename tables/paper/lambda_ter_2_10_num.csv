@@ -1,0 +1,6 @@
+secret dist.,lwe dim.,log q,usvp num,est usvp,bdd num,est bdd,output
+Ternary,1024,14,263,265,258,259,258
+Ternary,1024,19,191,192,187,188,187
+Ternary,1024,27,130,131,127,129,127
+Ternary,1024,34,100,102,99,100,99
+Ternary,1024,43,78,79,76,78,76
