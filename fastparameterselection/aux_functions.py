@@ -49,15 +49,19 @@ def check_estimator_installed():
 
 
 def check_ntru(output_dict):
-    beta_ = check_overstreched(output_dict)
-    if output_dict['l'] != 0:
-        if beta_ > 0 and output_dict['l'] > 0 and (output_dict['l'] - 0.292 * beta_) > 20:
-            print("Error: the ntru parameters are in the overstretched regime")
+    beta_dict = check_overstreched(output_dict)
+    print("Check for overstretched regime:", beta_dict)
+
+    for key, val in beta_dict.items():
+        if (val > -1):
+            if output_dict['l'] != 0 and (output_dict['l'] - 0.292 * val) > 20: #if we target certain security level
+                print(f"Warning: the modulus {key} falls in overstretched regime. Abort here. Restart with another modulus")
+
+            else: #if we *evaluate* the security level
+                print(f"Warning: the modulus {key} falls in the overstretched regime, we do not estimate it precisely. Abort here. Restart with another modulus ")
             sys.exit(1)
-    else:
-        if beta_ > 0:
-            print("Error: the ntru parameters are in the overstretched regime")
-            sys.exit(1)
+
+    print('Checked the input parameters for overstretchness. They do not fall in this regime, continue with standard lattice attack estimates')
 
 
 def print_warnings(verify, estimator_installed, data=None, threshold=WARNING_THRESHOLD):

@@ -112,32 +112,38 @@ def check_overstreched(params):
     Check if the parameters are in the overstretched regime.
 
     :param params: Dictionary of parameters.
-    :return: Beta value if overstretched, -1 otherwise.
+    :return: disctionary [lgq] = Beta_value, where Beta_value > -1 if overstretched, -1 otherwise.
     """
     n = params['lwe_d']
     lgq = params['logq']
     stds = params['secret_dist'].stddev
     stde = params['error_dist'].stddev
 
-    lnq = multiply(lgq, ln2)
+    #lnq = multiply(lgq, ln2)
+    beta = 0
 
     # dense_det_log = math.log(math.sqrt(stds**2*n)+math.sqrt(stde**2*n))
-    dense_det_log = math.log(math.sqrt(stds*n)+math.sqrt(stde*n))
+    var = stds**2+stde**2
+    dense_det_ln = 0.5*n*math.log(n*var) #n * ln(||f, g||)
 
-    for beta in range(50, 1000):
-        for lgq_value in lgq:
-            alpha_beta = delta_exact(beta)**2
-            alpha_beta_log = math.log(alpha_beta)
+    res = {}
+    for lgq_value in lgq: #lgq is a tuple of logs
+        lnq = lgq_value*math.log(2)
+        res[lgq_value] = -1 
+        for beta in range(30, 300, 5):
+            alpha_beta_ln = 2*math.log(delta_exact(beta))
             # print(0.5+lgq_value/(2*alpha_beta_log))
             # THIS FAILs. using python in-built round
-            m = round(0.5+lgq_value/(2*alpha_beta_log))
+            m = round(lgq_value/(2*alpha_beta_ln))-1
 
-            rhs_log = 0.5*(m-1)*lgq_value-0.5*(m-1)**2*alpha_beta_log
 
-            if dense_det_log < rhs_log:
-                return beta
+            #log-volume of the last projected sublattice
+            rhs_log = 0.5*m*lgq_value-0.5*m**2*alpha_beta_ln
 
-    return -1
+            if dense_det_ln < rhs_log:
+                res[lgq_value] = beta
+
+    return res
 
 
 def predicted_beta_bdd(n, q, sigma, zeta):
